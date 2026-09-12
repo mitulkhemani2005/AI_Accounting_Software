@@ -107,6 +107,9 @@ export default function SalesPage() {
   const [editPartyName, setEditPartyName] = useState("");
   const [editPartyMobile, setEditPartyMobile] = useState("");
   const [editPartyGst, setEditPartyGst] = useState("");
+  const [editPartyAddress, setEditPartyAddress] = useState("");
+  const [editTermsPreset, setEditTermsPreset] = useState("standard");
+  const [editTermsConditions, setEditTermsConditions] = useState("");
   const [editIsInterstate, setEditIsInterstate] = useState(false);
   const [editPaymentMode, setEditPaymentMode] = useState<"cash" | "credit">("cash");
   const [editPaymentStatus, setEditPaymentStatus] = useState<"paid" | "partial" | "unpaid">("paid");
@@ -116,6 +119,14 @@ export default function SalesPage() {
   const [editItems, setEditItems] = useState<BillItem[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [selectedCatalogItemToAdd, setSelectedCatalogItemToAdd] = useState("");
+
+  const getTermsText = (preset: string) => {
+    if (preset === "none") return "";
+    if (preset === "standard") return "1. Goods once sold will be accepted back within 7 days with original invoice.\n2. Certified that particulars given above are true & correct.\n3. Subject to local jurisdiction.";
+    if (preset === "no_returns") return "1. Goods once sold will not be accepted back or exchanged.\n2. Certified that particulars given above are true & correct.\n3. Subject to local jurisdiction.";
+    if (preset === "warranty") return "1. Standard manufacturer warranty terms apply.\n2. Physical or liquid damage is not covered under warranty.\n3. Subject to local jurisdiction.";
+    return editTermsConditions;
+  };
 
   const fetchBills = async () => {
     setLoading(true);
@@ -268,6 +279,19 @@ export default function SalesPage() {
     setEditPartyName(bill.party_name);
     setEditPartyMobile(bill.party_mobile || "");
     setEditPartyGst(bill.party_gst || "");
+    setEditPartyAddress(bill.party_address || "");
+    setEditTermsConditions(bill.terms_conditions || "");
+    if (!bill.terms_conditions) {
+      setEditTermsPreset("none");
+    } else if (bill.terms_conditions.includes("7 days")) {
+      setEditTermsPreset("standard");
+    } else if (bill.terms_conditions.includes("exchanged")) {
+      setEditTermsPreset("no_returns");
+    } else if (bill.terms_conditions.includes("warranty")) {
+      setEditTermsPreset("warranty");
+    } else {
+      setEditTermsPreset("custom");
+    }
     setEditIsInterstate(bill.is_interstate);
     const mode = bill.payment_mode === "credit" ? "credit" : "cash";
     setEditPaymentMode(mode);
@@ -471,11 +495,14 @@ export default function SalesPage() {
     }
     setIsSavingEdit(true);
     try {
+      const effectiveTerms = editTermsPreset === "none" ? undefined : (editTermsPreset === "custom" ? editTermsConditions : getTermsText(editTermsPreset));
       const payload = {
         party_id: editPartyId || undefined,
         party_name: editPartyName.trim() || "Cash Customer",
         party_mobile: editPartyMobile.trim() || undefined,
         party_gst: editPartyGst.trim() || undefined,
+        party_address: editPartyAddress.trim() || undefined,
+        terms_conditions: effectiveTerms,
         is_interstate: editIsInterstate,
         payment_mode: editPaymentMode,
         payment_status: editPaymentStatus,
@@ -1006,6 +1033,54 @@ export default function SalesPage() {
                 </div>
               </div>
 
+              <div>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  Customer Billing Address
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={editPartyAddress}
+                  onChange={(e) => setEditPartyAddress(e.target.value)}
+                  placeholder="Address, City, State..."
+                  style={{ fontSize: "0.85rem" }}
+                />
+              </div>
+
+              {/* Terms & Conditions Selection */}
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)" }}>
+                    📜 Terms & Conditions (Optional)
+                  </label>
+                  <span style={{ fontSize: "0.7rem", color: editTermsPreset === "none" ? "#94a3b8" : "#38bdf8", fontWeight: 600 }}>
+                    {editTermsPreset === "none" ? "Omitted" : "Included"}
+                  </span>
+                </div>
+                <select
+                  className="input-field"
+                  value={editTermsPreset}
+                  onChange={(e) => setEditTermsPreset(e.target.value)}
+                  style={{ fontSize: "0.825rem" }}
+                >
+                  <option value="standard">Standard Return Policy (7 Days)</option>
+                  <option value="no_returns">No Returns / Final Sale</option>
+                  <option value="warranty">Standard Manufacturer Warranty</option>
+                  <option value="custom">✏️ Custom Terms...</option>
+                  <option value="none">🚫 None (No Terms on Bill)</option>
+                </select>
+                {editTermsPreset === "custom" && (
+                  <textarea
+                    className="input-field"
+                    placeholder="Enter custom terms..."
+                    rows={2}
+                    value={editTermsConditions}
+                    onChange={(e) => setEditTermsConditions(e.target.value)}
+                    style={{ marginTop: "4px", fontSize: "0.8rem" }}
+                  />
+                )}
+              </div>
+
               {/* Payment Mode (ONLY CASH OR CREDIT) */}
               <div>
                 <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
@@ -1509,12 +1584,9 @@ export default function SalesPage() {
                 <div style={{ fontSize: "10px", color: "#333", marginBottom: "2px" }}>({tenant.legal_name})</div>
               )}
               <div style={{ fontSize: "10px", lineHeight: "1.3" }}>
-                {tenant?.address && <div>{tenant.address}{tenant.city ? `, ${tenant.city}` : ""}{tenant.state ? `, ${tenant.state}` : ""}{tenant.pincode ? ` - ${tenant.pincode}` : ""}</div>}
-                {tenant?.gst_number && <div><strong>GSTIN:</strong> {tenant.gst_number}</div>}
-                <div style={{ display: "flex", gap: "10px" }}>
-                  {tenant?.phone && <div><strong>Phone:</strong> {tenant.phone}</div>}
-                  {tenant?.email && <div><strong>Email:</strong> {tenant.email}</div>}
-                </div>
+                <div><strong>Address:</strong> {tenant?.address ? `${tenant.address}${tenant.city ? `, ${tenant.city}` : ""}${tenant.state ? `, ${tenant.state}` : ""}${tenant.pincode ? ` - ${tenant.pincode}` : ""}` : "Store Address"}</div>
+                <div><strong>Phone:</strong> {tenant?.phone || "—"} &bull; <strong>GSTIN:</strong> {tenant?.gst_number || "Unregistered"}</div>
+                {tenant?.email && <div><strong>Email:</strong> {tenant.email}</div>}
               </div>
             </div>
             
@@ -1536,8 +1608,8 @@ export default function SalesPage() {
             <div>
               <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Billed To (Customer):</div>
               <div style={{ fontSize: "12px", fontWeight: "bold", color: "#000" }}>{selectedBill.party_name || "Cash Customer"}</div>
-              {selectedBill.party_mobile && <div><strong>Mobile:</strong> {selectedBill.party_mobile}</div>}
-              {selectedBill.party_gst && <div><strong>GSTIN:</strong> {selectedBill.party_gst}</div>}
+              <div><strong>Address:</strong> {selectedBill.party_address || "—"}</div>
+              <div><strong>Phone:</strong> {selectedBill.party_mobile || "—"} &bull; <strong>GSTIN:</strong> {selectedBill.party_gst || "—"}</div>
             </div>
             <div style={{ borderLeft: "1px solid #ccc", paddingLeft: "8px" }}>
               <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Payment & Status:</div>
@@ -1583,14 +1655,15 @@ export default function SalesPage() {
           {/* Totals & Tax Breakdown Grid */}
           <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "10px", borderTop: "1px solid #000", paddingTop: "6px", marginBottom: "8px", fontSize: "10.5px" }}>
             <div>
-              <div style={{ border: "1px solid #ddd", padding: "5px 7px", borderRadius: "4px", background: "#fcfcfc", marginBottom: "6px" }}>
-                <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Terms & Conditions:</div>
-                <div style={{ fontSize: "9px", lineHeight: "1.3", color: "#333" }}>
-                  1. Goods once sold will not be accepted back without invoice.<br/>
-                  2. Certified that the particulars given above are true and correct.<br/>
-                  3. Subject to local jurisdiction.
+              {/* Optional Terms & Conditions */}
+              {selectedBill.terms_conditions && (
+                <div style={{ border: "1px solid #ddd", padding: "5px 7px", borderRadius: "4px", background: "#fcfcfc", marginBottom: "6px" }}>
+                  <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Terms & Conditions:</div>
+                  <div style={{ fontSize: "9px", lineHeight: "1.3", color: "#333", whiteSpace: "pre-line" }}>
+                    {selectedBill.terms_conditions}
+                  </div>
                 </div>
-              </div>
+              )}
               {selectedBill.notes && (
                 <div style={{ fontSize: "9.5px", color: "#444" }}>
                   <strong>Note:</strong> {selectedBill.notes}

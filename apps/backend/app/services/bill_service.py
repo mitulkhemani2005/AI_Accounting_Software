@@ -69,6 +69,8 @@ def format_bill_response(bill: Bill) -> BillResponse:
         party_name=bill.party_name,
         party_mobile=bill.party_mobile,
         party_gst=bill.party_gst,
+        party_address=bill.party_address,
+        terms_conditions=bill.terms_conditions,
         is_interstate=bill.is_interstate,
         created_by_user_id=bill.created_by_user_id,
         creator_name=bill.creator.name if bill.creator else None,
@@ -148,6 +150,8 @@ async def create_bill(
         party_name=payload.party_name,
         party_mobile=payload.party_mobile,
         party_gst=payload.party_gst,
+        party_address=payload.party_address,
+        terms_conditions=payload.terms_conditions,
         is_interstate=payload.is_interstate,
         created_by_user_id=current_user.id,
         subtotal=totals["subtotal"],
@@ -306,6 +310,10 @@ async def update_bill_by_admin(
         bill.party_mobile = payload.party_mobile
     if payload.party_gst is not None:
         bill.party_gst = payload.party_gst
+    if payload.party_address is not None:
+        bill.party_address = payload.party_address
+    if payload.terms_conditions is not None:
+        bill.terms_conditions = payload.terms_conditions
     if payload.party_id is not None:
         bill.party_id = payload.party_id if payload.party_id != "" else None
     if payload.is_interstate is not None:

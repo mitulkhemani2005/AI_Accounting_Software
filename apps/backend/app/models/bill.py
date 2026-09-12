@@ -29,6 +29,8 @@ class Bill(Base, TimestampMixin):
     party_name: Mapped[str] = mapped_column(String(200), default="Cash Customer", nullable=False)
     party_mobile: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     party_gst: Mapped[Optional[str]] = mapped_column(String(15), nullable=True)
+    party_address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    terms_conditions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_interstate: Mapped[bool] = mapped_column(default=False, nullable=False)  # If True, charge IGST instead of CGST+SGST
 
     # Audit & User tracking

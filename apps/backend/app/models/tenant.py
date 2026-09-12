@@ -15,6 +15,13 @@ class Tenant(Base, TimestampMixin):
     )
     business_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     gst_number: Mapped[Optional[str]] = mapped_column(String(15), nullable=True, index=True)
+    address: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    city: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    state: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    pincode: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    terms_conditions: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)
     subscription_tier: Mapped[str] = mapped_column(String(50), default="free", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

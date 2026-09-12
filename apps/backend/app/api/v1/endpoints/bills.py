@@ -2,6 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Request, Response, Query, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.db.session import get_db
 from app.schemas.bill import (
     BillCreateRequest,
@@ -152,12 +153,16 @@ async def void_bill(
 async def download_invoice_pdf(
     bill_id: str,
     format: Optional[str] = Query("a4", description="Paper size: a4 (full page) or a5 (half-A4 sheet)"),
+    terms: Optional[str] = Query(None, description="Custom terms & conditions text or 'none' to omit"),
+    include_terms: Optional[bool] = Query(True, description="Whether to include terms and conditions"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Generate and download GST-compliant PDF Tax Invoice (A4 Full Page or A5 Half-A4 Sheet)"""
     result = await db.execute(
-        select(Bill).where(Bill.tenant_id == current_user.tenant_id, Bill.id == bill_id)
+        select(Bill)
+        .options(selectinload(Bill.customer), selectinload(Bill.creator))
+        .where(Bill.tenant_id == current_user.tenant_id, Bill.id == bill_id)
     )
     bill = result.scalar_one_or_none()
     if not bill:
@@ -168,7 +173,19 @@ async def download_invoice_pdf(
     )
     tenant = tenant_res.scalar_one()
 
-    pdf_bytes = generate_bill_pdf(bill=bill, tenant=tenant, paper_format=format or "a4")
+    # Determine effective terms & conditions (selected by owner / optional)
+    effective_terms = None
+    if include_terms:
+        effective_terms = terms if terms is not None else bill.terms_conditions
+    else:
+        effective_terms = "none"
+
+    pdf_bytes = generate_bill_pdf(
+        bill=bill,
+        tenant=tenant,
+        paper_format=format or "a4",
+        terms_conditions=effective_terms
+    )
     suffix = "_A5_HalfSheet" if format in ["a5", "half_a4", "half-a4"] else ""
     filename = f"{bill.bill_number}{suffix}.pdf"
 

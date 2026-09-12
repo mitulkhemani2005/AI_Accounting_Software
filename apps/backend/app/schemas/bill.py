@@ -22,6 +22,8 @@ class BillCreateRequest(BaseModel):
     party_name: str = Field("Cash Customer", min_length=1, max_length=200)
     party_mobile: Optional[str] = None
     party_gst: Optional[str] = None
+    party_address: Optional[str] = None
+    terms_conditions: Optional[str] = None
     is_interstate: bool = Field(False, description="True for IGST, False for CGST+SGST")
     discount_amount: float = Field(0.0, ge=0)
     payment_mode: str = Field("cash", description="cash, upi, card, credit, split")
@@ -37,6 +39,8 @@ class BillUpdateRequest(BaseModel):
     party_name: Optional[str] = None
     party_mobile: Optional[str] = None
     party_gst: Optional[str] = None
+    party_address: Optional[str] = None
+    terms_conditions: Optional[str] = None
     is_interstate: Optional[bool] = None
     discount_amount: Optional[float] = None
     payment_mode: Optional[str] = None
@@ -77,6 +81,8 @@ class BillResponse(BaseModel):
     party_name: str
     party_mobile: Optional[str] = None
     party_gst: Optional[str] = None
+    party_address: Optional[str] = None
+    terms_conditions: Optional[str] = None
     is_interstate: bool
     created_by_user_id: str
     creator_name: Optional[str] = None

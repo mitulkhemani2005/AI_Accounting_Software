@@ -25,6 +25,15 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE items ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE NOT NULL",
                 "ALTER TABLE bill_items ADD COLUMN IF NOT EXISTS purchase_price FLOAT DEFAULT 0.0",
                 "ALTER TABLE bill_items ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE NOT NULL",
+                "ALTER TABLE bills ADD COLUMN IF NOT EXISTS party_address TEXT",
+                "ALTER TABLE bills ADD COLUMN IF NOT EXISTS terms_conditions TEXT",
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS address VARCHAR(500)",
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS phone VARCHAR(20)",
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS city VARCHAR(100)",
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS state VARCHAR(100)",
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS pincode VARCHAR(20)",
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS terms_conditions VARCHAR(2000)",
             ]
             for stmt in migration_statements:
                 try:

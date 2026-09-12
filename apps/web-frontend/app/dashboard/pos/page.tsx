@@ -73,6 +73,17 @@ export default function POSPage() {
   const [overallDiscount, setOverallDiscount] = useState("0");
   const [paymentMode, setPaymentMode] = useState<"cash" | "credit">("cash");
   const [notes, setNotes] = useState("");
+  const [termsPreset, setTermsPreset] = useState<string>("standard");
+  const [customTerms, setCustomTerms] = useState<string>("");
+
+  const getEffectiveTerms = () => {
+    if (termsPreset === "none") return "";
+    if (termsPreset === "standard") return "1. Goods once sold will be accepted back within 7 days with original invoice.\n2. Certified that particulars given above are true & correct.\n3. Subject to local jurisdiction.";
+    if (termsPreset === "no_returns") return "1. Goods once sold will not be accepted back or exchanged.\n2. Certified that particulars given above are true & correct.\n3. Subject to local jurisdiction.";
+    if (termsPreset === "warranty") return "1. Standard manufacturer warranty terms apply.\n2. Physical or liquid damage is not covered under warranty.\n3. Subject to local jurisdiction.";
+    if (termsPreset === "custom") return customTerms;
+    return "";
+  };
 
   // Customer Quick-Add Modal
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
@@ -530,6 +541,8 @@ export default function POSPage() {
       party_name: customerName,
       party_mobile: customerMobile || undefined,
       party_gst: customerGst || undefined,
+      party_address: partyType === "customer" ? customerAddress : undefined,
+      terms_conditions: getEffectiveTerms() || undefined,
       is_interstate: isInterstate,
       discount_amount: discountVal,
       payment_mode: paymentMode,
@@ -565,6 +578,9 @@ export default function POSPage() {
         items: billItems,
         party_name: customerName,
         party_mobile: customerMobile,
+        party_address: customerAddress,
+        party_gst: customerGst,
+        terms_conditions: getEffectiveTerms() || undefined,
         created_at: new Date().toISOString(),
       });
       setIsSubmitting(false);
@@ -1056,6 +1072,40 @@ export default function POSPage() {
               </button>
             </div>
 
+            {/* Terms & Conditions Selector (Owner Selected / Optional) */}
+            <div style={{ marginTop: "6px", marginBottom: "8px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                  📜 Terms & Conditions (Optional)
+                </span>
+                <span style={{ fontSize: "0.7rem", color: termsPreset === "none" ? "#94a3b8" : "#38bdf8", fontWeight: 600 }}>
+                  {termsPreset === "none" ? "Omitted" : "Included on Bill"}
+                </span>
+              </div>
+              <select
+                className="input-field"
+                value={termsPreset}
+                onChange={(e) => setTermsPreset(e.target.value)}
+                style={{ fontSize: "0.78rem", padding: "6px 8px", width: "100%" }}
+              >
+                <option value="standard">Standard Return Policy (7 Days)</option>
+                <option value="no_returns">No Returns / Final Sale</option>
+                <option value="warranty">Standard Manufacturer Warranty</option>
+                <option value="custom">✏️ Custom Terms...</option>
+                <option value="none">🚫 None (No Terms on Bill)</option>
+              </select>
+              {termsPreset === "custom" && (
+                <textarea
+                  className="input-field"
+                  placeholder="Enter custom terms & conditions..."
+                  rows={2}
+                  value={customTerms}
+                  onChange={(e) => setCustomTerms(e.target.value)}
+                  style={{ marginTop: "4px", fontSize: "0.75rem", padding: "6px" }}
+                />
+              )}
+            </div>
+
             {/* Checkout Button */}
             <button
               onClick={handleCheckout}
@@ -1112,6 +1162,17 @@ export default function POSPage() {
                   placeholder="27ABCDE1234F1Z5"
                   value={newCustomerForm.gst_number}
                   onChange={(e) => setNewCustomerForm({ ...newCustomerForm, gst_number: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="input-label">Billing Address (Optional)</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Shop / House No, Street, City"
+                  value={newCustomerForm.address}
+                  onChange={(e) => setNewCustomerForm({ ...newCustomerForm, address: e.target.value })}
                 />
               </div>
 
@@ -1247,12 +1308,9 @@ export default function POSPage() {
                 <div style={{ fontSize: "10px", color: "#333", marginBottom: "2px" }}>({tenant.legal_name})</div>
               )}
               <div style={{ fontSize: "10px", lineHeight: "1.3" }}>
-                {tenant?.address && <div>{tenant.address}{tenant.city ? `, ${tenant.city}` : ""}{tenant.state ? `, ${tenant.state}` : ""}{tenant.pincode ? ` - ${tenant.pincode}` : ""}</div>}
-                {tenant?.gst_number && <div><strong>GSTIN:</strong> {tenant.gst_number}</div>}
-                <div style={{ display: "flex", gap: "10px" }}>
-                  {tenant?.phone && <div><strong>Phone:</strong> {tenant.phone}</div>}
-                  {tenant?.email && <div><strong>Email:</strong> {tenant.email}</div>}
-                </div>
+                <div><strong>Address:</strong> {tenant?.address ? `${tenant.address}${tenant.city ? `, ${tenant.city}` : ""}${tenant.state ? `, ${tenant.state}` : ""}${tenant.pincode ? ` - ${tenant.pincode}` : ""}` : "Store Address"}</div>
+                <div><strong>Phone:</strong> {tenant?.phone || "—"} &bull; <strong>GSTIN:</strong> {tenant?.gst_number || "Unregistered"}</div>
+                {tenant?.email && <div><strong>Email:</strong> {tenant.email}</div>}
               </div>
             </div>
             
@@ -1269,13 +1327,13 @@ export default function POSPage() {
             </div>
           </div>
 
-          {/* Bill To & Payment Info */}
+          {/* Bill To (Customer Details) & Payment Info */}
           <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", border: "1px solid #000", padding: "6px 8px", marginBottom: "8px", fontSize: "10.5px", lineHeight: "1.35", background: "#fcfcfc" }}>
             <div>
               <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Billed To (Customer):</div>
-              <div style={{ fontSize: "12px", fontWeight: "bold", color: "#000" }}>{completedBill.party_name || "Cash Customer"}</div>
-              {completedBill.party_mobile && <div><strong>Mobile:</strong> {completedBill.party_mobile}</div>}
-              {completedBill.party_gst && <div><strong>GSTIN:</strong> {completedBill.party_gst}</div>}
+              <div style={{ fontSize: "12px", fontWeight: "bold", color: "#000" }}>{completedBill.party_name || customerName}</div>
+              <div><strong>Address:</strong> {completedBill.party_address || customerAddress || "—"}</div>
+              <div><strong>Phone:</strong> {completedBill.party_mobile || customerMobile || "—"} &bull; <strong>GSTIN:</strong> {completedBill.party_gst || customerGst || "—"}</div>
             </div>
             <div style={{ borderLeft: "1px solid #ccc", paddingLeft: "8px" }}>
               <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Payment & Status:</div>
@@ -1321,14 +1379,15 @@ export default function POSPage() {
           {/* Totals & Tax Breakdown Grid */}
           <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "10px", borderTop: "1px solid #000", paddingTop: "6px", marginBottom: "8px", fontSize: "10.5px" }}>
             <div>
-              <div style={{ border: "1px solid #ddd", padding: "5px 7px", borderRadius: "4px", background: "#fcfcfc", marginBottom: "6px" }}>
-                <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Terms & Conditions:</div>
-                <div style={{ fontSize: "9px", lineHeight: "1.3", color: "#333" }}>
-                  1. Goods once sold will not be accepted back without invoice.<br/>
-                  2. Certified that the particulars given above are true and correct.<br/>
-                  3. Subject to local jurisdiction.
+              {/* Optional Terms & Conditions */}
+              {(completedBill.terms_conditions || getEffectiveTerms()) && (
+                <div style={{ border: "1px solid #ddd", padding: "5px 7px", borderRadius: "4px", background: "#fcfcfc", marginBottom: "6px" }}>
+                  <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Terms & Conditions:</div>
+                  <div style={{ fontSize: "9px", lineHeight: "1.3", color: "#333", whiteSpace: "pre-line" }}>
+                    {completedBill.terms_conditions || getEffectiveTerms()}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div style={{ border: "1px solid #000", padding: "6px 8px", background: "#f9f9f9" }}>

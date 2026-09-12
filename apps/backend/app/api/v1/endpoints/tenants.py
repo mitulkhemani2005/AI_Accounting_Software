@@ -36,6 +36,13 @@ async def get_tenant_details(
         id=tenant.id,
         business_name=tenant.business_name,
         gst_number=tenant.gst_number,
+        address=tenant.address,
+        phone=tenant.phone,
+        email=tenant.email,
+        city=tenant.city,
+        state=tenant.state,
+        pincode=tenant.pincode,
+        terms_conditions=tenant.terms_conditions,
         subscription_tier=tenant.subscription_tier,
         is_active=tenant.is_active,
         created_at=tenant.created_at,
@@ -69,6 +76,20 @@ async def update_tenant_details(
         tenant.business_name = payload.business_name
     if payload.gst_number is not None:
         tenant.gst_number = payload.gst_number
+    if payload.address is not None:
+        tenant.address = payload.address
+    if payload.phone is not None:
+        tenant.phone = payload.phone
+    if payload.email is not None:
+        tenant.email = payload.email
+    if payload.city is not None:
+        tenant.city = payload.city
+    if payload.state is not None:
+        tenant.state = payload.state
+    if payload.pincode is not None:
+        tenant.pincode = payload.pincode
+    if payload.terms_conditions is not None:
+        tenant.terms_conditions = payload.terms_conditions
 
     await db.commit()
     await db.refresh(tenant)
@@ -94,6 +115,13 @@ async def update_tenant_details(
         id=tenant.id,
         business_name=tenant.business_name,
         gst_number=tenant.gst_number,
+        address=tenant.address,
+        phone=tenant.phone,
+        email=tenant.email,
+        city=tenant.city,
+        state=tenant.state,
+        pincode=tenant.pincode,
+        terms_conditions=tenant.terms_conditions,
         subscription_tier=tenant.subscription_tier,
         is_active=tenant.is_active,
         created_at=tenant.created_at,
