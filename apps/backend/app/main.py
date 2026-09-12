@@ -12,6 +12,18 @@ async def lifespan(app: FastAPI):
     # Startup tasks
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION} [{settings.ENVIRONMENT}]")
     init_sentry()
+    
+    # Initialize DB tables
+    try:
+        from app.db.session import engine
+        from app.db.base import Base
+        import app.models  # load all models
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database schema initialized successfully.")
+    except Exception as e:
+        logger.error(f"Database schema initialization warning: {e}")
+
     yield
     # Shutdown tasks
     logger.info(f"Shutting down {settings.PROJECT_NAME}")
