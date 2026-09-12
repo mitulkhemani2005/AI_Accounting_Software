@@ -1382,7 +1382,7 @@ export default function POSPage() {
           </table>
 
           {/* Totals & Tax Breakdown Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "8px", border: "1px solid #000", padding: "6px 8px", marginBottom: "6px", fontSize: "10px", background: "#fcfcfc" }}>
+          <div className="print-totals-block" style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "8px", border: "1px solid #000", padding: "6px 8px", marginBottom: "6px", fontSize: "10px", background: "#fcfcfc", pageBreakInside: "avoid", breakInside: "avoid" }}>
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
               <div>
                 <div style={{ fontSize: "8.5px", fontWeight: "bold", textTransform: "uppercase", color: "#555", marginBottom: "2px" }}>Amount in Words:</div>
@@ -1432,7 +1432,7 @@ export default function POSPage() {
           </div>
 
           {/* Signatures */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "10px", paddingTop: "6px", borderTop: "1px dashed #ccc", fontSize: "9.5px" }}>
+          <div className="print-signature-block" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "10px", paddingTop: "6px", borderTop: "1px dashed #ccc", fontSize: "9.5px", pageBreakInside: "avoid", breakInside: "avoid" }}>
             <div style={{ textAlign: "center", width: "130px" }}>
               <div style={{ borderTop: "1px solid #000", paddingTop: "2px" }}>Customer's Signature</div>
             </div>

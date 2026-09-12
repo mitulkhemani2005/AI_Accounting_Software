@@ -2,7 +2,7 @@ import io
 from typing import List, Optional
 from reportlab.lib.pagesizes import A4, A5
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from app.models.bill import Bill
 from app.models.tenant import Tenant
@@ -210,7 +210,7 @@ def _build_bill_story_elements(bill: Bill, tenant: Tenant, is_a5: bool, styles) 
         ])
 
     items_col_widths = [16, 136, 32, 40, 42, 42, 35, 45] if is_a5 else [25, 175, 45, 55, 60, 65, 45, 65]
-    items_table = Table(table_rows, colWidths=items_col_widths)
+    items_table = Table(table_rows, colWidths=items_col_widths, repeatRows=1)
     items_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#0f172a")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -281,8 +281,6 @@ def _build_bill_story_elements(bill: Bill, tenant: Tenant, is_a5: bool, styles) 
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
         ('PADDING', (0, 0), (-1, -1), 4 if is_a5 else 6),
     ]))
-    story.append(bottom_grid_table)
-    story.append(Spacer(1, 10 if is_a5 else 16))
 
     # 5. Signatures Section
     sig_col_widths = [190, 198] if is_a5 else [265, 270]
@@ -299,20 +297,27 @@ def _build_bill_story_elements(bill: Bill, tenant: Tenant, is_a5: bool, styles) 
         ('LINEABOVE', (1, 0), (1, 0), 0.5, colors.HexColor("#94a3b8")),
         ('PADDING', (0, 0), (-1, -1), 2),
     ]))
-    story.append(sig_table)
+
+    # Keep Totals & Signatures together to avoid awkward page breaks
+    bottom_section = [
+        bottom_grid_table,
+        Spacer(1, 10 if is_a5 else 16),
+        sig_table
+    ]
+    story.append(KeepTogether(bottom_section))
     return story
 
 
 def generate_bill_pdf(
     bill: Bill,
     tenant: Tenant,
-    paper_format: str = "a4"
+    paper_format: str = "a5"
 ) -> bytes:
     """
     Generate a GST-compliant Tax Invoice PDF in memory.
-    Supports A4 (Full Page) and A5 (Half-A4 Sheet).
+    Defaults to A5 (Half-A4 Sheet). Supports A4 (Full Page) and A5 (Half-A4 Sheet).
     """
-    is_a5 = str(paper_format).lower() in ["a5", "half_a4", "half-a4", "half_page"]
+    is_a5 = str(paper_format).lower() in ["a5", "half_a4", "half-a4", "half_page"] or paper_format is None
     selected_pagesize = A5 if is_a5 else A4
     margins = 14 if is_a5 else 28
 
@@ -337,13 +342,13 @@ def generate_bill_pdf(
 def generate_combined_bills_pdf(
     bills: List[Bill],
     tenant: Tenant,
-    paper_format: str = "a4"
+    paper_format: str = "a5"
 ) -> bytes:
     """
     Generate a multi-page combined PDF containing multiple selected bills.
-    Each bill is rendered on its own distinct page.
+    Defaults to A5 (Half-A4 Sheet). Each bill is rendered on its own distinct Half-A4 sheet (or sheets if items exceed).
     """
-    is_a5 = str(paper_format).lower() in ["a5", "half_a4", "half-a4", "half_page"]
+    is_a5 = str(paper_format).lower() in ["a5", "half_a4", "half-a4", "half_page"] or paper_format is None
     selected_pagesize = A5 if is_a5 else A4
     margins = 14 if is_a5 else 28
 

@@ -193,11 +193,11 @@ async def download_combined_invoices_pdf(
 @router.get("/{bill_id}/pdf")
 async def download_invoice_pdf(
     bill_id: str,
-    format: Optional[str] = Query("a4", description="Paper size: a4 (full page) or a5 (half-A4 sheet)"),
+    format: Optional[str] = Query("a5", description="Paper size: a5 (half-A4 sheet) or a4 (full page)"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Generate and download GST-compliant PDF Tax Invoice (A4 Full Page or A5 Half-A4 Sheet)"""
+    """Generate and download GST-compliant PDF Tax Invoice (A5 Half-A4 Sheet by default, or A4)"""
     result = await db.execute(
         select(Bill)
         .options(selectinload(Bill.customer), selectinload(Bill.creator))
@@ -215,9 +215,9 @@ async def download_invoice_pdf(
     pdf_bytes = generate_bill_pdf(
         bill=bill,
         tenant=tenant,
-        paper_format=format or "a4"
+        paper_format=format or "a5"
     )
-    suffix = "_A5_HalfSheet" if format in ["a5", "half_a4", "half-a4"] else ""
+    suffix = "_A4_FullPage" if format == "a4" else ""
     filename = f"{bill.bill_number}{suffix}.pdf"
 
     return Response(

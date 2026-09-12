@@ -232,8 +232,8 @@ a {
 /* Print Styles */
 @media print {
   @page {
-    size: auto;
-    margin: 4mm 6mm;
+    size: A5 portrait;
+    margin: 4mm 5mm;
   }
 
   *, *::before, *::after {
@@ -274,10 +274,9 @@ a {
     visibility: hidden !important;
   }
 
-  /* Printable single & batch containers */
+  /* Half-A4 single & batch containers */
   .print-only,
   .print-half-a4,
-  .print-thermal,
   .print-batch-sheet {
     display: block !important;
     visibility: visible !important;
@@ -285,14 +284,39 @@ a {
     background-color: #ffffff !important;
     color: #000000 !important;
     width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 2mm 4mm !important;
+    max-width: 140mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
     box-sizing: border-box !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   }
 
+  /* Multi-page table & item handling */
+  table {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Prevent awkward breaks inside totals, amount in words, declaration, and signature blocks */
+  .print-avoid-break,
+  .print-totals-block,
+  .print-signature-block {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
   .print-thermal {
+    display: block !important;
+    visibility: visible !important;
     width: 78mm !important;
     margin: 0 auto !important;
     padding: 2mm !important;
@@ -301,9 +325,15 @@ a {
   }
 
   /* Page break between bills in combined/batch printing */
-  .print-page-break {
+  .print-page-break,
+  .print-batch-sheet > div {
     page-break-after: always !important;
     break-after: page !important;
+  }
+
+  .print-batch-sheet > div:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 }
 
