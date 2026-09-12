@@ -21,17 +21,17 @@
 
 ## PHASE 1 — Core: Tenancy, Auth, Roles & Permissions
 
-- [ ] Create `tenants` table + tenant creation flow
-- [ ] Create `users` table with `tenant_id` scoping
-- [ ] Implement JWT-based authentication
-- [ ] Implement `roles` and `permissions` tables (admin, sub_user)
-- [ ] Implement `role_permissions` mapping
-- [ ] Build API middleware: tenant isolation (every request scoped to `tenant_id`)
-- [ ] Build API middleware: role/permission enforcement (server-side, not UI-only)
-- [ ] Implement admin signup flow (creates tenant + admin user)
-- [ ] Implement sub-user creation flow (admin adds staff, mobile number + OTP/PIN login)
-- [ ] Implement audit_log table + logging on all create/edit/delete actions
-- [ ] Build `module_entitlements` table + entitlement-check middleware (feature flag per tenant per module)
+- [x] Create `tenants` table + tenant creation flow
+- [x] Create `users` table with `tenant_id` scoping
+- [x] Implement JWT-based authentication
+- [x] Implement `roles` and `permissions` tables (admin, sub_user)
+- [x] Implement `role_permissions` mapping
+- [x] Build API middleware: tenant isolation (every request scoped to `tenant_id`)
+- [x] Build API middleware: role/permission enforcement (server-side, not UI-only)
+- [x] Implement admin signup flow (creates tenant + admin user)
+- [x] Implement sub-user creation flow (admin adds staff, mobile number + OTP/PIN login)
+- [x] Implement audit_log table + logging on all create/edit/delete actions
+- [x] Build `module_entitlements` table + entitlement-check middleware (feature flag per tenant per module)
 
 **✅ Checkpoint:** Admin can sign up, create a tenant, add a sub-user, and log in as both. Sub-user has no access to any restricted endpoint (test this explicitly via API, not just UI). Confirm before proceeding.
 

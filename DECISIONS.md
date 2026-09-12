@@ -47,3 +47,17 @@ This document tracks all key technical decisions, trade-offs, library selections
 - **Decision:** Structured JSON logging with Sentry SDK integration across Backend and AI Service.
 - **Context:** Sentry provides instant error tracing and performance monitoring in multi-tenant environments.
 - **Date:** 2026-09-13
+
+---
+
+## ADR 006: Staff / Sub-User Authentication with Numeric PIN
+- **Decision:** Sub-users / staff log in via their 10-digit mobile number + 4-6 digit numeric PIN (hashed with bcrypt via `pin_hash`), while Admins log in via Email/Mobile + Password.
+- **Context:** In Indian SMB retail environments (kiranas, pharmacies), counter staff often switch shifts and need rapid POS login without complex email/password flows.
+- **Date:** 2026-09-13
+
+---
+
+## ADR 007: API Layer Server-Side RBAC Enforcement
+- **Decision:** Enforce all role permissions (`require_permission`) and tenant module entitlements (`require_module_entitlement`) at the FastAPI dependency injection layer (`Depends(require_permission("..."))`).
+- **Context:** Rule 5 strictly forbids relying on UI button hiding. Sub-users trying to edit or delete bills, access ledgers, or create users receive a strict `403 Forbidden` response at the HTTP layer.
+- **Date:** 2026-09-13
