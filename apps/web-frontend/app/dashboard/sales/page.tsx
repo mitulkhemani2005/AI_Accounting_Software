@@ -30,10 +30,14 @@ import {
   Banknote,
   Loader2,
   X,
+  Edit2,
+  PlusCircle,
+  Save,
 } from "lucide-react";
 
 interface BillItem {
-  id: string;
+  id?: string;
+  item_id?: string;
   item_name: string;
   hsn_code?: string;
   quantity: number;
@@ -54,6 +58,7 @@ interface Bill {
   id: string;
   bill_number: string;
   type: string;
+  party_id?: string;
   party_name: string;
   party_mobile?: string;
   party_gst?: string;
@@ -83,6 +88,8 @@ interface Bill {
 export default function SalesPage() {
   const { user, tenant, isAdmin } = useAuth();
   const [bills, setBills] = useState<Bill[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [catalog, setCatalog] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
@@ -92,6 +99,22 @@ export default function SalesPage() {
   const [isVoiding, setIsVoiding] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Edit Bill Modal State (Admin only)
+  const [editingBill, setEditingBill] = useState<Bill | null>(null);
+  const [editPartyId, setEditPartyId] = useState("");
+  const [editPartyName, setEditPartyName] = useState("");
+  const [editPartyMobile, setEditPartyMobile] = useState("");
+  const [editPartyGst, setEditPartyGst] = useState("");
+  const [editIsInterstate, setEditIsInterstate] = useState(false);
+  const [editPaymentMode, setEditPaymentMode] = useState<"cash" | "credit">("cash");
+  const [editPaymentStatus, setEditPaymentStatus] = useState<"paid" | "partial" | "unpaid">("paid");
+  const [editPaidAmount, setEditPaidAmount] = useState<number>(0);
+  const [editDiscount, setEditDiscount] = useState<number>(0);
+  const [editNotes, setEditNotes] = useState("");
+  const [editItems, setEditItems] = useState<BillItem[]>([]);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [selectedCatalogItemToAdd, setSelectedCatalogItemToAdd] = useState("");
 
   const fetchBills = async () => {
     setLoading(true);
@@ -113,8 +136,22 @@ export default function SalesPage() {
     }
   };
 
+  const fetchAuxData = async () => {
+    try {
+      const [custRes, itemRes] = await Promise.all([
+        api.get("/parties/customers"),
+        api.get("/items"),
+      ]);
+      setCustomers(custRes.data);
+      setCatalog(itemRes.data);
+    } catch (e) {
+      console.error("Failed to load auxiliary data:", e);
+    }
+  };
+
   useEffect(() => {
     fetchBills();
+    fetchAuxData();
   }, [paymentStatusFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -177,6 +214,301 @@ export default function SalesPage() {
     }
   };
 
+  // --- Line Item Calculations for Editing ---
+  const calculateEditLineItem = (
+    item: {
+      rate: number;
+      quantity: number;
+      discount_amount?: number;
+      gst_rate: number;
+      is_tax_inclusive?: boolean;
+    },
+    interstate: boolean
+  ) => {
+    const raw = item.quantity * item.rate;
+    const netAmount = Math.max(0, raw - (item.discount_amount || 0));
+    const gstRate = item.gst_rate || 0;
+    let taxable = 0,
+      cgst = 0,
+      sgst = 0,
+      igst = 0,
+      total = 0;
+
+    if (item.is_tax_inclusive && gstRate > 0) {
+      taxable = Math.round((netAmount / (1 + gstRate / 100)) * 100) / 100;
+      const totalGst = Math.round((netAmount - taxable) * 100) / 100;
+      total = netAmount;
+
+      if (interstate) {
+        igst = totalGst;
+      } else {
+        cgst = Math.round((totalGst / 2) * 100) / 100;
+        sgst = Math.round((totalGst - cgst) * 100) / 100;
+      }
+    } else {
+      taxable = netAmount;
+      if (interstate) {
+        igst = Math.round(taxable * (gstRate / 100) * 100) / 100;
+      } else {
+        const halfRate = gstRate / 2;
+        cgst = Math.round(taxable * (halfRate / 100) * 100) / 100;
+        sgst = Math.round(taxable * (halfRate / 100) * 100) / 100;
+      }
+      total = Math.round((taxable + cgst + sgst + igst) * 100) / 100;
+    }
+
+    return { taxable, cgst, sgst, igst, total };
+  };
+
+  const openEditModal = (bill: Bill) => {
+    setEditingBill(bill);
+    setEditPartyId(bill.party_id || "");
+    setEditPartyName(bill.party_name);
+    setEditPartyMobile(bill.party_mobile || "");
+    setEditPartyGst(bill.party_gst || "");
+    setEditIsInterstate(bill.is_interstate);
+    const mode = bill.payment_mode === "credit" ? "credit" : "cash";
+    setEditPaymentMode(mode);
+    setEditPaymentStatus(bill.payment_status as any);
+    setEditPaidAmount(bill.paid_amount);
+    setEditDiscount(bill.discount_amount);
+    setEditNotes(bill.notes || "");
+    setEditItems(
+      (bill.items || []).map((i) => ({
+        ...i,
+        purchase_price: i.purchase_price || 0,
+        is_tax_inclusive: i.is_tax_inclusive || false,
+      }))
+    );
+  };
+
+  const updateEditItemQty = (idx: number, newQty: number) => {
+    if (newQty <= 0) return;
+    setEditItems((prev) => {
+      const updated = [...prev];
+      const item = updated[idx];
+      const calc = calculateEditLineItem(
+        {
+          rate: item.rate,
+          quantity: newQty,
+          discount_amount: item.discount_amount,
+          gst_rate: item.gst_rate,
+          is_tax_inclusive: item.is_tax_inclusive,
+        },
+        editIsInterstate
+      );
+      updated[idx] = {
+        ...item,
+        quantity: newQty,
+        taxable_amount: calc.taxable,
+        cgst_amount: calc.cgst,
+        sgst_amount: calc.sgst,
+        igst_amount: calc.igst,
+        total_amount: calc.total,
+      };
+      return updated;
+    });
+  };
+
+  const updateEditItemRate = (idx: number, newRate: number) => {
+    setEditItems((prev) => {
+      const updated = [...prev];
+      const item = updated[idx];
+      const calc = calculateEditLineItem(
+        {
+          rate: newRate,
+          quantity: item.quantity,
+          discount_amount: item.discount_amount,
+          gst_rate: item.gst_rate,
+          is_tax_inclusive: item.is_tax_inclusive,
+        },
+        editIsInterstate
+      );
+      updated[idx] = {
+        ...item,
+        rate: newRate,
+        taxable_amount: calc.taxable,
+        cgst_amount: calc.cgst,
+        sgst_amount: calc.sgst,
+        igst_amount: calc.igst,
+        total_amount: calc.total,
+      };
+      return updated;
+    });
+  };
+
+  const updateEditItemPurchasePrice = (idx: number, newCost: number) => {
+    setEditItems((prev) => {
+      const updated = [...prev];
+      updated[idx] = {
+        ...updated[idx],
+        purchase_price: newCost,
+      };
+      return updated;
+    });
+  };
+
+  const updateEditItemGst = (idx: number, newGst: number) => {
+    setEditItems((prev) => {
+      const updated = [...prev];
+      const item = updated[idx];
+      const calc = calculateEditLineItem(
+        {
+          rate: item.rate,
+          quantity: item.quantity,
+          discount_amount: item.discount_amount,
+          gst_rate: newGst,
+          is_tax_inclusive: item.is_tax_inclusive,
+        },
+        editIsInterstate
+      );
+      updated[idx] = {
+        ...item,
+        gst_rate: newGst,
+        taxable_amount: calc.taxable,
+        cgst_amount: calc.cgst,
+        sgst_amount: calc.sgst,
+        igst_amount: calc.igst,
+        total_amount: calc.total,
+      };
+      return updated;
+    });
+  };
+
+  const toggleEditItemTaxInclusive = (idx: number) => {
+    setEditItems((prev) => {
+      const updated = [...prev];
+      const item = updated[idx];
+      const newInc = !item.is_tax_inclusive;
+      const calc = calculateEditLineItem(
+        {
+          rate: item.rate,
+          quantity: item.quantity,
+          discount_amount: item.discount_amount,
+          gst_rate: item.gst_rate,
+          is_tax_inclusive: newInc,
+        },
+        editIsInterstate
+      );
+      updated[idx] = {
+        ...item,
+        is_tax_inclusive: newInc,
+        taxable_amount: calc.taxable,
+        cgst_amount: calc.cgst,
+        sgst_amount: calc.sgst,
+        igst_amount: calc.igst,
+        total_amount: calc.total,
+      };
+      return updated;
+    });
+  };
+
+  const removeEditItem = (idx: number) => {
+    if (editItems.length === 1) {
+      alert("A bill must have at least one item.");
+      return;
+    }
+    setEditItems((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const addProductToEditBill = (productId: string) => {
+    if (!productId) return;
+    const product = catalog.find((c) => c.id === productId);
+    if (!product) return;
+
+    const isTaxInc = product.is_tax_inclusive || false;
+    const calc = calculateEditLineItem(
+      {
+        rate: product.sale_price,
+        quantity: 1,
+        discount_amount: 0,
+        gst_rate: product.gst_rate,
+        is_tax_inclusive: isTaxInc,
+      },
+      editIsInterstate
+    );
+
+    const newItem: BillItem = {
+      item_id: product.id,
+      item_name: product.name,
+      hsn_code: product.hsn_code,
+      quantity: 1,
+      unit: product.unit || "PCS",
+      rate: product.sale_price,
+      purchase_price: product.purchase_price || 0,
+      discount_amount: 0,
+      gst_rate: product.gst_rate,
+      is_tax_inclusive: isTaxInc,
+      taxable_amount: calc.taxable,
+      cgst_amount: calc.cgst,
+      sgst_amount: calc.sgst,
+      igst_amount: calc.igst,
+      total_amount: calc.total,
+    };
+
+    setEditItems((prev) => [...prev, newItem]);
+    setSelectedCatalogItemToAdd("");
+  };
+
+  // Edit Form Totals
+  const editSubtotal = editItems.reduce((sum, i) => sum + i.taxable_amount, 0);
+  const editTaxable = Math.max(0, editSubtotal - (editDiscount || 0));
+  const editCgst = editItems.reduce((sum, i) => sum + i.cgst_amount, 0);
+  const editSgst = editItems.reduce((sum, i) => sum + i.sgst_amount, 0);
+  const editIgst = editItems.reduce((sum, i) => sum + i.igst_amount, 0);
+  const editTotalGst = editCgst + editSgst + editIgst;
+  const editRawTotal = editTaxable + editTotalGst;
+  const editGrandTotal = Math.round(editRawTotal);
+  const editRoundOff = Math.round((editGrandTotal - editRawTotal) * 100) / 100;
+
+  const handleSaveEdit = async () => {
+    if (!editingBill) return;
+    if (editItems.length === 0) {
+      alert("At least one item is required.");
+      return;
+    }
+    setIsSavingEdit(true);
+    try {
+      const payload = {
+        party_id: editPartyId || undefined,
+        party_name: editPartyName.trim() || "Cash Customer",
+        party_mobile: editPartyMobile.trim() || undefined,
+        party_gst: editPartyGst.trim() || undefined,
+        is_interstate: editIsInterstate,
+        payment_mode: editPaymentMode,
+        payment_status: editPaymentStatus,
+        paid_amount: editPaymentMode === "cash" && editPaymentStatus === "paid" ? editGrandTotal : editPaidAmount,
+        discount_amount: editDiscount || 0,
+        notes: editNotes.trim() || undefined,
+        items: editItems.map((i) => ({
+          item_id: i.item_id,
+          item_name: i.item_name,
+          hsn_code: i.hsn_code,
+          quantity: i.quantity,
+          unit: i.unit,
+          rate: i.rate,
+          purchase_price: i.purchase_price || 0,
+          discount_amount: i.discount_amount || 0,
+          gst_rate: i.gst_rate,
+          is_tax_inclusive: i.is_tax_inclusive || false,
+        })),
+      };
+
+      const res = await api.put(`/bills/${editingBill.id}`, payload);
+      setSuccessMsg(`Bill #${editingBill.bill_number} updated successfully!`);
+      setEditingBill(null);
+      if (selectedBill?.id === editingBill.id) {
+        setSelectedBill(res.data);
+      }
+      fetchBills();
+    } catch (err: any) {
+      console.error("Failed to update bill:", err);
+      alert(err.response?.data?.detail || "Failed to update bill. Please check values.");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   // Filter bills
   const filteredBills = bills.filter((b) => {
     const matchesMode = paymentModeFilter === "all" || b.payment_mode === paymentModeFilter;
@@ -194,7 +526,7 @@ export default function SalesPage() {
   const totalSalesRevenue = bills.filter((b) => b.status !== "void").reduce((sum, b) => sum + b.total_amount, 0);
   const totalGstCollected = bills.filter((b) => b.status !== "void").reduce((sum, b) => sum + b.gst_amount, 0);
   const cashSales = bills.filter((b) => b.status !== "void" && b.payment_mode === "cash").reduce((sum, b) => sum + b.total_amount, 0);
-  const upiSales = bills.filter((b) => b.status !== "void" && b.payment_mode === "upi").reduce((sum, b) => sum + b.total_amount, 0);
+  const creditSales = bills.filter((b) => b.status !== "void" && b.payment_mode === "credit").reduce((sum, b) => sum + b.total_amount, 0);
   const creditOutstanding = bills
     .filter((b) => b.status !== "void" && (b.payment_mode === "credit" || b.payment_status in ["unpaid", "partial"]))
     .reduce((sum, b) => sum + (b.total_amount - b.paid_amount), 0);
@@ -273,14 +605,14 @@ export default function SalesPage() {
 
           <div className="glass-panel" style={{ padding: "16px", borderLeft: "4px solid #8b5cf6" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-              <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Cash vs UPI Split</span>
-              <QrCode size={18} color="#8b5cf6" />
+              <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Cash vs Credit Split</span>
+              <Banknote size={18} color="#8b5cf6" />
             </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 700 }}>
-              Cash: ₹{cashSales.toFixed(0)} | UPI: ₹{upiSales.toFixed(0)}
+            <div style={{ fontSize: "1.15rem", fontWeight: 700 }}>
+              Cash: ₹{cashSales.toFixed(0)} | Credit: ₹{creditSales.toFixed(0)}
             </div>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-              Immediate settlements
+              Cash collected vs Khata sales
             </div>
           </div>
 
@@ -346,18 +678,16 @@ export default function SalesPage() {
               <option value="unpaid">Unpaid / Khata Credit</option>
             </select>
 
-            {/* Payment Mode Filter */}
+            {/* Payment Mode Filter - ONLY 2 OPTIONS: Cash or Credit */}
             <select
               className="input-field"
               value={paymentModeFilter}
               onChange={(e) => setPaymentModeFilter(e.target.value)}
               style={{ width: "auto", fontSize: "0.85rem", padding: "8px 12px" }}
             >
-              <option value="all">All Payment Modes</option>
-              <option value="cash">Cash</option>
-              <option value="upi">UPI / QR</option>
-              <option value="card">Card</option>
-              <option value="credit">Khata (Credit)</option>
+              <option value="all">All Modes (Cash & Credit)</option>
+              <option value="cash">💵 Cash Only</option>
+              <option value="credit">📒 Credit (Khata) Only</option>
             </select>
           </div>
         </div>
@@ -431,8 +761,16 @@ export default function SalesPage() {
 
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span className="badge" style={{ background: "rgba(30, 41, 59, 0.7)", textTransform: "uppercase", fontSize: "0.7rem" }}>
-                          {bill.payment_mode}
+                        <span
+                          className="badge"
+                          style={{
+                            background: bill.payment_mode === "credit" ? "rgba(245, 158, 11, 0.2)" : "rgba(16, 185, 129, 0.2)",
+                            color: bill.payment_mode === "credit" ? "#fbbf24" : "#34d399",
+                            textTransform: "uppercase",
+                            fontSize: "0.7rem",
+                          }}
+                        >
+                          {bill.payment_mode === "credit" ? "Credit (Khata)" : "Cash"}
                         </span>
                         <span
                           className={`badge ${
@@ -478,22 +816,49 @@ export default function SalesPage() {
 
                     <td style={{ textAlign: "right" }}>
                       <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                        {/* View Button */}
                         <button
                           onClick={() => setSelectedBill(bill)}
                           className="btn-secondary"
-                          style={{ padding: "6px 10px", fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "4px" }}
+                          style={{ padding: "6px 8px", fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "4px" }}
                           title="View Invoice Details"
                         >
-                          <Eye size={14} /> View
+                          <Eye size={14} />
                         </button>
+
+                        {/* Admin Edit Button */}
+                        {isAdmin && bill.status !== "void" && (
+                          <button
+                            onClick={() => openEditModal(bill)}
+                            className="btn-secondary"
+                            style={{ padding: "6px 8px", color: "#38bdf8", borderColor: "rgba(56, 189, 248, 0.4)" }}
+                            title="Edit Bill (Admin Override)"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        )}
+
+                        {/* Print Receipt */}
+                        <button
+                          onClick={() => handlePrintReceipt(bill)}
+                          className="btn-secondary"
+                          style={{ padding: "6px 8px" }}
+                          title="Print Thermal Receipt"
+                        >
+                          <Printer size={14} />
+                        </button>
+
+                        {/* Download PDF */}
                         <button
                           onClick={() => handleDownloadPdf(bill.id, bill.bill_number)}
                           className="btn-secondary"
                           style={{ padding: "6px 8px" }}
                           title="Download Tax Invoice PDF"
                         >
-                          <Printer size={14} />
+                          <FileText size={14} color="#60a5fa" />
                         </button>
+
+                        {/* WhatsApp */}
                         <button
                           onClick={() => handleWhatsAppShare(bill.id)}
                           className="btn-secondary"
@@ -502,6 +867,8 @@ export default function SalesPage() {
                         >
                           <Share2 size={14} color="#25D366" />
                         </button>
+
+                        {/* Void Button */}
                         {isAdmin && bill.status !== "void" && (
                           <button
                             onClick={() => handleVoidBill(bill.id)}
@@ -522,8 +889,392 @@ export default function SalesPage() {
         </div>
       </div>
 
-      {/* Full Invoice Details Modal */}
-      {selectedBill && (
+      {/* --- ADMIN FULL BILL EDITOR MODAL --- */}
+      {editingBill && (
+        <div className="modal-overlay no-print" onClick={() => setEditingBill(null)}>
+          <div
+            className="glass-panel"
+            style={{ width: "100%", maxWidth: "900px", maxHeight: "92vh", overflowY: "auto", padding: "24px", borderRadius: "14px", background: "#0f172a" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                  <span className="badge badge-purple">ADMIN BILL OVERRIDE</span>
+                  <span className="badge badge-blue">EDITING MODE</span>
+                </div>
+                <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>
+                  Edit Invoice: {editingBill.bill_number}
+                </h2>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                  Originally created by <strong>{editingBill.creator_name || "Counter Staff"}</strong> &bull; Changes will recalculate totals and update customer balances automatically.
+                </div>
+              </div>
+
+              <button onClick={() => setEditingBill(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Form Details Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" }}>
+              {/* Customer Selector */}
+              <div>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  Customer / Party
+                </label>
+                <select
+                  className="input-field"
+                  value={editPartyId}
+                  onChange={(e) => {
+                    const cid = e.target.value;
+                    setEditPartyId(cid);
+                    if (!cid) {
+                      setEditPartyName("Walk-in Cash Customer");
+                      setEditPartyMobile("");
+                      setEditPartyGst("");
+                    } else {
+                      const cust = customers.find((c) => c.id === cid);
+                      if (cust) {
+                        setEditPartyName(cust.name);
+                        setEditPartyMobile(cust.mobile || "");
+                        setEditPartyGst(cust.gst_number || "");
+                      }
+                    }
+                  }}
+                  style={{ fontSize: "0.85rem" }}
+                >
+                  <option value="">👤 Walk-in Cash Customer</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.mobile ? `(${c.mobile})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Customer Mobile & GST */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                <div>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                    Mobile Number
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={editPartyMobile}
+                    onChange={(e) => setEditPartyMobile(e.target.value)}
+                    placeholder="Mobile..."
+                    style={{ fontSize: "0.85rem" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                    GST Number
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={editPartyGst}
+                    onChange={(e) => setEditPartyGst(e.target.value)}
+                    placeholder="GSTIN..."
+                    style={{ fontSize: "0.85rem" }}
+                  />
+                </div>
+              </div>
+
+              {/* Payment Mode (ONLY CASH OR CREDIT) */}
+              <div>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  Payment Mode (2 Options)
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditPaymentMode("cash");
+                      setEditPaymentStatus("paid");
+                    }}
+                    style={{
+                      padding: "8px",
+                      borderRadius: "6px",
+                      fontWeight: 700,
+                      fontSize: "0.8rem",
+                      cursor: "pointer",
+                      border: editPaymentMode === "cash" ? "2px solid #10b981" : "1px solid var(--border)",
+                      background: editPaymentMode === "cash" ? "rgba(16, 185, 129, 0.25)" : "rgba(30, 41, 59, 0.4)",
+                      color: editPaymentMode === "cash" ? "#34d399" : "var(--text-muted)",
+                    }}
+                  >
+                    💵 CASH
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditPaymentMode("credit");
+                      setEditPaymentStatus("unpaid");
+                    }}
+                    style={{
+                      padding: "8px",
+                      borderRadius: "6px",
+                      fontWeight: 700,
+                      fontSize: "0.8rem",
+                      cursor: "pointer",
+                      border: editPaymentMode === "credit" ? "2px solid #f59e0b" : "1px solid var(--border)",
+                      background: editPaymentMode === "credit" ? "rgba(245, 158, 11, 0.25)" : "rgba(30, 41, 59, 0.4)",
+                      color: editPaymentMode === "credit" ? "#fbbf24" : "var(--text-muted)",
+                    }}
+                  >
+                    📒 CREDIT (KHATA)
+                  </button>
+                </div>
+              </div>
+
+              {/* Payment Status & Paid Amount */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                <div>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                    Payment Status
+                  </label>
+                  <select
+                    className="input-field"
+                    value={editPaymentStatus}
+                    onChange={(e) => setEditPaymentStatus(e.target.value as any)}
+                    style={{ fontSize: "0.85rem" }}
+                  >
+                    <option value="paid">Paid</option>
+                    <option value="partial">Partial</option>
+                    <option value="unpaid">Unpaid</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                    Paid Amount (₹)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="input-field"
+                    value={editPaidAmount}
+                    onChange={(e) => setEditPaidAmount(parseFloat(e.target.value) || 0)}
+                    style={{ fontSize: "0.85rem" }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Add Product from Catalog row */}
+            <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "12px", background: "rgba(30, 41, 59, 0.3)", padding: "8px 12px", borderRadius: "8px" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-muted)" }}>+ Add Product to Bill:</span>
+              <select
+                className="input-field"
+                value={selectedCatalogItemToAdd}
+                onChange={(e) => {
+                  setSelectedCatalogItemToAdd(e.target.value);
+                  addProductToEditBill(e.target.value);
+                }}
+                style={{ flex: 1, fontSize: "0.85rem" }}
+              >
+                <option value="">Select an item from catalog to add...</option>
+                {catalog.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} — ₹{c.sale_price} ({c.gst_rate}% GST)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Editable Items Table */}
+            <div style={{ overflowX: "auto", marginBottom: "16px" }}>
+              <table className="custom-table" style={{ fontSize: "0.825rem" }}>
+                <thead>
+                  <tr>
+                    <th>Item Name</th>
+                    <th style={{ width: "70px", textAlign: "center" }}>Qty</th>
+                    <th style={{ width: "95px" }}>Selling ₹</th>
+                    <th style={{ width: "95px" }}>Cost ₹</th>
+                    <th style={{ width: "80px" }}>GST %</th>
+                    <th style={{ width: "90px" }}>Tax Mode</th>
+                    <th style={{ textAlign: "right" }}>Line Total</th>
+                    <th style={{ width: "40px" }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {editItems.map((item, idx) => (
+                    <tr key={idx}>
+                      <td>
+                        <input
+                          type="text"
+                          className="input-field"
+                          value={item.item_name}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditItems((prev) => {
+                              const updated = [...prev];
+                              updated[idx] = { ...updated[idx], item_name: val };
+                              return updated;
+                            });
+                          }}
+                          style={{ padding: "4px 8px", fontSize: "0.8rem" }}
+                        />
+                      </td>
+
+                      <td>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          className="input-field"
+                          value={item.quantity}
+                          onChange={(e) => updateEditItemQty(idx, parseFloat(e.target.value) || 1)}
+                          style={{ padding: "4px 6px", fontSize: "0.8rem", textAlign: "center" }}
+                        />
+                      </td>
+
+                      <td>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="input-field"
+                          value={item.rate}
+                          onChange={(e) => updateEditItemRate(idx, parseFloat(e.target.value) || 0)}
+                          style={{ padding: "4px 6px", fontSize: "0.8rem", color: "#38bdf8", fontWeight: 600 }}
+                        />
+                      </td>
+
+                      <td>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="input-field"
+                          value={item.purchase_price ?? 0}
+                          onChange={(e) => updateEditItemPurchasePrice(idx, parseFloat(e.target.value) || 0)}
+                          style={{ padding: "4px 6px", fontSize: "0.8rem", color: "#f59e0b", fontWeight: 600 }}
+                        />
+                      </td>
+
+                      <td>
+                        <select
+                          className="input-field"
+                          value={item.gst_rate}
+                          onChange={(e) => updateEditItemGst(idx, parseFloat(e.target.value) || 0)}
+                          style={{ padding: "4px 6px", fontSize: "0.8rem" }}
+                        >
+                          <option value="0">0%</option>
+                          <option value="5">5%</option>
+                          <option value="12">12%</option>
+                          <option value="18">18%</option>
+                          <option value="28">28%</option>
+                        </select>
+                      </td>
+
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => toggleEditItemTaxInclusive(idx)}
+                          style={{
+                            padding: "3px 6px",
+                            borderRadius: "4px",
+                            fontSize: "0.65rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            border: "1px solid var(--border)",
+                            background: item.is_tax_inclusive ? "rgba(59, 130, 246, 0.2)" : "rgba(100, 116, 139, 0.2)",
+                            color: item.is_tax_inclusive ? "#60a5fa" : "#94a3b8",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {item.is_tax_inclusive ? "MRP Incl." : "Exclusive"}
+                        </button>
+                      </td>
+
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "#34d399", fontSize: "0.9rem" }}>
+                        ₹{item.total_amount.toFixed(2)}
+                      </td>
+
+                      <td style={{ textAlign: "center" }}>
+                        <button
+                          type="button"
+                          onClick={() => removeEditItem(idx)}
+                          style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer" }}
+                          title="Remove Item"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Totals & Notes Section */}
+            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "16px", marginBottom: "16px" }}>
+              <div>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  Invoice Notes
+                </label>
+                <textarea
+                  className="input-field"
+                  rows={3}
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Optional notes or remarks..."
+                  style={{ fontSize: "0.85rem", resize: "none" }}
+                />
+              </div>
+
+              <div style={{ background: "rgba(30, 41, 59, 0.4)", padding: "12px 16px", borderRadius: "8px", fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--text-muted)" }}>Subtotal (Taxable):</span>
+                  <span>₹{editTaxable.toFixed(2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--text-muted)" }}>Total GST:</span>
+                  <span>₹{editTotalGst.toFixed(2)}</span>
+                </div>
+                {editRoundOff !== 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "var(--text-muted)" }}>Round Off:</span>
+                    <span>₹{editRoundOff.toFixed(2)}</span>
+                  </div>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "6px", borderTop: "1px solid var(--border)", fontSize: "1.15rem", fontWeight: 700, color: "#34d399" }}>
+                  <span>Grand Total:</span>
+                  <span>₹{editGrandTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions Toolbar */}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", borderTop: "1px solid var(--border)", paddingTop: "14px" }}>
+              <button
+                type="button"
+                onClick={() => setEditingBill(null)}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={isSavingEdit}
+                className="btn-primary"
+                style={{ display: "flex", alignItems: "center", gap: "6px", background: "#3b82f6" }}
+              >
+                {isSavingEdit ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save Changes & Recalculate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- FULL INVOICE DETAILS MODAL (VIEW) --- */}
+      {selectedBill && !editingBill && (
         <div className="modal-overlay no-print" onClick={() => setSelectedBill(null)}>
           <div
             className="glass-panel"
@@ -563,7 +1314,7 @@ export default function SalesPage() {
 
               <div>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Payment & Tax Supply</div>
-                <div>Payment Mode: <strong style={{ textTransform: "uppercase" }}>{selectedBill.payment_mode}</strong></div>
+                <div>Payment Mode: <strong style={{ textTransform: "uppercase" }}>{selectedBill.payment_mode === "credit" ? "Credit (Khata)" : "Cash"}</strong></div>
                 <div>Payment Status: <strong style={{ textTransform: "capitalize" }}>{selectedBill.payment_status}</strong> (Paid ₹{selectedBill.paid_amount.toFixed(2)})</div>
                 <div>Place of Supply: <strong>{selectedBill.is_interstate ? "Inter-state (IGST)" : "Intra-state (CGST+SGST)"}</strong></div>
               </div>
@@ -587,7 +1338,7 @@ export default function SalesPage() {
                 </thead>
                 <tbody>
                   {selectedBill.items?.map((item) => (
-                    <tr key={item.id}>
+                    <tr key={item.id || item.item_name}>
                       <td style={{ fontWeight: 500 }}>
                         {item.item_name}
                         {item.is_tax_inclusive && (
@@ -655,16 +1406,30 @@ export default function SalesPage() {
 
             {/* Actions Toolbar */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border)", paddingTop: "16px", flexWrap: "wrap", gap: "10px" }}>
-              <div>
+              <div style={{ display: "flex", gap: "8px" }}>
                 {isAdmin && selectedBill.status !== "void" && (
-                  <button
-                    onClick={() => handleVoidBill(selectedBill.id)}
-                    disabled={isVoiding}
-                    className="btn-danger"
-                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                  >
-                    <Trash2 size={16} /> Void Invoice
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        const b = selectedBill;
+                        setSelectedBill(null);
+                        openEditModal(b);
+                      }}
+                      className="btn-primary"
+                      style={{ display: "flex", alignItems: "center", gap: "6px", background: "#3b82f6" }}
+                    >
+                      <Edit2 size={16} /> Edit Bill
+                    </button>
+
+                    <button
+                      onClick={() => handleVoidBill(selectedBill.id)}
+                      disabled={isVoiding}
+                      className="btn-danger"
+                      style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                    >
+                      <Trash2 size={16} /> Void Invoice
+                    </button>
+                  </>
                 )}
               </div>
 
@@ -684,7 +1449,7 @@ export default function SalesPage() {
                   className="btn-primary"
                   style={{ display: "flex", alignItems: "center", gap: "6px" }}
                 >
-                  {isDownloadingPdf ? <Loader2 className="animate-spin" size={16} /> : <Printer size={16} />} Download A4 PDF
+                  {isDownloadingPdf ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />} Download A4 PDF
                 </button>
               </div>
             </div>
@@ -692,7 +1457,7 @@ export default function SalesPage() {
         </div>
       )}
 
-      {/* PRINTABLE THERMAL RECEIPT CONTAINER (Activated only on window.print) */}
+      {/* --- PRINTABLE THERMAL RECEIPT CONTAINER --- */}
       {selectedBill && (
         <div className="print-only" style={{ padding: "10px", fontFamily: "monospace", fontSize: "12px", width: "300px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", borderBottom: "1px dashed #000", paddingBottom: "8px", marginBottom: "8px" }}>
@@ -744,7 +1509,7 @@ export default function SalesPage() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
               <span>Payment Mode:</span>
-              <span style={{ textTransform: "uppercase" }}>{selectedBill.payment_mode}</span>
+              <span style={{ textTransform: "uppercase" }}>{selectedBill.payment_mode === "credit" ? "Credit (Khata)" : "Cash"}</span>
             </div>
           </div>
 

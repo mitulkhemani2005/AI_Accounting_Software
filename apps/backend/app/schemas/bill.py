@@ -33,13 +33,18 @@ class BillCreateRequest(BaseModel):
 
 
 class BillUpdateRequest(BaseModel):
+    party_id: Optional[str] = None
     party_name: Optional[str] = None
     party_mobile: Optional[str] = None
+    party_gst: Optional[str] = None
+    is_interstate: Optional[bool] = None
+    discount_amount: Optional[float] = None
     payment_mode: Optional[str] = None
     payment_status: Optional[str] = None
     paid_amount: Optional[float] = None
     status: Optional[str] = Field(None, description="active, void")
     notes: Optional[str] = None
+    items: Optional[List[BillItemInput]] = None
 
 
 class BillItemResponse(BaseModel):

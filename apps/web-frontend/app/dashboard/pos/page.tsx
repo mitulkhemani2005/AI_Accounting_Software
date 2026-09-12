@@ -69,7 +69,7 @@ export default function POSPage() {
   const [customerBalance, setCustomerBalance] = useState<number>(0);
   const [isInterstate, setIsInterstate] = useState(false);
   const [overallDiscount, setOverallDiscount] = useState("0");
-  const [paymentMode, setPaymentMode] = useState<"cash" | "upi" | "card" | "credit">("cash");
+  const [paymentMode, setPaymentMode] = useState<"cash" | "credit">("cash");
   const [notes, setNotes] = useState("");
 
   // Customer Quick-Add Modal
@@ -983,34 +983,58 @@ export default function POSPage() {
               <span style={{ color: "#34d399" }}>₹{grandTotal.toFixed(2)}</span>
             </div>
 
-            {/* Payment Mode Selector */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "6px", margin: "8px 0" }}>
-              {(["cash", "upi", "card", "credit"] as const).map((mode) => {
-                const isSelected = paymentMode === mode;
-                const isCreditDisabled = mode === "credit" && partyType !== "customer";
+            {/* Payment Mode Selector - ONLY CASH & CREDIT */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", margin: "10px 0" }}>
+              <button
+                type="button"
+                onClick={() => setPaymentMode("cash")}
+                style={{
+                  padding: "10px 8px",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  border: paymentMode === "cash" ? "2px solid #10b981" : "1px solid var(--border)",
+                  background: paymentMode === "cash" ? "rgba(16, 185, 129, 0.25)" : "rgba(30, 41, 59, 0.4)",
+                  color: paymentMode === "cash" ? "#34d399" : "var(--text-muted)",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                💵 CASH
+              </button>
 
-                return (
-                  <button
-                    key={mode}
-                    type="button"
-                    disabled={isCreditDisabled}
-                    onClick={() => setPaymentMode(mode)}
-                    style={{
-                      padding: "8px 4px",
-                      borderRadius: "6px",
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      border: isSelected ? "1px solid #3b82f6" : "1px solid var(--border)",
-                      background: isSelected ? "rgba(37, 99, 235, 0.4)" : "rgba(30, 41, 59, 0.4)",
-                      color: isCreditDisabled ? "#64748b" : isSelected ? "#fff" : "var(--text-muted)",
-                      cursor: isCreditDisabled ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    {mode === "credit" ? "Khata (Credit)" : mode}
-                  </button>
-                );
-              })}
+              <button
+                type="button"
+                onClick={() => {
+                  if (partyType !== "customer" || !selectedCustomerId) {
+                    alert("Please select or add a Customer above to create a Credit / Khata bill.");
+                    setShowAddCustomerModal(true);
+                    return;
+                  }
+                  setPaymentMode("credit");
+                }}
+                style={{
+                  padding: "10px 8px",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  border: paymentMode === "credit" ? "2px solid #f59e0b" : "1px solid var(--border)",
+                  background: paymentMode === "credit" ? "rgba(245, 158, 11, 0.25)" : "rgba(30, 41, 59, 0.4)",
+                  color: paymentMode === "credit" ? "#fbbf24" : "var(--text-muted)",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                📒 CREDIT (KHATA)
+              </button>
             </div>
 
             {/* Checkout Button */}

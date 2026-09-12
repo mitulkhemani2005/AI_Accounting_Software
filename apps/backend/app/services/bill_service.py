@@ -285,7 +285,8 @@ async def update_bill_by_admin(
     payload: BillUpdateRequest,
     client_ip: Optional[str] = None
 ) -> BillResponse:
-    """Admin edits, corrects, or voids a bill"""
+    """Admin edits, corrects, or updates a bill at any time, including line items, prices, parties, and payments"""
+    from sqlalchemy import delete
     result = await db.execute(
         select(Bill).where(Bill.tenant_id == tenant_id, Bill.id == bill_id)
     )
@@ -293,9 +294,127 @@ async def update_bill_by_admin(
     if not bill:
         raise HTTPException(status_code=404, detail="Bill not found")
 
-    update_data = payload.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(bill, key, value)
+    old_party_id = bill.party_id
+    old_total = bill.total_amount
+    old_paid = bill.paid_amount
+    old_unpaid = (old_total - old_paid) if (bill.payment_mode == "credit" or bill.payment_status in ["unpaid", "partial"]) else 0.0
+
+    # 1. Update basic fields if supplied
+    if payload.party_name is not None:
+        bill.party_name = payload.party_name
+    if payload.party_mobile is not None:
+        bill.party_mobile = payload.party_mobile
+    if payload.party_gst is not None:
+        bill.party_gst = payload.party_gst
+    if payload.party_id is not None:
+        bill.party_id = payload.party_id if payload.party_id != "" else None
+    if payload.is_interstate is not None:
+        bill.is_interstate = payload.is_interstate
+    if payload.payment_mode is not None:
+        bill.payment_mode = payload.payment_mode
+    if payload.payment_status is not None:
+        bill.payment_status = payload.payment_status
+    if payload.paid_amount is not None:
+        bill.paid_amount = payload.paid_amount
+    if payload.status is not None:
+        bill.status = payload.status
+    if payload.notes is not None:
+        bill.notes = payload.notes
+    if payload.discount_amount is not None:
+        bill.discount_amount = payload.discount_amount
+
+    # 2. If items are provided, recompute all line items and bill totals
+    if payload.items is not None and len(payload.items) > 0:
+        is_interstate = bill.is_interstate
+        items_breakdown = []
+        for itm in payload.items:
+            calc = calculate_line_item(
+                rate=itm.rate,
+                quantity=itm.quantity,
+                discount_amount=itm.discount_amount,
+                gst_rate=itm.gst_rate,
+                is_interstate=is_interstate,
+                is_tax_inclusive=itm.is_tax_inclusive
+            )
+            items_breakdown.append({
+                "item_id": itm.item_id,
+                "item_name": itm.item_name,
+                "hsn_code": itm.hsn_code,
+                "quantity": itm.quantity,
+                "unit": itm.unit,
+                "rate": itm.rate,
+                "purchase_price": itm.purchase_price or 0.0,
+                "discount_amount": itm.discount_amount,
+                "gst_rate": itm.gst_rate,
+                "is_tax_inclusive": itm.is_tax_inclusive,
+                "taxable_amount": calc["taxable_amount"],
+                "cgst_amount": calc["cgst_amount"],
+                "sgst_amount": calc["sgst_amount"],
+                "igst_amount": calc["igst_amount"],
+                "total_amount": calc["total_amount"],
+            })
+
+        discount_val = bill.discount_amount if bill.discount_amount is not None else 0.0
+        totals = calculate_bill_totals(items=items_breakdown, overall_discount=discount_val)
+
+        bill.subtotal = totals["subtotal"]
+        bill.taxable_amount = totals["taxable_amount"]
+        bill.gst_amount = totals["gst_amount"]
+        bill.cgst_amount = totals["cgst_amount"]
+        bill.sgst_amount = totals["sgst_amount"]
+        bill.igst_amount = totals["igst_amount"]
+        bill.round_off = totals["round_off"]
+        bill.total_amount = totals["total_amount"]
+
+        if bill.payment_mode == "cash" and bill.payment_status == "paid":
+            bill.paid_amount = bill.total_amount
+        elif bill.payment_mode == "credit" and bill.payment_status == "unpaid":
+            bill.paid_amount = 0.0
+
+        # Replace BillItem records
+        await db.execute(delete(BillItem).where(BillItem.bill_id == bill.id))
+        await db.flush()
+
+        for ib in items_breakdown:
+            bill_item = BillItem(
+                bill_id=bill.id,
+                item_id=ib["item_id"],
+                item_name=ib["item_name"],
+                hsn_code=ib["hsn_code"],
+                quantity=ib["quantity"],
+                unit=ib["unit"],
+                rate=ib["rate"],
+                purchase_price=ib.get("purchase_price", 0.0) or 0.0,
+                discount_amount=ib["discount_amount"],
+                gst_rate=ib["gst_rate"],
+                is_tax_inclusive=ib.get("is_tax_inclusive", False),
+                taxable_amount=ib["taxable_amount"],
+                cgst_amount=ib["cgst_amount"],
+                sgst_amount=ib["sgst_amount"],
+                igst_amount=ib["igst_amount"],
+                total_amount=ib["total_amount"]
+            )
+            db.add(bill_item)
+
+    # 3. Adjust customer balance if credit/unpaid debt changes
+    new_unpaid = (bill.total_amount - bill.paid_amount) if (bill.payment_mode == "credit" or bill.payment_status in ["unpaid", "partial"]) else 0.0
+
+    if old_party_id and old_party_id != bill.party_id:
+        old_cust_res = await db.execute(select(Customer).where(Customer.tenant_id == tenant_id, Customer.id == old_party_id))
+        old_cust = old_cust_res.scalar_one_or_none()
+        if old_cust:
+            old_cust.current_balance = max(0.0, old_cust.current_balance - old_unpaid)
+        if bill.party_id:
+            new_cust_res = await db.execute(select(Customer).where(Customer.tenant_id == tenant_id, Customer.id == bill.party_id))
+            new_cust = new_cust_res.scalar_one_or_none()
+            if new_cust:
+                new_cust.current_balance += new_unpaid
+    elif bill.party_id:
+        cust_res = await db.execute(select(Customer).where(Customer.tenant_id == tenant_id, Customer.id == bill.party_id))
+        cust = cust_res.scalar_one_or_none()
+        if cust:
+            diff = new_unpaid - old_unpaid
+            cust.current_balance += diff
 
     bill.is_reviewed_by_admin = True
     await db.commit()
@@ -308,7 +427,7 @@ async def update_bill_by_admin(
         action="UPDATE",
         entity_type="Bill",
         entity_id=bill.id,
-        details={"bill_number": bill.bill_number, "changes": update_data},
+        details={"bill_number": bill.bill_number, "total_amount": bill.total_amount},
         ip_address=client_ip
     )
 
