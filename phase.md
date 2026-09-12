@@ -39,19 +39,19 @@
 
 ## PHASE 2 — Billing & POS Module
 
-- [ ] Create `customers`, `suppliers`, `items` tables
-- [ ] Build item master CRUD (admin only)
-- [ ] Build customer/supplier master CRUD (admin only)
-- [ ] Build counter sale (POS) screen: quick add item, quantity, price, payment mode
-- [ ] Implement GST calculation logic on bills
-- [ ] Build `bills` and `bill_items` tables
-- [ ] Implement bill creation API (available to both admin and sub-user)
-- [ ] Enforce sub-user restriction: bill creation allowed, edit/delete blocked at API level
-- [ ] Build admin "Staff Bills Review" screen (admin can edit/correct sub-user bills)
-- [ ] Implement bill PDF generation
-- [ ] Implement WhatsApp/SMS bill sharing (via WhatsApp Business API)
-- [ ] Implement barcode scan support (mobile + web)
-- [ ] Implement offline bill creation + local queue + sync-on-reconnect logic
+- [x] Create `customers`, `suppliers`, `items` tables
+- [x] Build item master CRUD (admin only)
+- [x] Build customer/supplier master CRUD (admin only)
+- [x] Build counter sale (POS) screen: quick add item, quantity, price, payment mode
+- [x] Implement GST calculation logic on bills
+- [x] Build `bills` and `bill_items` tables
+- [x] Implement bill creation API (available to both admin and sub-user)
+- [x] Enforce sub-user restriction: bill creation allowed, edit/delete blocked at API level
+- [x] Build admin "Staff Bills Review" screen (admin can edit/correct sub-user bills)
+- [x] Implement bill PDF generation
+- [x] Implement WhatsApp/SMS bill sharing (via WhatsApp Business API)
+- [x] Implement barcode scan support (mobile + web)
+- [x] Implement offline bill creation + local queue + sync-on-reconnect logic
 
 **✅ Checkpoint:** Admin and sub-user can both create bills from web and mobile. Sub-user cannot edit/delete any bill (verify via direct API call, not just UI). Bills generate correctly with GST. Confirm before proceeding.
 

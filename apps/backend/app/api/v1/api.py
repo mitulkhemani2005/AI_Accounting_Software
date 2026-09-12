@@ -1,5 +1,14 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import health, auth, users, tenants, test_routes
+from app.api.v1.endpoints import (
+    health,
+    auth,
+    users,
+    tenants,
+    items,
+    parties,
+    bills,
+    test_routes,
+)
 
 api_router = APIRouter()
 
@@ -14,6 +23,15 @@ api_router.include_router(users.router, prefix="/users", tags=["Users & Staff Ma
 
 # Tenant & Organization
 api_router.include_router(tenants.router, prefix="/tenants", tags=["Tenants & Audit Trail"])
+
+# Catalog & Items Master (Phase 2)
+api_router.include_router(items.router, prefix="/items", tags=["Item Master & Barcodes"])
+
+# Customer & Supplier Parties (Phase 2)
+api_router.include_router(parties.router, prefix="/parties", tags=["Parties (Customers & Suppliers)"])
+
+# Billing & POS Transactions (Phase 2)
+api_router.include_router(bills.router, prefix="/bills", tags=["Billing & Point of Sale"])
 
 # RBAC Test Verification Routes
 api_router.include_router(test_routes.router, prefix="/test-rbac", tags=["RBAC & Security Verification"])

@@ -2,6 +2,9 @@ from app.db.base import Base, TimestampMixin
 from app.models.tenant import Tenant, ModuleEntitlement
 from app.models.user import Role, Permission, RolePermission, User
 from app.models.audit import AuditLog
+from app.models.party import Customer, Supplier
+from app.models.item import Item
+from app.models.bill import Bill, BillItem
 
 __all__ = [
     "Base",
@@ -12,5 +15,10 @@ __all__ = [
     "Permission",
     "RolePermission",
     "User",
-    "AuditLog"
+    "AuditLog",
+    "Customer",
+    "Supplier",
+    "Item",
+    "Bill",
+    "BillItem",
 ]

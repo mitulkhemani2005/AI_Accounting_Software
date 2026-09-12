@@ -61,3 +61,13 @@ This document tracks all key technical decisions, trade-offs, library selections
 - **Decision:** Enforce all role permissions (`require_permission`) and tenant module entitlements (`require_module_entitlement`) at the FastAPI dependency injection layer (`Depends(require_permission("..."))`).
 - **Context:** Rule 5 strictly forbids relying on UI button hiding. Sub-users trying to edit or delete bills, access ledgers, or create users receive a strict `403 Forbidden` response at the HTTP layer.
 - **Date:** 2026-09-13
+
+---
+
+## ADR 008: GST Calculation, Sequential Numbering & Offline Sync Idempotency
+- **Decision:**
+  - **GST Calculation Engine:** Supports intra-state (`CGST` + `SGST`, e.g., 9% + 9% = 18%) and inter-state (`IGST`, 18%) tax splits on taxable amounts after line item discounts, with standard commercial round-off to nearest rupee.
+  - **Sequential Bill Numbering:** Formatted as `INV-{FY}-{SEQ:05d}` with database locks preventing duplicate bill numbers.
+  - **Offline Sync Idempotency:** Offline POS billing generates client UUIDs (`offline_sync_id`). Batch sync endpoint `/api/v1/bills/sync` uses `offline_sync_id` to prevent duplicate billing entries upon network reconnections.
+  - **PDF Generation & Direct Sharing:** ReportLab generates A4 Tax Invoices server-side; WhatsApp direct share payload formats formatted text and wa.me direct links.
+- **Date:** 2026-09-13

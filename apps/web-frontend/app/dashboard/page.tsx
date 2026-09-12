@@ -102,11 +102,19 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <Link href="/dashboard/pos" className="btn-primary" style={{ background: "#10b981", borderColor: "#059669" }}>
+              <Receipt size={16} /> Open POS Counter
+            </Link>
             {isAdmin && (
-              <Link href="/dashboard/staff" className="btn-primary">
-                <Plus size={16} /> Manage Staff
-              </Link>
+              <>
+                <Link href="/dashboard/items" className="btn-secondary">
+                  <Package size={16} /> Product Master
+                </Link>
+                <Link href="/dashboard/staff" className="btn-secondary">
+                  <Plus size={16} /> Manage Staff
+                </Link>
+              </>
             )}
           </div>
         </div>

@@ -15,6 +15,9 @@ import {
   Sparkles,
   Lock,
   Building,
+  ClipboardCheck,
+  Contact,
+  Boxes,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -23,16 +26,19 @@ export function Sidebar() {
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, allowed: true },
+    { label: "POS Counter Sale", href: "/dashboard/pos", icon: Receipt, allowed: true },
+    { label: "Product Master", href: "/dashboard/items", icon: Package, adminOnly: true },
+    { label: "Parties & Khata", href: "/dashboard/parties", icon: Contact, adminOnly: true },
+    { label: "Staff Bills Review", href: "/dashboard/staff-bills", icon: ClipboardCheck, adminOnly: true },
     { label: "Staff & Sub-users", href: "/dashboard/staff", icon: Users, adminOnly: true },
     { label: "Audit Trail", href: "/dashboard/audit", icon: History, adminOnly: true },
   ];
 
   const upcomingModules = [
-    { label: "Billing & POS (Phase 2)", icon: Receipt, phase: "Phase 2" },
-    { label: "Inventory (Phase 3)", icon: Package, phase: "Phase 3" },
-    { label: "Accounting Engine (Phase 4)", icon: BookOpen, phase: "Phase 4" },
-    { label: "Outstanding Reports (Phase 5)", icon: FileText, phase: "Phase 5" },
-    { label: "AI Suggestions (Phase 7)", icon: Sparkles, phase: "Phase 7" },
+    { label: "Inventory & Godowns", icon: Boxes, phase: "Phase 3" },
+    { label: "Accounting Engine", icon: BookOpen, phase: "Phase 4" },
+    { label: "Outstanding Reports", icon: FileText, phase: "Phase 5" },
+    { label: "AI Suggestions", icon: Sparkles, phase: "Phase 7" },
   ];
 
   return (
