@@ -74,16 +74,56 @@ export default function POSPage() {
   const [overallDiscount, setOverallDiscount] = useState("0");
   const [paymentMode, setPaymentMode] = useState<"cash" | "credit">("cash");
   const [notes, setNotes] = useState("");
-  const [termsPreset, setTermsPreset] = useState<string>("standard");
-  const [customTerms, setCustomTerms] = useState<string>("");
 
-  const getEffectiveTerms = () => {
-    if (termsPreset === "none") return "";
-    if (termsPreset === "standard") return "1. Goods once sold will be accepted back within 7 days with original invoice.\n2. Certified that particulars given above are true & correct.\n3. Subject to local jurisdiction.";
-    if (termsPreset === "no_returns") return "1. Goods once sold will not be accepted back or exchanged.\n2. Certified that particulars given above are true & correct.\n3. Subject to local jurisdiction.";
-    if (termsPreset === "warranty") return "1. Standard manufacturer warranty terms apply.\n2. Physical or liquid damage is not covered under warranty.\n3. Subject to local jurisdiction.";
-    if (termsPreset === "custom") return customTerms;
-    return "";
+  const numberToWordsINR = (amount: number): string => {
+    try {
+      const units = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+        "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+      const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+      const convertBelowThousand = (n: number): string => {
+        let res = "";
+        if (n >= 100) {
+          res += units[Math.floor(n / 100)] + " Hundred ";
+          n %= 100;
+        }
+        if (n >= 20) {
+          res += tens[Math.floor(n / 10)] + " ";
+          n %= 10;
+        }
+        if (n > 0) {
+          res += units[n] + " ";
+        }
+        return res.trim();
+      };
+
+      let rupees = Math.floor(amount);
+      const paise = Math.round((amount - rupees) * 100);
+
+      if (rupees === 0) return "Rupees Zero Only";
+
+      const crores = Math.floor(rupees / 10000000);
+      rupees %= 10000000;
+      const lakhs = Math.floor(rupees / 100000);
+      rupees %= 100000;
+      const thousands = Math.floor(rupees / 1000);
+      rupees %= 1000;
+      const remainder = rupees;
+
+      const parts: string[] = [];
+      if (crores > 0) parts.push(convertBelowThousand(crores) + " Crore");
+      if (lakhs > 0) parts.push(convertBelowThousand(lakhs) + " Lakh");
+      if (thousands > 0) parts.push(convertBelowThousand(thousands) + " Thousand");
+      if (remainder > 0) parts.push(convertBelowThousand(remainder));
+
+      let words = "Rupees " + parts.join(" ").trim();
+      if (paise > 0) {
+        words += " and " + convertBelowThousand(paise) + " Paise";
+      }
+      return words + " Only";
+    } catch {
+      return `Rupees ${amount.toFixed(2)} Only`;
+    }
   };
 
   // Customer Quick-Add Modal
@@ -543,7 +583,6 @@ export default function POSPage() {
       party_mobile: customerMobile || undefined,
       party_gst: customerGst || undefined,
       party_address: partyType === "customer" ? customerAddress : undefined,
-      terms_conditions: getEffectiveTerms() || undefined,
       is_interstate: isInterstate,
       discount_amount: discountVal,
       payment_mode: paymentMode,
@@ -581,7 +620,6 @@ export default function POSPage() {
         party_mobile: customerMobile,
         party_address: customerAddress,
         party_gst: customerGst,
-        terms_conditions: getEffectiveTerms() || undefined,
         created_at: new Date().toISOString(),
       });
       setIsSubmitting(false);
@@ -1073,40 +1111,6 @@ export default function POSPage() {
               </button>
             </div>
 
-            {/* Terms & Conditions Selector (Owner Selected / Optional) */}
-            <div style={{ marginTop: "6px", marginBottom: "8px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>
-                  📜 Terms & Conditions (Optional)
-                </span>
-                <span style={{ fontSize: "0.7rem", color: termsPreset === "none" ? "#94a3b8" : "#38bdf8", fontWeight: 600 }}>
-                  {termsPreset === "none" ? "Omitted" : "Included on Bill"}
-                </span>
-              </div>
-              <select
-                className="input-field"
-                value={termsPreset}
-                onChange={(e) => setTermsPreset(e.target.value)}
-                style={{ fontSize: "0.78rem", padding: "6px 8px", width: "100%" }}
-              >
-                <option value="standard">Standard Return Policy (7 Days)</option>
-                <option value="no_returns">No Returns / Final Sale</option>
-                <option value="warranty">Standard Manufacturer Warranty</option>
-                <option value="custom">✏️ Custom Terms...</option>
-                <option value="none">🚫 None (No Terms on Bill)</option>
-              </select>
-              {termsPreset === "custom" && (
-                <textarea
-                  className="input-field"
-                  placeholder="Enter custom terms & conditions..."
-                  rows={2}
-                  value={customTerms}
-                  onChange={(e) => setCustomTerms(e.target.value)}
-                  style={{ marginTop: "4px", fontSize: "0.75rem", padding: "6px" }}
-                />
-              )}
-            </div>
-
             {/* Checkout Button */}
             <button
               onClick={handleCheckout}
@@ -1298,28 +1302,28 @@ export default function POSPage() {
 
       {/* --- PRINTABLE HALF-A4 PROFESSIONAL BILL CONTAINER --- */}
       {completedBill && printFormat === "half_a4" && (
-        <div className="print-half-a4" style={{ width: "100%", maxWidth: "100%", margin: "0 auto", padding: "4mm 6mm", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize: "11px", color: "#000", background: "#fff" }}>
+        <div className="print-half-a4" style={{ width: "100%", maxWidth: "100%", margin: "0", padding: "2mm 4mm", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize: "10.5px", color: "#000", background: "#fff", boxSizing: "border-box" }}>
           {/* Header: Company Details & Invoice Metadata */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #000", paddingBottom: "6px", marginBottom: "8px" }}>
-            <div style={{ maxWidth: "60%" }}>
-              <h2 style={{ margin: "0 0 2px 0", fontSize: "17px", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #000", paddingBottom: "5px", marginBottom: "6px" }}>
+            <div style={{ maxWidth: "62%" }}>
+              <h2 style={{ margin: "0 0 2px 0", fontSize: "16px", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.5px", color: "#000" }}>
                 {tenant?.business_name || "RETAIL STORE"}
               </h2>
               {tenant?.legal_name && tenant?.legal_name !== tenant?.business_name && (
-                <div style={{ fontSize: "10px", color: "#333", marginBottom: "2px" }}>({tenant.legal_name})</div>
+                <div style={{ fontSize: "9.5px", color: "#333", marginBottom: "2px" }}>({tenant.legal_name})</div>
               )}
-              <div style={{ fontSize: "10px", lineHeight: "1.3" }}>
+              <div style={{ fontSize: "9.5px", lineHeight: "1.3", color: "#111" }}>
                 <div><strong>Address:</strong> {tenant?.address ? `${tenant.address}${tenant.city ? `, ${tenant.city}` : ""}${tenant.state ? `, ${tenant.state}` : ""}${tenant.pincode ? ` - ${tenant.pincode}` : ""}` : "Store Address"}</div>
                 <div><strong>Phone:</strong> {tenant?.phone || "—"} &bull; <strong>GSTIN:</strong> {tenant?.gst_number || "Unregistered"}</div>
                 {tenant?.email && <div><strong>Email:</strong> {tenant.email}</div>}
               </div>
             </div>
             
-            <div style={{ textAlign: "right", maxWidth: "40%" }}>
-              <div style={{ background: "#000", color: "#fff", padding: "2px 8px", fontSize: "12px", fontWeight: "bold", display: "inline-block", letterSpacing: "1px", marginBottom: "4px" }}>
+            <div style={{ textAlign: "right", maxWidth: "38%" }}>
+              <div style={{ background: "#000", color: "#fff", padding: "2px 8px", fontSize: "11px", fontWeight: "bold", display: "inline-block", letterSpacing: "1px", marginBottom: "3px" }}>
                 TAX INVOICE
               </div>
-              <div style={{ fontSize: "10px", lineHeight: "1.4" }}>
+              <div style={{ fontSize: "9.5px", lineHeight: "1.35", color: "#111" }}>
                 <div><strong>Invoice No:</strong> {completedBill.bill_number}</div>
                 <div><strong>Date:</strong> {new Date(completedBill.created_at || Date.now()).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
                 <div><strong>Time:</strong> {new Date(completedBill.created_at || Date.now()).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
@@ -1329,69 +1333,69 @@ export default function POSPage() {
           </div>
 
           {/* Bill To (Customer Details) & Payment Info */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", border: "1px solid #000", padding: "6px 8px", marginBottom: "8px", fontSize: "10.5px", lineHeight: "1.35", background: "#fcfcfc" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", border: "1px solid #000", padding: "5px 8px", marginBottom: "6px", fontSize: "10px", lineHeight: "1.35", background: "#fcfcfc" }}>
             <div>
-              <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Billed To (Customer):</div>
-              <div style={{ fontSize: "12px", fontWeight: "bold", color: "#000" }}>{completedBill.party_name || customerName}</div>
+              <div style={{ fontSize: "8.5px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>BILLED TO (CUSTOMER):</div>
+              <div style={{ fontSize: "11.5px", fontWeight: "bold", color: "#000" }}>{completedBill.party_name || customerName}</div>
               <div><strong>Address:</strong> {completedBill.party_address || customerAddress || "—"}</div>
               <div><strong>Phone:</strong> {completedBill.party_mobile || customerMobile || "—"} &bull; <strong>GSTIN:</strong> {completedBill.party_gst || customerGst || "—"}</div>
             </div>
             <div style={{ borderLeft: "1px solid #ccc", paddingLeft: "8px" }}>
-              <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Payment & Status:</div>
-              <div><strong>Payment Mode:</strong> <span style={{ textTransform: "uppercase", fontWeight: "bold" }}>{completedBill.payment_mode === "credit" ? "Credit" : "Cash"}</span></div>
+              <div style={{ fontSize: "8.5px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>PAYMENT & BILLING:</div>
+              <div><strong>Payment Mode:</strong> <span style={{ textTransform: "uppercase", fontWeight: "bold" }}>{completedBill.payment_mode === "credit" ? "CREDIT" : "CASH"}</span></div>
               <div><strong>Payment Status:</strong> <span style={{ textTransform: "uppercase", fontWeight: "bold" }}>{completedBill.payment_status || "PAID"}</span></div>
               <div><strong>Billed By:</strong> {user?.name || "Counter Staff"}</div>
             </div>
           </div>
 
           {/* Items Table */}
-          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "8px", fontSize: "10px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "6px", fontSize: "9.5px" }}>
             <thead>
-              <tr style={{ background: "#f0f0f0", borderTop: "1px solid #000", borderBottom: "1px solid #000", textAlign: "left" }}>
-                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", width: "24px", textAlign: "center" }}>#</th>
-                <th style={{ padding: "4px 4px", borderRight: "1px solid #ddd" }}>Item Description</th>
-                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "center", width: "45px" }}>HSN</th>
-                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "right", width: "35px" }}>Qty</th>
-                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "right", width: "50px" }}>Rate</th>
-                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "right", width: "55px" }}>Taxable</th>
-                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "right", width: "38px" }}>GST</th>
-                <th style={{ padding: "4px 4px", textAlign: "right", width: "65px" }}>Amount (₹)</th>
+              <tr style={{ background: "#000", color: "#fff", borderTop: "1px solid #000", borderBottom: "1px solid #000", textAlign: "left" }}>
+                <th style={{ padding: "4px 3px", width: "22px", textAlign: "center", borderRight: "1px solid #333" }}>#</th>
+                <th style={{ padding: "4px 4px", borderRight: "1px solid #333" }}>Item Description</th>
+                <th style={{ padding: "4px 3px", textAlign: "center", width: "42px", borderRight: "1px solid #333" }}>HSN</th>
+                <th style={{ padding: "4px 3px", textAlign: "right", width: "35px", borderRight: "1px solid #333" }}>Qty</th>
+                <th style={{ padding: "4px 3px", textAlign: "right", width: "48px", borderRight: "1px solid #333" }}>Rate</th>
+                <th style={{ padding: "4px 3px", textAlign: "right", width: "52px", borderRight: "1px solid #333" }}>Taxable</th>
+                <th style={{ padding: "4px 3px", textAlign: "right", width: "36px", borderRight: "1px solid #333" }}>GST</th>
+                <th style={{ padding: "4px 4px", textAlign: "right", width: "62px" }}>Amount (₹)</th>
               </tr>
             </thead>
             <tbody>
               {(completedBill.items || []).map((item: any, idx: number) => (
-                <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
-                  <td style={{ padding: "3px", textAlign: "center", borderRight: "1px solid #ddd" }}>{idx + 1}</td>
-                  <td style={{ padding: "3px 4px", borderRight: "1px solid #ddd", fontWeight: 500 }}>
+                <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                  <td style={{ padding: "3px", textAlign: "center", borderRight: "1px solid #e2e8f0" }}>{idx + 1}</td>
+                  <td style={{ padding: "3px 4px", borderRight: "1px solid #e2e8f0", fontWeight: 500, color: "#000" }}>
                     {item.item_name}
-                    {item.is_tax_inclusive && <span style={{ fontSize: "8.5px", color: "#555", marginLeft: "4px" }}>(Incl.)</span>}
+                    {item.is_tax_inclusive && <span style={{ fontSize: "8px", color: "#555", marginLeft: "4px" }}>(Incl.)</span>}
                   </td>
-                  <td style={{ padding: "3px", textAlign: "center", borderRight: "1px solid #ddd", color: "#444" }}>{item.hsn_code || "—"}</td>
-                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #ddd" }}>{item.quantity} {item.unit || "pcs"}</td>
-                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #ddd" }}>{item.rate.toFixed(2)}</td>
-                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #ddd" }}>{(item.taxable_amount || (item.quantity * item.rate)).toFixed(2)}</td>
-                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #ddd" }}>{item.gst_rate}%</td>
-                  <td style={{ padding: "3px 4px", textAlign: "right", fontWeight: "bold" }}>{item.total_amount.toFixed(2)}</td>
+                  <td style={{ padding: "3px", textAlign: "center", borderRight: "1px solid #e2e8f0", color: "#444" }}>{item.hsn_code || "—"}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #e2e8f0" }}>{item.quantity} {item.unit || "pcs"}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #e2e8f0" }}>{item.rate.toFixed(2)}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #e2e8f0" }}>{(item.taxable_amount || (item.quantity * item.rate)).toFixed(2)}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #e2e8f0" }}>{item.gst_rate}%</td>
+                  <td style={{ padding: "3px 4px", textAlign: "right", fontWeight: "bold", color: "#000" }}>{item.total_amount.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
           {/* Totals & Tax Breakdown Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "10px", borderTop: "1px solid #000", paddingTop: "6px", marginBottom: "8px", fontSize: "10.5px" }}>
-            <div>
-              {/* Optional Terms & Conditions */}
-              {(completedBill.terms_conditions || getEffectiveTerms()) && (
-                <div style={{ border: "1px solid #ddd", padding: "5px 7px", borderRadius: "4px", background: "#fcfcfc", marginBottom: "6px" }}>
-                  <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Terms & Conditions:</div>
-                  <div style={{ fontSize: "9px", lineHeight: "1.3", color: "#333", whiteSpace: "pre-line" }}>
-                    {completedBill.terms_conditions || getEffectiveTerms()}
-                  </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "8px", border: "1px solid #000", padding: "6px 8px", marginBottom: "6px", fontSize: "10px", background: "#fcfcfc" }}>
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: "8.5px", fontWeight: "bold", textTransform: "uppercase", color: "#555", marginBottom: "2px" }}>Amount in Words:</div>
+                <div style={{ fontSize: "9.5px", fontStyle: "italic", color: "#111", fontWeight: 500 }}>
+                  {numberToWordsINR(completedBill.total_amount || 0)}
                 </div>
-              )}
+              </div>
+              <div style={{ marginTop: "6px", fontSize: "8px", color: "#555" }}>
+                <strong>Declaration:</strong> Certified that the particulars given above are true and correct.
+              </div>
             </div>
 
-            <div style={{ border: "1px solid #000", padding: "6px 8px", background: "#f9f9f9" }}>
+            <div style={{ borderLeft: "1px solid #ccc", paddingLeft: "8px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
                 <span>Taxable Amount:</span>
                 <span>₹{(completedBill.taxable_amount || completedBill.subtotal || 0).toFixed(2)}</span>
@@ -1420,7 +1424,7 @@ export default function POSPage() {
                   <span>₹{completedBill.igst_amount.toFixed(2)}</span>
                 </div>
               )}
-              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "2px solid #000", paddingTop: "4px", marginTop: "4px", fontSize: "13px", fontWeight: "bold" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1.5px solid #000", paddingTop: "3px", marginTop: "3px", fontSize: "12px", fontWeight: "bold", color: "#000" }}>
                 <span>Grand Total:</span>
                 <span>₹{(completedBill.total_amount || 0).toFixed(2)}</span>
               </div>
@@ -1428,13 +1432,13 @@ export default function POSPage() {
           </div>
 
           {/* Signatures */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "12px", paddingTop: "8px", borderTop: "1px dashed #ccc", fontSize: "10px" }}>
-            <div style={{ textAlign: "center", width: "140px" }}>
-              <div style={{ borderTop: "1px solid #000", paddingTop: "3px" }}>Customer's Signature</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "10px", paddingTop: "6px", borderTop: "1px dashed #ccc", fontSize: "9.5px" }}>
+            <div style={{ textAlign: "center", width: "130px" }}>
+              <div style={{ borderTop: "1px solid #000", paddingTop: "2px" }}>Customer's Signature</div>
             </div>
-            <div style={{ textAlign: "center", width: "160px" }}>
-              <div style={{ fontWeight: "bold", marginBottom: "16px" }}>For {tenant?.business_name || "Company"}</div>
-              <div style={{ borderTop: "1px solid #000", paddingTop: "3px" }}>Authorized Signatory</div>
+            <div style={{ textAlign: "center", width: "150px" }}>
+              <div style={{ fontWeight: "bold", marginBottom: "14px" }}>For {tenant?.business_name || "Company"}</div>
+              <div style={{ borderTop: "1px solid #000", paddingTop: "2px" }}>Authorized Signatory</div>
             </div>
           </div>
         </div>

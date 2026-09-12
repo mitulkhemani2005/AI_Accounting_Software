@@ -24,7 +24,7 @@ from app.services.bill_service import (
     sync_offline_bills,
     format_bill_response,
 )
-from app.services.pdf_service import generate_bill_pdf
+from app.services.pdf_service import generate_bill_pdf, generate_combined_bills_pdf
 from app.services.whatsapp_service import generate_whatsapp_share_payload
 
 router = APIRouter()
@@ -149,12 +149,51 @@ async def void_bill(
     return {"message": "Bill voided successfully"}
 
 
+@router.get("/batch/pdf")
+async def download_combined_invoices_pdf(
+    bill_ids: str = Query(..., description="Comma-separated bill IDs to combine into single multi-page PDF"),
+    format: Optional[str] = Query("a5", description="Paper size: a4 (full page) or a5 (half-A4 sheet)"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Generate and download a multi-page combined PDF containing all selected bills"""
+    id_list = [b.strip() for b in bill_ids.split(",") if b.strip()]
+    if not id_list:
+        raise HTTPException(status_code=400, detail="No bill IDs provided")
+
+    result = await db.execute(
+        select(Bill)
+        .options(selectinload(Bill.customer), selectinload(Bill.creator))
+        .where(Bill.tenant_id == current_user.tenant_id, Bill.id.in_(id_list))
+        .order_by(Bill.created_at.desc())
+    )
+    bills = list(result.scalars().all())
+    if not bills:
+        raise HTTPException(status_code=404, detail="None of the specified bills were found")
+
+    tenant_res = await db.execute(
+        select(Tenant).where(Tenant.id == current_user.tenant_id)
+    )
+    tenant = tenant_res.scalar_one()
+
+    pdf_bytes = generate_combined_bills_pdf(
+        bills=bills,
+        tenant=tenant,
+        paper_format=format or "a5"
+    )
+    filename = f"Combined_Bills_{len(bills)}_Invoices.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 @router.get("/{bill_id}/pdf")
 async def download_invoice_pdf(
     bill_id: str,
     format: Optional[str] = Query("a4", description="Paper size: a4 (full page) or a5 (half-A4 sheet)"),
-    terms: Optional[str] = Query(None, description="Custom terms & conditions text or 'none' to omit"),
-    include_terms: Optional[bool] = Query(True, description="Whether to include terms and conditions"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -173,18 +212,10 @@ async def download_invoice_pdf(
     )
     tenant = tenant_res.scalar_one()
 
-    # Determine effective terms & conditions (selected by owner / optional)
-    effective_terms = None
-    if include_terms:
-        effective_terms = terms if terms is not None else bill.terms_conditions
-    else:
-        effective_terms = "none"
-
     pdf_bytes = generate_bill_pdf(
         bill=bill,
         tenant=tenant,
-        paper_format=format or "a4",
-        terms_conditions=effective_terms
+        paper_format=format or "a4"
     )
     suffix = "_A5_HalfSheet" if format in ["a5", "half_a4", "half-a4"] else ""
     filename = f"{bill.bill_number}{suffix}.pdf"
