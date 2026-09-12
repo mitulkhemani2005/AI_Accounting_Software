@@ -311,7 +311,9 @@ export default function ItemsPage() {
               <div className="badge badge-danger" style={{ width: "100%", padding: "8px 12px", marginBottom: "16px", display: "block" }}>
                 {error}
               </div>
-                      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            )}
+
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               {/* Primary Required Details */}
               <div>
                 <label className="input-label">Product Name *</label>
