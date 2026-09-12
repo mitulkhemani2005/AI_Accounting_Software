@@ -49,6 +49,7 @@ def calculate_line_item_gst(
         "quantity": item.quantity,
         "unit": item.unit,
         "rate": item.rate,
+        "purchase_price": getattr(item, "purchase_price", 0.0) or 0.0,
         "discount_amount": item.discount_amount,
         "gst_rate": gst_rate,
         "is_tax_inclusive": is_inclusive,

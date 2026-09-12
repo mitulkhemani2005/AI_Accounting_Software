@@ -86,6 +86,7 @@ class BillItem(Base, TimestampMixin):
     quantity: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
     unit: Mapped[str] = mapped_column(String(20), default="PCS", nullable=False)
     rate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    purchase_price: Mapped[Optional[float]] = mapped_column(Float, default=0.0, nullable=True)
     discount_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     
     # Taxes

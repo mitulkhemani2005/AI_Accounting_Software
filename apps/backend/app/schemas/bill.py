@@ -10,6 +10,7 @@ class BillItemInput(BaseModel):
     quantity: float = Field(..., gt=0)
     unit: str = Field("PCS", max_length=20)
     rate: float = Field(..., ge=0)
+    purchase_price: Optional[float] = Field(0.0, ge=0)
     discount_amount: float = Field(0.0, ge=0)
     gst_rate: float = Field(..., ge=0, le=100)
     is_tax_inclusive: bool = Field(False, description="True if rate already includes GST")
@@ -49,6 +50,7 @@ class BillItemResponse(BaseModel):
     quantity: float
     unit: str
     rate: float
+    purchase_price: Optional[float] = 0.0
     discount_amount: float
     gst_rate: float
     is_tax_inclusive: bool = False

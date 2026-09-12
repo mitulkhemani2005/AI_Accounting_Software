@@ -38,6 +38,7 @@ interface POSItem {
   quantity: number;
   unit: string;
   rate: number;
+  purchase_price?: number;
   discount_amount: number;
   gst_rate: number;
   is_tax_inclusive: boolean;
@@ -258,6 +259,7 @@ export default function POSPage() {
           quantity: 1,
           unit: product.unit || "PCS",
           rate: product.sale_price,
+          purchase_price: product.purchase_price || 0,
           discount_amount: 0,
           gst_rate: product.gst_rate,
           is_tax_inclusive: isTaxInc,
@@ -353,6 +355,17 @@ export default function POSPage() {
         sgst_amount: calc.sgst,
         igst_amount: calc.igst,
         total_amount: calc.total,
+      };
+      return updated;
+    });
+  };
+
+  const updateItemPurchasePrice = (idx: number, newPurchasePrice: number) => {
+    setBillItems((prev) => {
+      const updated = [...prev];
+      updated[idx] = {
+        ...updated[idx],
+        purchase_price: newPurchasePrice,
       };
       return updated;
     });
@@ -524,6 +537,7 @@ export default function POSPage() {
         quantity: i.quantity,
         unit: i.unit,
         rate: i.rate,
+        purchase_price: i.purchase_price ?? 0,
         discount_amount: i.discount_amount,
         gst_rate: i.gst_rate,
         is_tax_inclusive: i.is_tax_inclusive,
@@ -846,8 +860,54 @@ export default function POSPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#f8fafc" }}>{item.item_name}</div>
-                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                        Rate: ₹{item.rate.toFixed(2)} &bull; {item.gst_rate}% GST
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", flexWrap: "wrap" }}>
+                        <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "3px" }}>
+                          <span>Sell ₹:</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.rate}
+                            onChange={(e) => updateItemRate(idx, parseFloat(e.target.value) || 0)}
+                            style={{
+                              width: "72px",
+                              padding: "2px 6px",
+                              fontSize: "0.75rem",
+                              background: "rgba(15, 23, 42, 0.9)",
+                              border: "1px solid rgba(56, 189, 248, 0.5)",
+                              borderRadius: "4px",
+                              color: "#38bdf8",
+                              fontWeight: 600,
+                            }}
+                            title="Edit Selling Price / Unit Rate"
+                          />
+                        </label>
+                        {isAdmin && (
+                          <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "3px" }}>
+                            <span>Cost ₹:</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={item.purchase_price ?? 0}
+                              onChange={(e) => updateItemPurchasePrice(idx, parseFloat(e.target.value) || 0)}
+                              style={{
+                                width: "72px",
+                                padding: "2px 6px",
+                                fontSize: "0.75rem",
+                                background: "rgba(15, 23, 42, 0.9)",
+                                border: "1px solid rgba(245, 158, 11, 0.5)",
+                                borderRadius: "4px",
+                                color: "#f59e0b",
+                                fontWeight: 600,
+                              }}
+                              title="Admin: Edit Purchase / Cost Price"
+                            />
+                          </label>
+                        )}
+                        <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                          &bull; {item.gst_rate}% GST
+                        </span>
                       </div>
                     </div>
 

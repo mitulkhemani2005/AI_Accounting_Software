@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard,
   Receipt,
+  ShoppingBag,
   Users,
   History,
   Package,
@@ -27,6 +28,7 @@ export function Sidebar() {
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, allowed: true },
     { label: "POS Counter Sale", href: "/dashboard/pos", icon: Receipt, allowed: true },
+    { label: "Sales & Invoices", href: "/dashboard/sales", icon: ShoppingBag, allowed: true },
     { label: "Product Master", href: "/dashboard/items", icon: Package, adminOnly: true },
     { label: "Parties & Khata", href: "/dashboard/parties", icon: Contact, adminOnly: true },
     { label: "Staff Bills Review", href: "/dashboard/staff-bills", icon: ClipboardCheck, adminOnly: true },

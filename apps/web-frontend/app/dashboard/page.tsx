@@ -106,6 +106,9 @@ export default function DashboardPage() {
             <Link href="/dashboard/pos" className="btn-primary" style={{ background: "#10b981", borderColor: "#059669" }}>
               <Receipt size={16} /> Open POS Counter
             </Link>
+            <Link href="/dashboard/sales" className="btn-secondary">
+              <Receipt size={16} /> Sales & Invoices
+            </Link>
             {isAdmin && (
               <>
                 <Link href="/dashboard/items" className="btn-secondary">
