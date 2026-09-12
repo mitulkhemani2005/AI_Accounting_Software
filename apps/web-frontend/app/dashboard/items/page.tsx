@@ -111,15 +111,15 @@ export default function ItemsPage() {
     setError(null);
 
     const payload = {
-      name: formData.name,
-      sku: formData.sku || undefined,
-      barcode: formData.barcode || undefined,
+      name: formData.name.trim(),
+      sku: formData.sku.trim() || undefined,
+      barcode: formData.barcode.trim() || undefined,
       category: formData.category,
       unit: formData.unit,
       sale_price: parseFloat(formData.sale_price) || 0,
       purchase_price: parseFloat(formData.purchase_price) || 0,
       gst_rate: parseFloat(formData.gst_rate) || 0,
-      hsn_code: formData.hsn_code || undefined,
+      hsn_code: formData.hsn_code.trim() || undefined,
       min_stock_alert: parseFloat(formData.min_stock_alert) || 0,
     };
 
@@ -311,16 +311,15 @@ export default function ItemsPage() {
               <div className="badge badge-danger" style={{ width: "100%", padding: "8px 12px", marginBottom: "16px", display: "block" }}>
                 {error}
               </div>
-            )}
-
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {/* Primary Required Details */}
               <div>
                 <label className="input-label">Product Name *</label>
                 <input
                   type="text"
                   required
                   className="input-field"
-                  placeholder="e.g. Amul Butter 500g"
+                  placeholder="e.g. Basmati Rice 1kg, Milk 500ml, Crocin 650mg"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
@@ -328,24 +327,30 @@ export default function ItemsPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="input-label">Barcode (Scan or Enter)</label>
+                  <label className="input-label">Sale Price (₹) *</label>
                   <input
-                    type="text"
+                    type="number"
+                    step="0.01"
+                    required
                     className="input-field"
-                    placeholder="8901052000012"
-                    value={formData.barcode}
-                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                    placeholder="0.00"
+                    value={formData.sale_price}
+                    onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className="input-label">SKU / Item Code</label>
-                  <input
-                    type="text"
+                  <label className="input-label">GST Tax Rate (%)</label>
+                  <select
                     className="input-field"
-                    placeholder="AMUL-BUT-500"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  />
+                    value={formData.gst_rate}
+                    onChange={(e) => setFormData({ ...formData, gst_rate: e.target.value })}
+                  >
+                    <option value="0">0% (Nil / Exempt)</option>
+                    <option value="5">5% (Essential)</option>
+                    <option value="12">12% (Standard I)</option>
+                    <option value="18">18% (Standard II)</option>
+                    <option value="28">28% (Luxury / Sin)</option>
+                  </select>
                 </div>
               </div>
 
@@ -375,60 +380,70 @@ export default function ItemsPage() {
                     <option value="BOX">BOX (Boxes)</option>
                     <option value="BAG">BAG (Bags)</option>
                     <option value="MTR">MTR (Metres)</option>
+                    <option value="PKT">PKT (Packets)</option>
                   </select>
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div>
-                  <label className="input-label">Sale Price (₹) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    className="input-field"
-                    placeholder="0.00"
-                    value={formData.sale_price}
-                    onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
-                  />
+              {/* Optional Identifiers & Codes */}
+              <div
+                style={{
+                  background: "rgba(30, 41, 59, 0.4)",
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  border: "1px dashed var(--border)",
+                  marginTop: "4px",
+                }}
+              >
+                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "10px" }}>
+                  Optional Codes & Tracking (Leave empty if not needed)
                 </div>
-                <div>
-                  <label className="input-label">Purchase Price (₹)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input-field"
-                    placeholder="0.00"
-                    value={formData.purchase_price}
-                    onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value })}
-                  />
-                </div>
-              </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div>
-                  <label className="input-label">GST Tax Rate (%)</label>
-                  <select
-                    className="input-field"
-                    value={formData.gst_rate}
-                    onChange={(e) => setFormData({ ...formData, gst_rate: e.target.value })}
-                  >
-                    <option value="0">0% (Nil / Exempt)</option>
-                    <option value="5">5% (Essential)</option>
-                    <option value="12">12% (Standard I)</option>
-                    <option value="18">18% (Standard II)</option>
-                    <option value="28">28% (Luxury / Sin)</option>
-                  </select>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label className="input-label" style={{ fontSize: "0.75rem" }}>Barcode (Optional)</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="e.g. 8901052000012"
+                      value={formData.barcode}
+                      onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="input-label" style={{ fontSize: "0.75rem" }}>Item Code / SKU (Optional)</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="e.g. RICE-1KG"
+                      value={formData.sku}
+                      onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="input-label">HSN / SAC Code</label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="e.g. 0405"
-                    value={formData.hsn_code}
-                    onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
-                  />
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label className="input-label" style={{ fontSize: "0.75rem" }}>HSN Code (Optional)</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="e.g. 1006"
+                      value={formData.hsn_code}
+                      onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="input-label" style={{ fontSize: "0.75rem" }}>Purchase Price (Optional)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="input-field"
+                      placeholder="0.00"
+                      value={formData.purchase_price}
+                      onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
 

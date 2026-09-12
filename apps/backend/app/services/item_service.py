@@ -14,40 +14,44 @@ async def create_item(
     payload: ItemCreateRequest,
     client_ip: Optional[str] = None
 ) -> Item:
-    """Create a new catalog item"""
-    # Check duplicate SKU in tenant
-    if payload.sku:
+    """Create a new catalog item with optional SKU, Barcode, and HSN"""
+    clean_sku = payload.sku.strip() if (payload.sku and payload.sku.strip()) else None
+    clean_barcode = payload.barcode.strip() if (payload.barcode and payload.barcode.strip()) else None
+    clean_hsn = payload.hsn_code.strip() if (payload.hsn_code and payload.hsn_code.strip()) else None
+
+    # Check duplicate SKU in tenant if provided
+    if clean_sku:
         existing_sku = await db.execute(
-            select(Item).where(Item.tenant_id == tenant_id, Item.sku == payload.sku)
+            select(Item).where(Item.tenant_id == tenant_id, Item.sku == clean_sku)
         )
         if existing_sku.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Item with SKU '{payload.sku}' already exists"
+                detail=f"Item with SKU '{clean_sku}' already exists"
             )
 
-    # Check duplicate Barcode in tenant
-    if payload.barcode:
+    # Check duplicate Barcode in tenant if provided
+    if clean_barcode:
         existing_barcode = await db.execute(
-            select(Item).where(Item.tenant_id == tenant_id, Item.barcode == payload.barcode)
+            select(Item).where(Item.tenant_id == tenant_id, Item.barcode == clean_barcode)
         )
         if existing_barcode.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Item with barcode '{payload.barcode}' already exists"
+                detail=f"Item with barcode '{clean_barcode}' already exists"
             )
 
     item = Item(
         tenant_id=tenant_id,
-        name=payload.name,
-        sku=payload.sku,
-        barcode=payload.barcode,
-        category=payload.category,
-        unit=payload.unit.upper(),
+        name=payload.name.strip(),
+        sku=clean_sku,
+        barcode=clean_barcode,
+        category=payload.category or "General",
+        unit=(payload.unit or "PCS").upper(),
         sale_price=payload.sale_price,
         purchase_price=payload.purchase_price,
         gst_rate=payload.gst_rate,
-        hsn_code=payload.hsn_code,
+        hsn_code=clean_hsn,
         min_stock_alert=payload.min_stock_alert,
         is_active=True
     )
@@ -130,6 +134,13 @@ async def update_item(
         raise HTTPException(status_code=404, detail="Item not found")
 
     update_data = payload.model_dump(exclude_unset=True)
+    if "sku" in update_data:
+        update_data["sku"] = update_data["sku"].strip() if (update_data["sku"] and update_data["sku"].strip()) else None
+    if "barcode" in update_data:
+        update_data["barcode"] = update_data["barcode"].strip() if (update_data["barcode"] and update_data["barcode"].strip()) else None
+    if "hsn_code" in update_data:
+        update_data["hsn_code"] = update_data["hsn_code"].strip() if (update_data["hsn_code"] and update_data["hsn_code"].strip()) else None
+
     for key, value in update_data.items():
         setattr(item, key, value)
 
