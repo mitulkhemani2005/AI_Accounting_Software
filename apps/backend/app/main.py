@@ -41,6 +41,16 @@ async def lifespan(app: FastAPI):
                 except Exception as me:
                     logger.debug(f"Migration note ({stmt}): {me}")
         logger.info("Database schema and migrations initialized successfully.")
+
+        # Seed roles and permissions
+        try:
+            from app.db.session import AsyncSessionLocal
+            from app.services.tenant_service import seed_roles_and_permissions
+            async with AsyncSessionLocal() as session:
+                await seed_roles_and_permissions(session)
+            logger.info("Roles and permissions seeded successfully.")
+        except Exception as se:
+            logger.warning(f"Role/permission seeding note: {se}")
     except Exception as e:
         logger.error(f"Database schema initialization warning: {e}")
 

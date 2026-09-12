@@ -2,6 +2,7 @@ from typing import Optional, Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from fastapi import HTTPException, status
+from sqlalchemy.orm import selectinload
 from app.models.user import User, Role, Permission
 from app.models.tenant import Tenant, ModuleEntitlement
 from app.core.security import verify_password, verify_pin, create_access_token
@@ -11,11 +12,23 @@ from app.services.audit_service import log_audit_event
 async def get_user_permissions(db: AsyncSession, user: User) -> List[str]:
     """Fetch list of permission name strings for user's role"""
     role = user.role
-    if not role:
-        result = await db.execute(select(Role).where(Role.id == user.role_id))
+    if not role and user.role_id:
+        result = await db.execute(select(Role).options(selectinload(Role.permissions)).where(Role.id == user.role_id))
         role = result.scalar_one_or_none()
     
-    if not role or not role.permissions:
+    if not role:
+        return []
+    
+    if role.name == "admin":
+        perm_res = await db.execute(select(Permission))
+        all_perms = perm_res.scalars().all()
+        return [p.name for p in all_perms]
+    
+    if not role.permissions:
+        role_res = await db.execute(select(Role).options(selectinload(Role.permissions)).where(Role.id == role.id))
+        loaded_role = role_res.scalar_one_or_none()
+        if loaded_role and loaded_role.permissions:
+            return [p.name for p in loaded_role.permissions]
         return []
     
     return [p.name for p in role.permissions]
