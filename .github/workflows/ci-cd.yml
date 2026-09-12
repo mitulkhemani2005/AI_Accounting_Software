@@ -1,0 +1,116 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, staging, develop ]
+  pull_request:
+    branches: [ main, staging ]
+
+env:
+  AWS_REGION: ap-south-1  # Mumbai Data Localization Region
+  REGISTRY_BACKEND: ai-accounting-backend
+  REGISTRY_AI: ai-accounting-ai-service
+  REGISTRY_WEB: ai-accounting-web
+
+jobs:
+  backend-test:
+    name: Backend Lint & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r apps/backend/requirements.txt ruff pytest pytest-cov
+
+      - name: Lint with Ruff
+        run: |
+          ruff check apps/backend
+
+      - name: Run Backend Tests
+        run: |
+          cd apps/backend
+          pytest --cov=app --cov-report=xml --cov-report=term
+
+  ai-service-test:
+    name: AI Service Lint & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r apps/ai-service/requirements.txt pytest
+
+      - name: Run AI Service Tests
+        run: |
+          cd apps/ai-service
+          pytest
+
+  web-frontend-build:
+    name: Web Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: apps/web-frontend/package.json
+
+      - name: Install Web Dependencies
+        run: |
+          cd apps/web-frontend
+          npm ci --legacy-peer-deps || npm install
+
+      - name: Build Web App
+        run: |
+          cd apps/web-frontend
+          npm run build
+
+  staging-deploy:
+    name: Build & Deploy to Staging (Mumbai Region)
+    needs: [backend-test, ai-service-test, web-frontend-build]
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Docker Image
+        run: |
+          docker build -t $REGISTRY_BACKEND:staging ./apps/backend
+
+      - name: Build AI Service Docker Image
+        run: |
+          docker build -t $REGISTRY_AI:staging ./apps/ai-service
+
+      - name: Build Web Frontend Docker Image
+        run: |
+          docker build -t $REGISTRY_WEB:staging ./apps/web-frontend
+
+      - name: Log Deployment Notification
+        run: |
+          echo "Staging build completed successfully for ap-south-1 (Mumbai Region)."
