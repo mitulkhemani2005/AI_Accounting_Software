@@ -62,6 +62,8 @@ interface Bill {
   party_name: string;
   party_mobile?: string;
   party_gst?: string;
+  party_address?: string;
+  terms_conditions?: string;
   is_interstate: boolean;
   created_by_user_id: string;
   creator_name?: string;

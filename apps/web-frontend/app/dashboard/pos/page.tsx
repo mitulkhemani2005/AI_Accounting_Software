@@ -29,6 +29,7 @@ import {
   Phone,
   Building,
   Calendar,
+  FileText,
 } from "lucide-react";
 
 interface POSItem {

@@ -15,8 +15,16 @@ export interface User {
 export interface Tenant {
   id: string;
   business_name: string;
+  legal_name?: string | null;
   gst_number?: string | null;
   subscription_tier: string;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  terms_conditions?: string | null;
 }
 
 interface AuthContextType {
