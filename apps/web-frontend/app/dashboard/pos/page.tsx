@@ -99,6 +99,7 @@ export default function POSPage() {
   const [whatsAppData, setWhatsAppData] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [printFormat, setPrintFormat] = useState<"thermal" | "half_a4">("half_a4");
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
@@ -593,15 +594,15 @@ export default function POSPage() {
   };
 
   // 9. PDF Download with Auth Token
-  const handleDownloadPdf = async (billId: string, billNumber: string) => {
+  const handleDownloadPdf = async (billId: string, billNumber: string, format: "a4" | "a5" = "a4") => {
     setIsDownloadingPdf(true);
     try {
-      const res = await api.get(`/bills/${billId}/pdf`, { responseType: "blob" });
+      const res = await api.get(`/bills/${billId}/pdf?format=${format}`, { responseType: "blob" });
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${billNumber}.pdf`;
+      link.download = `${billNumber}_${format.toUpperCase()}${format === "a5" ? "_HalfSheet" : ""}.pdf`;
       link.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
@@ -611,8 +612,11 @@ export default function POSPage() {
     }
   };
 
-  const handlePrintReceipt = () => {
-    window.print();
+  const handlePrintBill = (format: "thermal" | "half_a4" = "half_a4") => {
+    setPrintFormat(format);
+    setTimeout(() => {
+      window.print();
+    }, 120);
   };
 
   const categories = ["All", "Groceries", "Beverages", "Snacks", "Dairy", "Pharmacy", "Electronics", "General"];
@@ -801,7 +805,7 @@ export default function POSPage() {
                   <option value="">👤 Walk-in Cash Customer</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} {c.mobile ? `• 📱 ${c.mobile}` : ""} {c.gst_number ? `• 🆔 GST: ${c.gst_number}` : ""} {c.billing_address ? `• 📍 ${c.billing_address}` : ""} • 💰 Khata: ₹{c.current_balance?.toFixed(2)}
+                      {c.name} {c.mobile ? `• 📱 ${c.mobile}` : ""} {c.gst_number ? `• 🆔 GST: ${c.gst_number}` : ""} {c.billing_address ? `• 📍 ${c.billing_address}` : ""} • 💰 Credit Due: ₹{c.current_balance?.toFixed(2)}
                     </option>
                   ))}
                 </select>
@@ -820,7 +824,7 @@ export default function POSPage() {
               )}
             </div>
 
-            {/* Selected Customer Info Badge with Name, Address, GSTIN, Mobile, and Khata */}
+            {/* Selected Customer Info Badge with Name, Address, GSTIN, Mobile, and Credit Due */}
             {selectedCustomerId && (
               <div
                 style={{
@@ -841,7 +845,7 @@ export default function POSPage() {
                     {customerMobile && <span style={{ color: "var(--text-muted)", marginLeft: "8px" }}>📱 {customerMobile}</span>}
                   </div>
                   <div style={{ color: customerBalance > 0 ? "#f87171" : "#34d399", fontWeight: 700 }}>
-                    Khata Due: ₹{customerBalance.toFixed(2)}
+                    Credit Due: ₹{customerBalance.toFixed(2)}
                   </div>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "var(--text-muted)", fontSize: "0.725rem", flexWrap: "wrap", gap: "6px" }}>
@@ -1026,7 +1030,7 @@ export default function POSPage() {
                 type="button"
                 onClick={() => {
                   if (partyType !== "customer" || !selectedCustomerId) {
-                    alert("Please select or add a Customer above to create a Credit / Khata bill.");
+                    alert("Please select or add a Customer above to create a Credit bill.");
                     setShowAddCustomerModal(true);
                     return;
                   }
@@ -1048,7 +1052,7 @@ export default function POSPage() {
                   transition: "all 0.15s ease",
                 }}
               >
-                📒 CREDIT (KHATA)
+                📒 CREDIT
               </button>
             </div>
 
@@ -1164,28 +1168,49 @@ export default function POSPage() {
               Invoice No: <strong style={{ color: "#38bdf8" }}>{completedBill.bill_number}</strong> &bull; Total: <strong style={{ color: "#34d399" }}>₹{completedBill.total_amount?.toFixed(2)}</strong>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", margin: "18px 0" }}>
-              {/* Direct Print Button */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", margin: "16px 0" }}>
+              {/* Direct Print Half A4 */}
               <button
                 type="button"
-                onClick={handlePrintReceipt}
+                onClick={() => handlePrintBill("half_a4")}
                 className="btn-primary"
-                style={{ width: "100%", padding: "10px", background: "#2563eb", fontSize: "0.95rem" }}
+                style={{ width: "100%", padding: "10px", background: "#0284c7", borderColor: "#0369a1", fontSize: "0.95rem" }}
               >
-                <Printer size={16} /> Print Thermal / POS Receipt
+                <Printer size={16} /> Print Half-A4 (A5) Professional Bill
               </button>
 
-              {/* PDF Download Button */}
+              {/* Direct Print Thermal */}
+              <button
+                type="button"
+                onClick={() => handlePrintBill("thermal")}
+                className="btn-secondary"
+                style={{ width: "100%", padding: "9px", fontSize: "0.9rem" }}
+              >
+                <Receipt size={16} /> Print Thermal POS Receipt
+              </button>
+
+              {/* PDF Download Buttons */}
               {completedBill.id && (
-                <button
-                  type="button"
-                  onClick={() => handleDownloadPdf(completedBill.id, completedBill.bill_number)}
-                  disabled={isDownloadingPdf}
-                  className="btn-secondary"
-                  style={{ width: "100%", padding: "10px", fontSize: "0.9rem" }}
-                >
-                  {isDownloadingPdf ? <Loader2 className="animate-spin" size={16} /> : <Printer size={16} />} Download A4 Tax Invoice (PDF)
-                </button>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadPdf(completedBill.id, completedBill.bill_number, "a5")}
+                    disabled={isDownloadingPdf}
+                    className="btn-secondary"
+                    style={{ padding: "9px 6px", fontSize: "0.825rem", justifyContent: "center" }}
+                  >
+                    {isDownloadingPdf ? <Loader2 className="animate-spin" size={14} /> : <FileText size={14} color="#a855f7" />} Half-A4 PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadPdf(completedBill.id, completedBill.bill_number, "a4")}
+                    disabled={isDownloadingPdf}
+                    className="btn-secondary"
+                    style={{ padding: "9px 6px", fontSize: "0.825rem", justifyContent: "center" }}
+                  >
+                    {isDownloadingPdf ? <Loader2 className="animate-spin" size={14} /> : <FileText size={14} color="#60a5fa" />} Full A4 PDF
+                  </button>
+                </div>
               )}
 
               {/* WhatsApp Share Button */}
@@ -1195,9 +1220,9 @@ export default function POSPage() {
                   target="_blank"
                   rel="noreferrer"
                   className="btn-secondary"
-                  style={{ width: "100%", padding: "10px", justifyContent: "center", background: "#065f46", color: "#34d399", borderColor: "#059669", fontSize: "0.9rem" }}
+                  style={{ width: "100%", padding: "9px", justifyContent: "center", background: "#065f46", color: "#34d399", borderColor: "#059669", fontSize: "0.85rem" }}
                 >
-                  <Share2 size={16} /> Share Invoice on WhatsApp
+                  <Share2 size={15} /> Share Invoice on WhatsApp
                 </a>
               )}
             </div>
@@ -1209,9 +1234,155 @@ export default function POSPage() {
         </div>
       )}
 
-      {/* PRINTABLE THERMAL RECEIPT (Visible only when window.print is called) */}
-      {completedBill && (
-        <div className="print-only" style={{ padding: "10px", fontFamily: "monospace", fontSize: "12px", width: "300px", margin: "0 auto" }}>
+      {/* --- PRINTABLE HALF-A4 PROFESSIONAL BILL CONTAINER --- */}
+      {completedBill && printFormat === "half_a4" && (
+        <div className="print-half-a4" style={{ width: "100%", maxWidth: "100%", margin: "0 auto", padding: "4mm 6mm", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize: "11px", color: "#000", background: "#fff" }}>
+          {/* Header: Company Details & Invoice Metadata */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #000", paddingBottom: "6px", marginBottom: "8px" }}>
+            <div style={{ maxWidth: "60%" }}>
+              <h2 style={{ margin: "0 0 2px 0", fontSize: "17px", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                {tenant?.business_name || "RETAIL STORE"}
+              </h2>
+              {tenant?.legal_name && tenant?.legal_name !== tenant?.business_name && (
+                <div style={{ fontSize: "10px", color: "#333", marginBottom: "2px" }}>({tenant.legal_name})</div>
+              )}
+              <div style={{ fontSize: "10px", lineHeight: "1.3" }}>
+                {tenant?.address && <div>{tenant.address}{tenant.city ? `, ${tenant.city}` : ""}{tenant.state ? `, ${tenant.state}` : ""}{tenant.pincode ? ` - ${tenant.pincode}` : ""}</div>}
+                {tenant?.gst_number && <div><strong>GSTIN:</strong> {tenant.gst_number}</div>}
+                <div style={{ display: "flex", gap: "10px" }}>
+                  {tenant?.phone && <div><strong>Phone:</strong> {tenant.phone}</div>}
+                  {tenant?.email && <div><strong>Email:</strong> {tenant.email}</div>}
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ textAlign: "right", maxWidth: "40%" }}>
+              <div style={{ background: "#000", color: "#fff", padding: "2px 8px", fontSize: "12px", fontWeight: "bold", display: "inline-block", letterSpacing: "1px", marginBottom: "4px" }}>
+                TAX INVOICE
+              </div>
+              <div style={{ fontSize: "10px", lineHeight: "1.4" }}>
+                <div><strong>Invoice No:</strong> {completedBill.bill_number}</div>
+                <div><strong>Date:</strong> {new Date(completedBill.created_at || Date.now()).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                <div><strong>Time:</strong> {new Date(completedBill.created_at || Date.now()).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
+                <div><strong>Place of Supply:</strong> {completedBill.is_interstate ? "Inter-State (IGST)" : "Intra-State"}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bill To & Payment Info */}
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", border: "1px solid #000", padding: "6px 8px", marginBottom: "8px", fontSize: "10.5px", lineHeight: "1.35", background: "#fcfcfc" }}>
+            <div>
+              <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Billed To (Customer):</div>
+              <div style={{ fontSize: "12px", fontWeight: "bold", color: "#000" }}>{completedBill.party_name || "Cash Customer"}</div>
+              {completedBill.party_mobile && <div><strong>Mobile:</strong> {completedBill.party_mobile}</div>}
+              {completedBill.party_gst && <div><strong>GSTIN:</strong> {completedBill.party_gst}</div>}
+            </div>
+            <div style={{ borderLeft: "1px solid #ccc", paddingLeft: "8px" }}>
+              <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Payment & Status:</div>
+              <div><strong>Payment Mode:</strong> <span style={{ textTransform: "uppercase", fontWeight: "bold" }}>{completedBill.payment_mode === "credit" ? "Credit" : "Cash"}</span></div>
+              <div><strong>Payment Status:</strong> <span style={{ textTransform: "uppercase", fontWeight: "bold" }}>{completedBill.payment_status || "PAID"}</span></div>
+              <div><strong>Billed By:</strong> {user?.name || "Counter Staff"}</div>
+            </div>
+          </div>
+
+          {/* Items Table */}
+          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "8px", fontSize: "10px" }}>
+            <thead>
+              <tr style={{ background: "#f0f0f0", borderTop: "1px solid #000", borderBottom: "1px solid #000", textAlign: "left" }}>
+                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", width: "24px", textAlign: "center" }}>#</th>
+                <th style={{ padding: "4px 4px", borderRight: "1px solid #ddd" }}>Item Description</th>
+                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "center", width: "45px" }}>HSN</th>
+                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "right", width: "35px" }}>Qty</th>
+                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "right", width: "50px" }}>Rate</th>
+                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "right", width: "55px" }}>Taxable</th>
+                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "right", width: "38px" }}>GST</th>
+                <th style={{ padding: "4px 4px", textAlign: "right", width: "65px" }}>Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(completedBill.items || []).map((item: any, idx: number) => (
+                <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
+                  <td style={{ padding: "3px", textAlign: "center", borderRight: "1px solid #ddd" }}>{idx + 1}</td>
+                  <td style={{ padding: "3px 4px", borderRight: "1px solid #ddd", fontWeight: 500 }}>
+                    {item.item_name}
+                    {item.is_tax_inclusive && <span style={{ fontSize: "8.5px", color: "#555", marginLeft: "4px" }}>(Incl.)</span>}
+                  </td>
+                  <td style={{ padding: "3px", textAlign: "center", borderRight: "1px solid #ddd", color: "#444" }}>{item.hsn_code || "—"}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #ddd" }}>{item.quantity} {item.unit || "pcs"}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #ddd" }}>{item.rate.toFixed(2)}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #ddd" }}>{(item.taxable_amount || (item.quantity * item.rate)).toFixed(2)}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #ddd" }}>{item.gst_rate}%</td>
+                  <td style={{ padding: "3px 4px", textAlign: "right", fontWeight: "bold" }}>{item.total_amount.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Totals & Tax Breakdown Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "10px", borderTop: "1px solid #000", paddingTop: "6px", marginBottom: "8px", fontSize: "10.5px" }}>
+            <div>
+              <div style={{ border: "1px solid #ddd", padding: "5px 7px", borderRadius: "4px", background: "#fcfcfc", marginBottom: "6px" }}>
+                <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Terms & Conditions:</div>
+                <div style={{ fontSize: "9px", lineHeight: "1.3", color: "#333" }}>
+                  1. Goods once sold will not be accepted back without invoice.<br/>
+                  2. Certified that the particulars given above are true and correct.<br/>
+                  3. Subject to local jurisdiction.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ border: "1px solid #000", padding: "6px 8px", background: "#f9f9f9" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                <span>Taxable Amount:</span>
+                <span>₹{(completedBill.taxable_amount || completedBill.subtotal || 0).toFixed(2)}</span>
+              </div>
+              {completedBill.discount_amount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", color: "#000", marginBottom: "2px" }}>
+                  <span>Discount:</span>
+                  <span>-₹{completedBill.discount_amount.toFixed(2)}</span>
+                </div>
+              )}
+              {completedBill.cgst_amount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                  <span>CGST:</span>
+                  <span>₹{completedBill.cgst_amount.toFixed(2)}</span>
+                </div>
+              )}
+              {completedBill.sgst_amount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                  <span>SGST:</span>
+                  <span>₹{completedBill.sgst_amount.toFixed(2)}</span>
+                </div>
+              )}
+              {completedBill.igst_amount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                  <span>IGST:</span>
+                  <span>₹{completedBill.igst_amount.toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "2px solid #000", paddingTop: "4px", marginTop: "4px", fontSize: "13px", fontWeight: "bold" }}>
+                <span>Grand Total:</span>
+                <span>₹{(completedBill.total_amount || 0).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Signatures */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "12px", paddingTop: "8px", borderTop: "1px dashed #ccc", fontSize: "10px" }}>
+            <div style={{ textAlign: "center", width: "140px" }}>
+              <div style={{ borderTop: "1px solid #000", paddingTop: "3px" }}>Customer's Signature</div>
+            </div>
+            <div style={{ textAlign: "center", width: "160px" }}>
+              <div style={{ fontWeight: "bold", marginBottom: "16px" }}>For {tenant?.business_name || "Company"}</div>
+              <div style={{ borderTop: "1px solid #000", paddingTop: "3px" }}>Authorized Signatory</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- PRINTABLE THERMAL RECEIPT --- */}
+      {completedBill && printFormat === "thermal" && (
+        <div className="print-thermal" style={{ padding: "10px", fontFamily: "monospace", fontSize: "12px", width: "300px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", borderBottom: "1px dashed #000", paddingBottom: "8px", marginBottom: "8px" }}>
             <h3 style={{ fontSize: "16px", margin: 0 }}>{tenant?.business_name || "RETAIL STORE"}</h3>
             {tenant?.gst_number && <div>GSTIN: {tenant.gst_number}</div>}
@@ -1261,7 +1432,7 @@ export default function POSPage() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
               <span>Payment Mode:</span>
-              <span style={{ textTransform: "uppercase" }}>{completedBill.payment_mode}</span>
+              <span style={{ textTransform: "uppercase" }}>{completedBill.payment_mode === "credit" ? "Credit" : "Cash"}</span>
             </div>
           </div>
 

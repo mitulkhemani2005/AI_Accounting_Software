@@ -141,7 +141,7 @@ export default function PartiesPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "4px" }}>
-            Parties & Khata Directory
+            Parties & Ledger Directory
           </h1>
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}>
             Manage Customer receivables, Supplier payables, GST details, and credit balances

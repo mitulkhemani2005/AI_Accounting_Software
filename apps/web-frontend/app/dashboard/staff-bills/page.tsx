@@ -152,14 +152,14 @@ export default function StaffBillsReviewPage() {
     }
   };
 
-  const handleDownloadPdf = async (billId: string, billNumber: string) => {
+  const handleDownloadPdf = async (billId: string, billNumber: string, format: "a4" | "a5" = "a4") => {
     try {
-      const res = await api.get(`/bills/${billId}/pdf`, { responseType: "blob" });
+      const res = await api.get(`/bills/${billId}/pdf?format=${format}`, { responseType: "blob" });
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${billNumber}.pdf`;
+      link.download = `${billNumber}_${format.toUpperCase()}${format === "a5" ? "_HalfSheet" : ""}.pdf`;
       link.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
@@ -301,7 +301,7 @@ export default function StaffBillsReviewPage() {
             ₹{totalOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </div>
           <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-            Khata outstanding balance
+            Customer credit balance
           </div>
         </div>
       </div>
@@ -795,7 +795,7 @@ export default function StaffBillsReviewPage() {
                   >
                     <option value="paid">Paid (Full Settlement)</option>
                     <option value="partial">Partial Payment</option>
-                    <option value="unpaid">Unpaid / Khata Credit</option>
+                    <option value="unpaid">Unpaid / Credit</option>
                   </select>
                 </div>
 
@@ -837,10 +837,19 @@ export default function StaffBillsReviewPage() {
                 <div style={{ display: "flex", gap: "10px" }}>
                   <button
                     type="button"
-                    onClick={() => handleDownloadPdf(selectedBill.id, selectedBill.bill_number)}
+                    onClick={() => handleDownloadPdf(selectedBill.id, selectedBill.bill_number, "a5")}
                     className="btn-secondary"
+                    title="Download Half-A4 (A5) Tax Invoice"
                   >
-                    <Printer size={16} /> Print Tax Invoice
+                    <Printer size={16} /> Half-A4 PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadPdf(selectedBill.id, selectedBill.bill_number, "a4")}
+                    className="btn-secondary"
+                    title="Download Full A4 Tax Invoice"
+                  >
+                    <Printer size={16} /> Full A4 PDF
                   </button>
                   <button
                     type="button"

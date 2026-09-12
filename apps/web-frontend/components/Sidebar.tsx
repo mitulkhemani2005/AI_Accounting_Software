@@ -30,7 +30,7 @@ export function Sidebar() {
     { label: "POS Counter Sale", href: "/dashboard/pos", icon: Receipt, allowed: true },
     { label: "Sales & Invoices", href: "/dashboard/sales", icon: ShoppingBag, allowed: true },
     { label: "Product Master", href: "/dashboard/items", icon: Package, adminOnly: true },
-    { label: "Parties & Khata", href: "/dashboard/parties", icon: Contact, adminOnly: true },
+    { label: "Parties & Ledger", href: "/dashboard/parties", icon: Contact, adminOnly: true },
     { label: "Staff Bills Review", href: "/dashboard/staff-bills", icon: ClipboardCheck, adminOnly: true },
     { label: "Staff & Sub-users", href: "/dashboard/staff", icon: Users, adminOnly: true },
     { label: "Audit Trail", href: "/dashboard/audit", icon: History, adminOnly: true },

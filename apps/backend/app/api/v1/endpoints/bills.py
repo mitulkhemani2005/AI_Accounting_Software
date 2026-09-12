@@ -151,10 +151,11 @@ async def void_bill(
 @router.get("/{bill_id}/pdf")
 async def download_invoice_pdf(
     bill_id: str,
+    format: Optional[str] = Query("a4", description="Paper size: a4 (full page) or a5 (half-A4 sheet)"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Generate and download GST-compliant PDF Tax Invoice"""
+    """Generate and download GST-compliant PDF Tax Invoice (A4 Full Page or A5 Half-A4 Sheet)"""
     result = await db.execute(
         select(Bill).where(Bill.tenant_id == current_user.tenant_id, Bill.id == bill_id)
     )
@@ -167,8 +168,9 @@ async def download_invoice_pdf(
     )
     tenant = tenant_res.scalar_one()
 
-    pdf_bytes = generate_bill_pdf(bill=bill, tenant=tenant)
-    filename = f"{bill.bill_number}.pdf"
+    pdf_bytes = generate_bill_pdf(bill=bill, tenant=tenant, paper_format=format or "a4")
+    suffix = "_A5_HalfSheet" if format in ["a5", "half_a4", "half-a4"] else ""
+    filename = f"{bill.bill_number}{suffix}.pdf"
 
     return Response(
         content=pdf_bytes,

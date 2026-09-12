@@ -97,6 +97,7 @@ export default function SalesPage() {
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [isVoiding, setIsVoiding] = useState(false);
+  const [printFormat, setPrintFormat] = useState<"thermal" | "half_a4">("half_a4");
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -159,15 +160,15 @@ export default function SalesPage() {
     fetchBills();
   };
 
-  const handleDownloadPdf = async (billId: string, billNumber: string) => {
+  const handleDownloadPdf = async (billId: string, billNumber: string, format: "a4" | "a5" = "a4") => {
     setIsDownloadingPdf(true);
     try {
-      const res = await api.get(`/bills/${billId}/pdf`, { responseType: "blob" });
+      const res = await api.get(`/bills/${billId}/pdf?format=${format}`, { responseType: "blob" });
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${billNumber}.pdf`;
+      link.download = `${billNumber}_${format.toUpperCase()}${format === "a5" ? "_HalfSheet" : ""}.pdf`;
       link.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
@@ -188,11 +189,12 @@ export default function SalesPage() {
     }
   };
 
-  const handlePrintReceipt = (bill: Bill) => {
+  const handlePrintBill = (bill: Bill, format: "thermal" | "half_a4" = "half_a4") => {
     setSelectedBill(bill);
+    setPrintFormat(format);
     setTimeout(() => {
       window.print();
-    }, 100);
+    }, 120);
   };
 
   const handleVoidBill = async (billId: string) => {
@@ -612,13 +614,13 @@ export default function SalesPage() {
               Cash: ₹{cashSales.toFixed(0)} | Credit: ₹{creditSales.toFixed(0)}
             </div>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-              Cash collected vs Khata sales
+              Cash collected vs Credit sales
             </div>
           </div>
 
           <div className="glass-panel" style={{ padding: "16px", borderLeft: "4px solid #ef4444" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-              <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Khata / Udhaar Due</span>
+              <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Customer Credit Due</span>
               <AlertTriangle size={18} color="#ef4444" />
             </div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#ef4444" }}>
@@ -675,7 +677,7 @@ export default function SalesPage() {
               <option value="all">All Payment Status</option>
               <option value="paid">Paid</option>
               <option value="partial">Partial</option>
-              <option value="unpaid">Unpaid / Khata Credit</option>
+              <option value="unpaid">Unpaid / Credit</option>
             </select>
 
             {/* Payment Mode Filter - ONLY 2 OPTIONS: Cash or Credit */}
@@ -687,7 +689,7 @@ export default function SalesPage() {
             >
               <option value="all">All Modes (Cash & Credit)</option>
               <option value="cash">💵 Cash Only</option>
-              <option value="credit">📒 Credit (Khata) Only</option>
+              <option value="credit">📒 Credit Only</option>
             </select>
           </div>
         </div>
@@ -770,7 +772,7 @@ export default function SalesPage() {
                             fontSize: "0.7rem",
                           }}
                         >
-                          {bill.payment_mode === "credit" ? "Credit (Khata)" : "Cash"}
+                          {bill.payment_mode === "credit" ? "Credit" : "Cash"}
                         </span>
                         <span
                           className={`badge ${
@@ -838,22 +840,42 @@ export default function SalesPage() {
                           </button>
                         )}
 
-                        {/* Print Receipt */}
+                        {/* Print Half-A4 */}
                         <button
-                          onClick={() => handlePrintReceipt(bill)}
+                          onClick={() => handlePrintBill(bill, "half_a4")}
                           className="btn-secondary"
                           style={{ padding: "6px 8px" }}
-                          title="Print Thermal Receipt"
+                          title="Print Professional Half-A4 (A5) Bill"
                         >
-                          <Printer size={14} />
+                          <Printer size={14} color="#38bdf8" />
                         </button>
 
-                        {/* Download PDF */}
+                        {/* Print Thermal */}
                         <button
-                          onClick={() => handleDownloadPdf(bill.id, bill.bill_number)}
+                          onClick={() => handlePrintBill(bill, "thermal")}
                           className="btn-secondary"
                           style={{ padding: "6px 8px" }}
-                          title="Download Tax Invoice PDF"
+                          title="Print Thermal Slip"
+                        >
+                          <Receipt size={14} />
+                        </button>
+
+                        {/* Download Half A4 PDF */}
+                        <button
+                          onClick={() => handleDownloadPdf(bill.id, bill.bill_number, "a5")}
+                          className="btn-secondary"
+                          style={{ padding: "6px 8px" }}
+                          title="Download Half-A4 (A5) PDF"
+                        >
+                          <FileText size={14} color="#a855f7" />
+                        </button>
+
+                        {/* Download Full A4 PDF */}
+                        <button
+                          onClick={() => handleDownloadPdf(bill.id, bill.bill_number, "a4")}
+                          className="btn-secondary"
+                          style={{ padding: "6px 8px" }}
+                          title="Download Full A4 PDF"
                         >
                           <FileText size={14} color="#60a5fa" />
                         </button>
@@ -948,7 +970,7 @@ export default function SalesPage() {
                   <option value="">👤 Walk-in Cash Customer</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} {c.mobile ? `• 📱 ${c.mobile}` : ""} {c.gst_number ? `• 🆔 GST: ${c.gst_number}` : ""} {c.billing_address ? `• 📍 ${c.billing_address}` : ""} • 💰 Khata: ₹{c.current_balance?.toFixed(2)}
+                      {c.name} {c.mobile ? `• 📱 ${c.mobile}` : ""} {c.gst_number ? `• 🆔 GST: ${c.gst_number}` : ""} {c.billing_address ? `• 📍 ${c.billing_address}` : ""} • 💰 Credit Due: ₹{c.current_balance?.toFixed(2)}
                     </option>
                   ))}
                 </select>
@@ -1026,7 +1048,7 @@ export default function SalesPage() {
                       color: editPaymentMode === "credit" ? "#fbbf24" : "var(--text-muted)",
                     }}
                   >
-                    📒 CREDIT (KHATA)
+                    📒 CREDIT
                   </button>
                 </div>
               </div>
@@ -1314,7 +1336,7 @@ export default function SalesPage() {
 
               <div>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Payment & Tax Supply</div>
-                <div>Payment Mode: <strong style={{ textTransform: "uppercase" }}>{selectedBill.payment_mode === "credit" ? "Credit (Khata)" : "Cash"}</strong></div>
+                <div>Payment Mode: <strong style={{ textTransform: "uppercase" }}>{selectedBill.payment_mode === "credit" ? "Credit" : "Cash"}</strong></div>
                 <div>Payment Status: <strong style={{ textTransform: "capitalize" }}>{selectedBill.payment_status}</strong> (Paid ₹{selectedBill.paid_amount.toFixed(2)})</div>
                 <div>Place of Supply: <strong>{selectedBill.is_interstate ? "Inter-state (IGST)" : "Intra-state (CGST+SGST)"}</strong></div>
               </div>
@@ -1433,23 +1455,40 @@ export default function SalesPage() {
                 )}
               </div>
 
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <button
                   type="button"
-                  onClick={() => handlePrintReceipt(selectedBill)}
-                  className="btn-secondary"
-                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                  onClick={() => handlePrintBill(selectedBill, "half_a4")}
+                  className="btn-primary"
+                  style={{ display: "flex", alignItems: "center", gap: "6px", background: "#0284c7" }}
                 >
-                  <Printer size={16} /> Print Thermal Receipt
+                  <Printer size={16} /> Print Half-A4 Bill
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleDownloadPdf(selectedBill.id, selectedBill.bill_number)}
-                  disabled={isDownloadingPdf}
-                  className="btn-primary"
+                  onClick={() => handlePrintBill(selectedBill, "thermal")}
+                  className="btn-secondary"
                   style={{ display: "flex", alignItems: "center", gap: "6px" }}
                 >
-                  {isDownloadingPdf ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />} Download A4 PDF
+                  <Receipt size={16} /> Thermal Slip
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadPdf(selectedBill.id, selectedBill.bill_number, "a5")}
+                  disabled={isDownloadingPdf}
+                  className="btn-secondary"
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  {isDownloadingPdf ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} color="#a855f7" />} Half-A4 PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadPdf(selectedBill.id, selectedBill.bill_number, "a4")}
+                  disabled={isDownloadingPdf}
+                  className="btn-secondary"
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  {isDownloadingPdf ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} color="#60a5fa" />} Full A4 PDF
                 </button>
               </div>
             </div>
@@ -1457,9 +1496,160 @@ export default function SalesPage() {
         </div>
       )}
 
+      {/* --- PRINTABLE HALF-A4 PROFESSIONAL BILL CONTAINER --- */}
+      {selectedBill && printFormat === "half_a4" && (
+        <div className="print-half-a4" style={{ width: "100%", maxWidth: "100%", margin: "0 auto", padding: "4mm 6mm", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize: "11px", color: "#000", background: "#fff" }}>
+          {/* Header: Company Details & Invoice Metadata */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #000", paddingBottom: "6px", marginBottom: "8px" }}>
+            <div style={{ maxWidth: "60%" }}>
+              <h2 style={{ margin: "0 0 2px 0", fontSize: "17px", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                {tenant?.business_name || "RETAIL STORE"}
+              </h2>
+              {tenant?.legal_name && tenant?.legal_name !== tenant?.business_name && (
+                <div style={{ fontSize: "10px", color: "#333", marginBottom: "2px" }}>({tenant.legal_name})</div>
+              )}
+              <div style={{ fontSize: "10px", lineHeight: "1.3" }}>
+                {tenant?.address && <div>{tenant.address}{tenant.city ? `, ${tenant.city}` : ""}{tenant.state ? `, ${tenant.state}` : ""}{tenant.pincode ? ` - ${tenant.pincode}` : ""}</div>}
+                {tenant?.gst_number && <div><strong>GSTIN:</strong> {tenant.gst_number}</div>}
+                <div style={{ display: "flex", gap: "10px" }}>
+                  {tenant?.phone && <div><strong>Phone:</strong> {tenant.phone}</div>}
+                  {tenant?.email && <div><strong>Email:</strong> {tenant.email}</div>}
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ textAlign: "right", maxWidth: "40%" }}>
+              <div style={{ background: "#000", color: "#fff", padding: "2px 8px", fontSize: "12px", fontWeight: "bold", display: "inline-block", letterSpacing: "1px", marginBottom: "4px" }}>
+                TAX INVOICE
+              </div>
+              <div style={{ fontSize: "10px", lineHeight: "1.4" }}>
+                <div><strong>Invoice No:</strong> {selectedBill.bill_number}</div>
+                <div><strong>Date:</strong> {new Date(selectedBill.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                <div><strong>Time:</strong> {new Date(selectedBill.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
+                <div><strong>Place of Supply:</strong> {selectedBill.is_interstate ? "Inter-State (IGST)" : "Intra-State"}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bill To & Payment Info */}
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", border: "1px solid #000", padding: "6px 8px", marginBottom: "8px", fontSize: "10.5px", lineHeight: "1.35", background: "#fcfcfc" }}>
+            <div>
+              <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Billed To (Customer):</div>
+              <div style={{ fontSize: "12px", fontWeight: "bold", color: "#000" }}>{selectedBill.party_name || "Cash Customer"}</div>
+              {selectedBill.party_mobile && <div><strong>Mobile:</strong> {selectedBill.party_mobile}</div>}
+              {selectedBill.party_gst && <div><strong>GSTIN:</strong> {selectedBill.party_gst}</div>}
+            </div>
+            <div style={{ borderLeft: "1px solid #ccc", paddingLeft: "8px" }}>
+              <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Payment & Status:</div>
+              <div><strong>Payment Mode:</strong> <span style={{ textTransform: "uppercase", fontWeight: "bold" }}>{selectedBill.payment_mode === "credit" ? "Credit" : "Cash"}</span></div>
+              <div><strong>Payment Status:</strong> <span style={{ textTransform: "uppercase", fontWeight: "bold" }}>{selectedBill.payment_status}</span> (Paid: ₹{selectedBill.paid_amount.toFixed(2)})</div>
+              <div><strong>Billed By:</strong> {selectedBill.creator_name || "Counter Staff"}</div>
+            </div>
+          </div>
+
+          {/* Items Table */}
+          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "8px", fontSize: "10px" }}>
+            <thead>
+              <tr style={{ background: "#f0f0f0", borderTop: "1px solid #000", borderBottom: "1px solid #000", textAlign: "left" }}>
+                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", width: "24px", textAlign: "center" }}>#</th>
+                <th style={{ padding: "4px 4px", borderRight: "1px solid #ddd" }}>Item Description</th>
+                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "center", width: "45px" }}>HSN</th>
+                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "right", width: "35px" }}>Qty</th>
+                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "right", width: "50px" }}>Rate</th>
+                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "right", width: "55px" }}>Taxable</th>
+                <th style={{ padding: "4px 3px", borderRight: "1px solid #ddd", textAlign: "right", width: "38px" }}>GST</th>
+                <th style={{ padding: "4px 4px", textAlign: "right", width: "65px" }}>Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(selectedBill.items || []).map((item, idx) => (
+                <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
+                  <td style={{ padding: "3px", textAlign: "center", borderRight: "1px solid #ddd" }}>{idx + 1}</td>
+                  <td style={{ padding: "3px 4px", borderRight: "1px solid #ddd", fontWeight: 500 }}>
+                    {item.item_name}
+                    {item.is_tax_inclusive && <span style={{ fontSize: "8.5px", color: "#555", marginLeft: "4px" }}>(Incl.)</span>}
+                  </td>
+                  <td style={{ padding: "3px", textAlign: "center", borderRight: "1px solid #ddd", color: "#444" }}>{item.hsn_code || "—"}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #ddd" }}>{item.quantity} {item.unit || "pcs"}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #ddd" }}>{item.rate.toFixed(2)}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #ddd" }}>{item.taxable_amount.toFixed(2)}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #ddd" }}>{item.gst_rate}%</td>
+                  <td style={{ padding: "3px 4px", textAlign: "right", fontWeight: "bold" }}>{item.total_amount.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Totals & Tax Breakdown Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "10px", borderTop: "1px solid #000", paddingTop: "6px", marginBottom: "8px", fontSize: "10.5px" }}>
+            <div>
+              <div style={{ border: "1px solid #ddd", padding: "5px 7px", borderRadius: "4px", background: "#fcfcfc", marginBottom: "6px" }}>
+                <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>Terms & Conditions:</div>
+                <div style={{ fontSize: "9px", lineHeight: "1.3", color: "#333" }}>
+                  1. Goods once sold will not be accepted back without invoice.<br/>
+                  2. Certified that the particulars given above are true and correct.<br/>
+                  3. Subject to local jurisdiction.
+                </div>
+              </div>
+              {selectedBill.notes && (
+                <div style={{ fontSize: "9.5px", color: "#444" }}>
+                  <strong>Note:</strong> {selectedBill.notes}
+                </div>
+              )}
+            </div>
+
+            <div style={{ border: "1px solid #000", padding: "6px 8px", background: "#f9f9f9" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                <span>Taxable Amount:</span>
+                <span>₹{selectedBill.taxable_amount.toFixed(2)}</span>
+              </div>
+              {selectedBill.discount_amount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", color: "#000", marginBottom: "2px" }}>
+                  <span>Discount:</span>
+                  <span>-₹{selectedBill.discount_amount.toFixed(2)}</span>
+                </div>
+              )}
+              {selectedBill.cgst_amount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                  <span>CGST:</span>
+                  <span>₹{selectedBill.cgst_amount.toFixed(2)}</span>
+                </div>
+              )}
+              {selectedBill.sgst_amount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                  <span>SGST:</span>
+                  <span>₹{selectedBill.sgst_amount.toFixed(2)}</span>
+                </div>
+              )}
+              {selectedBill.igst_amount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                  <span>IGST:</span>
+                  <span>₹{selectedBill.igst_amount.toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "2px solid #000", paddingTop: "4px", marginTop: "4px", fontSize: "13px", fontWeight: "bold" }}>
+                <span>Grand Total:</span>
+                <span>₹{selectedBill.total_amount.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Signatures */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "12px", paddingTop: "8px", borderTop: "1px dashed #ccc", fontSize: "10px" }}>
+            <div style={{ textAlign: "center", width: "140px" }}>
+              <div style={{ borderTop: "1px solid #000", paddingTop: "3px" }}>Customer's Signature</div>
+            </div>
+            <div style={{ textAlign: "center", width: "160px" }}>
+              <div style={{ fontWeight: "bold", marginBottom: "16px" }}>For {tenant?.business_name || "Company"}</div>
+              <div style={{ borderTop: "1px solid #000", paddingTop: "3px" }}>Authorized Signatory</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- PRINTABLE THERMAL RECEIPT CONTAINER --- */}
-      {selectedBill && (
-        <div className="print-only" style={{ padding: "10px", fontFamily: "monospace", fontSize: "12px", width: "300px", margin: "0 auto" }}>
+      {selectedBill && printFormat === "thermal" && (
+        <div className="print-thermal" style={{ padding: "10px", fontFamily: "monospace", fontSize: "12px", width: "300px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", borderBottom: "1px dashed #000", paddingBottom: "8px", marginBottom: "8px" }}>
             <h3 style={{ fontSize: "16px", margin: 0 }}>{tenant?.business_name || "RETAIL STORE"}</h3>
             {tenant?.gst_number && <div>GSTIN: {tenant.gst_number}</div>}
@@ -1509,7 +1699,7 @@ export default function SalesPage() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
               <span>Payment Mode:</span>
-              <span style={{ textTransform: "uppercase" }}>{selectedBill.payment_mode === "credit" ? "Credit (Khata)" : "Cash"}</span>
+              <span style={{ textTransform: "uppercase" }}>{selectedBill.payment_mode === "credit" ? "Credit" : "Cash"}</span>
             </div>
           </div>
 
