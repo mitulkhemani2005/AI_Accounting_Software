@@ -13,14 +13,25 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION} [{settings.ENVIRONMENT}]")
     init_sentry()
     
-    # Initialize DB tables
+    # Initialize DB tables & run migrations
     try:
+        from sqlalchemy import text
         from app.db.session import engine
         from app.db.base import Base
         import app.models  # load all models
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database schema initialized successfully.")
+            migration_statements = [
+                "ALTER TABLE items ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE NOT NULL",
+                "ALTER TABLE bill_items ADD COLUMN IF NOT EXISTS purchase_price FLOAT DEFAULT 0.0",
+                "ALTER TABLE bill_items ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE NOT NULL",
+            ]
+            for stmt in migration_statements:
+                try:
+                    await conn.execute(text(stmt))
+                except Exception as me:
+                    logger.debug(f"Migration note ({stmt}): {me}")
+        logger.info("Database schema and migrations initialized successfully.")
     except Exception as e:
         logger.error(f"Database schema initialization warning: {e}")
 
