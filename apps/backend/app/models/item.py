@@ -26,6 +26,7 @@ class Item(Base, TimestampMixin):
     sale_price: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     purchase_price: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     gst_rate: Mapped[float] = mapped_column(Float, default=18.0, nullable=False)  # 0, 5, 12, 18, 28
+    is_tax_inclusive: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     hsn_code: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, index=True)
     min_stock_alert: Mapped[float] = mapped_column(Float, default=5.0, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

@@ -86,7 +86,7 @@ def generate_bill_pdf(bill: Bill, tenant: Tenant) -> bytes:
     story.append(Spacer(1, 15))
 
     # 3. Line Items Table
-    headers = ["#", "Item Description", "HSN", "Qty", "Rate (₹)", "Taxable (₹)", "GST %", "Total (₹)"]
+    headers = ["#", "Item Description", "HSN", "Qty", "Rate (Rs.)", "Taxable (Rs.)", "GST %", "Total (Rs.)"]
     table_rows = [headers]
 
     for idx, item in enumerate(bill.items, start=1):
@@ -118,20 +118,20 @@ def generate_bill_pdf(bill: Bill, tenant: Tenant) -> bytes:
 
     # 4. Totals Breakdown Table
     totals_data = [
-        ["Subtotal:", f"₹{bill.subtotal:.2f}"],
-        ["Discount:", f"-₹{bill.discount_amount:.2f}"],
-        ["Taxable Amount:", f"₹{bill.taxable_amount:.2f}"],
+        ["Subtotal:", f"Rs. {bill.subtotal:.2f}"],
+        ["Discount:", f"-Rs. {bill.discount_amount:.2f}"],
+        ["Taxable Amount:", f"Rs. {bill.taxable_amount:.2f}"],
     ]
     if bill.is_interstate:
-        totals_data.append(["Integrated GST (IGST):", f"₹{bill.igst_amount:.2f}"])
+        totals_data.append(["Integrated GST (IGST):", f"Rs. {bill.igst_amount:.2f}"])
     else:
-        totals_data.append(["Central GST (CGST):", f"₹{bill.cgst_amount:.2f}"])
-        totals_data.append(["State GST (SGST):", f"₹{bill.sgst_amount:.2f}"])
+        totals_data.append(["Central GST (CGST):", f"Rs. {bill.cgst_amount:.2f}"])
+        totals_data.append(["State GST (SGST):", f"Rs. {bill.sgst_amount:.2f}"])
 
     if bill.round_off != 0.0:
-        totals_data.append(["Round Off:", f"₹{bill.round_off:.2f}"])
+        totals_data.append(["Round Off:", f"Rs. {bill.round_off:.2f}"])
 
-    totals_data.append(["Grand Total:", f"₹{bill.total_amount:.2f}"])
+    totals_data.append(["Grand Total:", f"Rs. {bill.total_amount:.2f}"])
 
     totals_table = Table(totals_data, colWidths=[140, 100], hAlign='RIGHT')
     totals_table.setStyle(TableStyle([

@@ -6,23 +6,41 @@ def calculate_line_item_gst(
     item: BillItemInput,
     is_interstate: bool = False
 ) -> Dict[str, Any]:
-    """Calculate GST breakdown for an individual line item"""
+    """Calculate GST breakdown for an individual line item (supports tax inclusive & exclusive)"""
     raw_amount = item.quantity * item.rate
-    item_taxable = round(max(0.0, raw_amount - item.discount_amount), 2)
+    net_line_amount = max(0.0, raw_amount - item.discount_amount)
     gst_rate = float(item.gst_rate)
+    is_inclusive = getattr(item, "is_tax_inclusive", False)
 
-    if is_interstate:
-        cgst = 0.0
-        sgst = 0.0
-        igst = round(item_taxable * (gst_rate / 100.0), 2)
+    if is_inclusive and gst_rate > 0:
+        # Tax is included in price (e.g. MRP ₹20 with 12% GST => taxable = 20 / 1.12)
+        item_taxable = round(net_line_amount / (1.0 + (gst_rate / 100.0)), 2)
+        total_item_gst = round(net_line_amount - item_taxable, 2)
+        total_amount = round(net_line_amount, 2)
+
+        if is_interstate:
+            cgst = 0.0
+            sgst = 0.0
+            igst = total_item_gst
+        else:
+            cgst = round(total_item_gst / 2.0, 2)
+            sgst = round(total_item_gst - cgst, 2)
+            igst = 0.0
     else:
-        half_rate = gst_rate / 2.0
-        cgst = round(item_taxable * (half_rate / 100.0), 2)
-        sgst = round(item_taxable * (half_rate / 100.0), 2)
-        igst = 0.0
+        # Tax is exclusive (added on top of price)
+        item_taxable = round(net_line_amount, 2)
+        if is_interstate:
+            cgst = 0.0
+            sgst = 0.0
+            igst = round(item_taxable * (gst_rate / 100.0), 2)
+        else:
+            half_rate = gst_rate / 2.0
+            cgst = round(item_taxable * (half_rate / 100.0), 2)
+            sgst = round(item_taxable * (half_rate / 100.0), 2)
+            igst = 0.0
 
-    total_item_gst = cgst + sgst + igst
-    total_amount = round(item_taxable + total_item_gst, 2)
+        total_item_gst = round(cgst + sgst + igst, 2)
+        total_amount = round(item_taxable + total_item_gst, 2)
 
     return {
         "item_id": item.item_id,
@@ -33,6 +51,7 @@ def calculate_line_item_gst(
         "rate": item.rate,
         "discount_amount": item.discount_amount,
         "gst_rate": gst_rate,
+        "is_tax_inclusive": is_inclusive,
         "taxable_amount": item_taxable,
         "cgst_amount": cgst,
         "sgst_amount": sgst,

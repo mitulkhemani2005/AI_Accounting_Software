@@ -12,6 +12,7 @@ class ItemCreateRequest(BaseModel):
     sale_price: float = Field(..., ge=0)
     purchase_price: float = Field(0.0, ge=0)
     gst_rate: float = Field(18.0, ge=0, le=100)
+    is_tax_inclusive: bool = Field(False, description="True if sale_price already includes GST (MRP)")
     hsn_code: Optional[str] = Field(None, max_length=20)
     min_stock_alert: float = Field(5.0, ge=0)
 
@@ -25,6 +26,7 @@ class ItemUpdateRequest(BaseModel):
     sale_price: Optional[float] = Field(None, ge=0)
     purchase_price: Optional[float] = Field(None, ge=0)
     gst_rate: Optional[float] = Field(None, ge=0, le=100)
+    is_tax_inclusive: Optional[bool] = None
     hsn_code: Optional[str] = None
     min_stock_alert: Optional[float] = Field(None, ge=0)
     is_active: Optional[bool] = None
@@ -41,6 +43,7 @@ class ItemResponse(BaseModel):
     sale_price: float
     purchase_price: float
     gst_rate: float
+    is_tax_inclusive: bool = False
     hsn_code: Optional[str] = None
     min_stock_alert: float
     is_active: bool

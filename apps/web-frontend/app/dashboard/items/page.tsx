@@ -35,6 +35,7 @@ export default function ItemsPage() {
     sale_price: "",
     purchase_price: "",
     gst_rate: "18",
+    is_tax_inclusive: false,
     hsn_code: "",
     min_stock_alert: "5",
   });
@@ -80,6 +81,7 @@ export default function ItemsPage() {
       sale_price: "",
       purchase_price: "",
       gst_rate: "18",
+      is_tax_inclusive: false,
       hsn_code: "",
       min_stock_alert: "5",
     });
@@ -98,6 +100,7 @@ export default function ItemsPage() {
       sale_price: item.sale_price.toString(),
       purchase_price: item.purchase_price.toString(),
       gst_rate: item.gst_rate.toString(),
+      is_tax_inclusive: item.is_tax_inclusive || false,
       hsn_code: item.hsn_code || "",
       min_stock_alert: item.min_stock_alert.toString(),
     });
@@ -119,6 +122,7 @@ export default function ItemsPage() {
       sale_price: parseFloat(formData.sale_price) || 0,
       purchase_price: parseFloat(formData.purchase_price) || 0,
       gst_rate: parseFloat(formData.gst_rate) || 0,
+      is_tax_inclusive: formData.is_tax_inclusive,
       hsn_code: formData.hsn_code.trim() || undefined,
       min_stock_alert: parseFloat(formData.min_stock_alert) || 0,
     };
@@ -264,6 +268,9 @@ export default function ItemsPage() {
                   </td>
                   <td style={{ fontWeight: 700, color: "#34d399", fontSize: "0.95rem" }}>
                     ₹{item.sale_price.toFixed(2)}
+                    <div style={{ fontSize: "0.7rem", color: item.is_tax_inclusive ? "#60a5fa" : "var(--text-muted)", fontWeight: 400 }}>
+                      {item.is_tax_inclusive ? "Tax Inclusive (MRP)" : "Tax Exclusive"}
+                    </div>
                   </td>
                   <td>
                     <span className="badge badge-blue">{item.gst_rate}% GST</span>
@@ -354,6 +361,41 @@ export default function ItemsPage() {
                     <option value="28">28% (Luxury / Sin)</option>
                   </select>
                 </div>
+              </div>
+
+              {/* GST Inclusive vs Exclusive Option */}
+              <div
+                style={{
+                  background: "rgba(30, 41, 59, 0.4)",
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#f8fafc" }}>
+                    GST Included in Sale Price? (MRP)
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                    {formData.is_tax_inclusive
+                      ? "Price is Inclusive of GST (Tax extracted backwards)"
+                      : "Price is Exclusive (GST added on top at billing)"}
+                  </div>
+                </div>
+                <label style={{ position: "relative", display: "inline-flex", alignItems: "center", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.is_tax_inclusive}
+                    onChange={(e) => setFormData({ ...formData, is_tax_inclusive: e.target.checked })}
+                    style={{ width: "18px", height: "18px", accentColor: "#3b82f6", cursor: "pointer" }}
+                  />
+                  <span style={{ marginLeft: "8px", fontSize: "0.85rem", fontWeight: 600, color: formData.is_tax_inclusive ? "#60a5fa" : "var(--text-muted)" }}>
+                    {formData.is_tax_inclusive ? "Tax Inclusive" : "Tax Exclusive"}
+                  </span>
+                </label>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>

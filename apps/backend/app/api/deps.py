@@ -1,5 +1,5 @@
-from typing import AsyncGenerator, Callable, List, Optional
-from fastapi import Depends, HTTPException, status
+from typing import Optional, Callable, List, AsyncGenerator
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -16,10 +16,12 @@ oauth2_scheme = OAuth2PasswordBearer(
 
 
 async def get_current_user(
-    token: Optional[str] = Depends(oauth2_scheme),
+    request: Request,
+    header_token: Optional[str] = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
 ) -> User:
-    """Extract and validate current authenticated user and tenant context from JWT"""
+    """Extract and validate current authenticated user and tenant context from JWT (header or query param)"""
+    token = header_token or request.query_params.get("token")
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

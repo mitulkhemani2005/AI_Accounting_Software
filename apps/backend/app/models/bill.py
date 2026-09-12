@@ -1,6 +1,6 @@
 import uuid
 from typing import Optional, List
-from sqlalchemy import String, Float, ForeignKey, UniqueConstraint, Text, DateTime, func
+from sqlalchemy import String, Float, Boolean, ForeignKey, UniqueConstraint, Text, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 from app.db.base import Base, TimestampMixin
@@ -90,6 +90,7 @@ class BillItem(Base, TimestampMixin):
     
     # Taxes
     gst_rate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    is_tax_inclusive: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     taxable_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     cgst_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     sgst_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
