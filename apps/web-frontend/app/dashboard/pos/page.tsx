@@ -66,6 +66,8 @@ export default function POSPage() {
   const [customerName, setCustomerName] = useState("Walk-in Cash Customer");
   const [customerMobile, setCustomerMobile] = useState("");
   const [customerGst, setCustomerGst] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [customerState, setCustomerState] = useState("");
   const [customerBalance, setCustomerBalance] = useState<number>(0);
   const [isInterstate, setIsInterstate] = useState(false);
   const [overallDiscount, setOverallDiscount] = useState("0");
@@ -421,6 +423,8 @@ export default function POSPage() {
       setCustomerName("Walk-in Cash Customer");
       setCustomerMobile("");
       setCustomerGst("");
+      setCustomerAddress("");
+      setCustomerState("");
       setCustomerBalance(0);
       return;
     }
@@ -429,6 +433,8 @@ export default function POSPage() {
     setCustomerName(cust.name);
     setCustomerMobile(cust.mobile || "");
     setCustomerGst(cust.gst_number || "");
+    setCustomerAddress(cust.billing_address || "");
+    setCustomerState(cust.state || "");
     setCustomerBalance(cust.current_balance || 0);
   };
 
@@ -780,7 +786,7 @@ export default function POSPage() {
               </div>
             </div>
 
-            {/* Customer Selector Dropdown + Quick Add */}
+            {/* Customer Selector Dropdown + Quick Add (Admin Only) */}
             <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               <div style={{ flex: 1, position: "relative" }}>
                 <select
@@ -795,43 +801,52 @@ export default function POSPage() {
                   <option value="">👤 Walk-in Cash Customer</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} {c.mobile ? `(${c.mobile})` : ""} — Khata: ₹{c.current_balance?.toFixed(2)}
+                      {c.name} {c.mobile ? `• 📱 ${c.mobile}` : ""} {c.gst_number ? `• 🆔 GST: ${c.gst_number}` : ""} {c.billing_address ? `• 📍 ${c.billing_address}` : ""} • 💰 Khata: ₹{c.current_balance?.toFixed(2)}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowAddCustomerModal(true)}
-                className="btn-secondary"
-                style={{ padding: "6px 10px", fontSize: "0.8rem", whiteSpace: "nowrap", height: "36px" }}
-                title="Create New Customer"
-              >
-                <UserPlus size={14} /> + New
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddCustomerModal(true)}
+                  className="btn-secondary"
+                  style={{ padding: "6px 10px", fontSize: "0.8rem", whiteSpace: "nowrap", height: "36px" }}
+                  title="Admin: Create New Customer"
+                >
+                  <UserPlus size={14} /> + New
+                </button>
+              )}
             </div>
 
-            {/* Selected Customer Info Badge */}
+            {/* Selected Customer Info Badge with Name, Address, GSTIN, Mobile, and Khata */}
             {selectedCustomerId && (
               <div
                 style={{
-                  marginTop: "6px",
-                  padding: "6px 10px",
-                  borderRadius: "6px",
+                  marginTop: "8px",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
                   background: "rgba(59, 130, 246, 0.15)",
                   border: "1px solid rgba(59, 130, 246, 0.3)",
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  fontSize: "0.75rem",
+                  flexDirection: "column",
+                  gap: "4px",
+                  fontSize: "0.775rem",
                 }}
               >
-                <div>
-                  <strong>{customerName}</strong> {customerMobile && `&bull; ${customerMobile}`}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <strong style={{ fontSize: "0.85rem", color: "#f8fafc" }}>👤 {customerName}</strong>
+                    {customerMobile && <span style={{ color: "var(--text-muted)", marginLeft: "8px" }}>📱 {customerMobile}</span>}
+                  </div>
+                  <div style={{ color: customerBalance > 0 ? "#f87171" : "#34d399", fontWeight: 700 }}>
+                    Khata Due: ₹{customerBalance.toFixed(2)}
+                  </div>
                 </div>
-                <div style={{ color: customerBalance > 0 ? "#f87171" : "#34d399", fontWeight: 600 }}>
-                  Khata Due: ₹{customerBalance.toFixed(2)}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "var(--text-muted)", fontSize: "0.725rem", flexWrap: "wrap", gap: "6px" }}>
+                  <div>📍 Address: <span style={{ color: "#f1f5f9" }}>{customerAddress ? `${customerAddress}${customerState ? `, ${customerState}` : ""}` : "No address registered"}</span></div>
+                  <div>🆔 GSTIN: <span style={{ fontFamily: "monospace", color: "#60a5fa" }}>{customerGst || "Unregistered"}</span></div>
                 </div>
               </div>
             )}

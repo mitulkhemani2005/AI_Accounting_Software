@@ -948,7 +948,7 @@ export default function SalesPage() {
                   <option value="">👤 Walk-in Cash Customer</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} {c.mobile ? `(${c.mobile})` : ""}
+                      {c.name} {c.mobile ? `• 📱 ${c.mobile}` : ""} {c.gst_number ? `• 🆔 GST: ${c.gst_number}` : ""} {c.billing_address ? `• 📍 ${c.billing_address}` : ""} • 💰 Khata: ₹{c.current_balance?.toFixed(2)}
                     </option>
                   ))}
                 </select>

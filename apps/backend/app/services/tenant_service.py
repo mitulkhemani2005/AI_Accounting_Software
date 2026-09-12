@@ -19,6 +19,8 @@ DEFAULT_PERMISSIONS = [
     ("accounting.manage", "Access full double-entry books, chart of accounts, and journals"),
     ("reports.view", "View financial reports, Trial Balance, P&L, and Balance Sheet"),
     ("outstanding.view", "View Sundry Debtors and Creditors ageing reports"),
+    ("party.create", "Create new customer or supplier accounts (Admin only)"),
+    ("party.edit", "Edit customer or supplier profiles (Admin only)"),
     ("users.manage", "Manage sub-users, staff, roles, and staff PINs"),
     ("tenant.manage", "Manage business profile, GST details, and billing settings"),
     ("ai.query", "Query AI intelligence layer and view smart suggestions"),

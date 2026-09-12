@@ -28,10 +28,10 @@ router = APIRouter()
 async def add_customer(
     payload: CustomerCreateRequest,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("party.create")),
     db: AsyncSession = Depends(get_db)
 ):
-    """Create a customer (accessible to both Admin & POS staff)"""
+    """Create a customer (ADMIN ONLY - Staff cannot add new customers)"""
     client_ip = request.client.host if request.client else None
     return await create_customer(
         db=db,
@@ -48,7 +48,7 @@ async def get_customers(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """List customers with optional search filter"""
+    """List customers with optional search filter (available for billing selection)"""
     return await list_customers(
         db=db,
         tenant_id=current_user.tenant_id,
@@ -61,10 +61,10 @@ async def edit_customer(
     customer_id: str,
     payload: CustomerUpdateRequest,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("party.edit")),
     db: AsyncSession = Depends(get_db)
 ):
-    """Update customer details"""
+    """Update customer details (ADMIN ONLY)"""
     client_ip = request.client.host if request.client else None
     return await update_customer(
         db=db,

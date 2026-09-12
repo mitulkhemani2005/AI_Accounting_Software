@@ -122,6 +122,19 @@ export default function PartiesPage() {
     }
   };
 
+  if (!isAdmin) {
+    return (
+      <div className="glass-panel" style={{ padding: "40px", textAlign: "center", maxWidth: "600px", margin: "40px auto" }}>
+        <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "8px", color: "#f87171" }}>
+          Admin Access Required
+        </h2>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+          Staff members are restricted to counter sale billing only. Adding or managing customers and suppliers requires Store Owner / Admin privileges.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Header */}
