@@ -59,41 +59,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = async () => {
     try {
+      if (typeof window === "undefined") return;
+      
       const storedToken = localStorage.getItem("auth_token");
       if (!storedToken) {
         setIsLoading(false);
         return;
       }
+
       setToken(storedToken);
 
       const sessionStr = localStorage.getItem("auth_session");
       if (sessionStr) {
-        const session = JSON.parse(sessionStr);
-        setUser(session.user);
-        setTenant(session.tenant);
-        setPermissions(session.permissions || []);
-        setEntitlements(session.entitlements || []);
+        try {
+          const session = JSON.parse(sessionStr);
+          setUser(session.user);
+          setTenant(session.tenant);
+          setPermissions(session.permissions || []);
+          setEntitlements(session.entitlements || []);
+        } catch (e) {
+          console.error("Failed to parse cached session:", e);
+        }
       }
 
       // Fetch fresh profile from API
       const res = await api.get("/auth/me");
       if (res.data) {
-        setUser((prev) => ({
-          ...prev!,
+        setUser({
           id: res.data.id,
           name: res.data.name,
           mobile_number: res.data.mobile_number,
           email: res.data.email,
           role: res.data.role,
-        }));
+        });
         setPermissions(res.data.permissions || []);
       }
-    } catch (err) {
-      console.error("Session refresh error:", err);
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("auth_session");
-      setUser(null);
-      setTenant(null);
+    } catch (err: any) {
+      console.warn("Session validation error:", err?.message || err);
+      // Only clear if 401 Unauthorized
+      if (err.response?.status === 401) {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_session");
+        setUser(null);
+        setTenant(null);
+      }
     } finally {
       setIsLoading(false);
     }

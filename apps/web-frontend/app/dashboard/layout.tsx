@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import { Sidebar } from "@/components/Sidebar";
@@ -10,14 +10,19 @@ import { Loader2 } from "lucide-react";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/login");
-    }
-  }, [user, isLoading, router]);
+    setMounted(true);
+  }, []);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (mounted && !isLoading && !user) {
+      router.replace("/login");
+    }
+  }, [user, isLoading, mounted, router]);
+
+  if (!mounted || isLoading) {
     return (
       <div
         style={{
@@ -27,11 +32,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           alignItems: "center",
           justifyContent: "center",
           gap: "16px",
+          backgroundColor: "#0b132b",
         }}
       >
         <Loader2 className="animate-spin" size={36} color="#3b82f6" />
         <div style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>
-          Authenticating tenant session...
+          Loading workspace...
         </div>
       </div>
     );
@@ -42,7 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#0b132b" }}>
       <Navbar />
       <div style={{ display: "flex", flex: 1 }}>
         <Sidebar />

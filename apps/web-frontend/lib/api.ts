@@ -1,15 +1,21 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+// On browser, use relative path '/api/v1' to leverage Next.js rewrites; on server fallback to backend URL
+const getBaseUrl = () => {
+  if (typeof window !== "undefined") {
+    return "/api/v1";
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
+};
 
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: getBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Attach Authorization header if token exists in localStorage
+// Request interceptor: attach token
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("auth_token");
@@ -20,16 +26,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Global response interceptor for 401 Unauthorized
+// Response interceptor: handle session expiration gracefully without crashing forms
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && typeof window !== "undefined") {
-      // Token expired or invalid
-      if (!window.location.pathname.startsWith("/login") && !window.location.pathname.startsWith("/signup")) {
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("auth_user");
-        window.location.href = "/login";
+    if (typeof window !== "undefined") {
+      const isAuthEndpoint =
+        error.config?.url?.includes("/auth/login") ||
+        error.config?.url?.includes("/auth/signup");
+
+      if (error.response?.status === 401 && !isAuthEndpoint) {
+        const path = window.location.pathname;
+        if (path !== "/login" && path !== "/signup" && path !== "/") {
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("auth_session");
+          window.location.href = "/login";
+        }
       }
     }
     return Promise.reject(error);
