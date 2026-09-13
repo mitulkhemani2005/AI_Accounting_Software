@@ -246,11 +246,15 @@ export default function InventoryPage() {
     notes: "",
   });
 
+  const [suppliersList, setSuppliersList] = useState<any[]>([]);
+
   // Stock In Form State (Options: product, cs, ea, batch(opt) only)
   const [stockInForm, setStockInForm] = useState<{
     godown_id: string;
+    supplier_id?: string;
     supplier_name: string;
     invoice_number: string;
+    payment_mode: "credit" | "cash";
     items: {
       item_id: string;
       cases: number | string;
@@ -260,8 +264,10 @@ export default function InventoryPage() {
     notes: string;
   }>({
     godown_id: "",
+    supplier_id: "",
     supplier_name: "",
     invoice_number: "",
+    payment_mode: "credit",
     items: [
       {
         item_id: "",
@@ -356,12 +362,13 @@ export default function InventoryPage() {
   const loadAllData = async () => {
     setIsLoading(true);
     try {
-      const [metricsRes, stocksRes, godownsRes, alertsRes, expiringRes] = await Promise.all([
+      const [metricsRes, stocksRes, godownsRes, alertsRes, expiringRes, suppsRes] = await Promise.all([
         api.get("/inventory/metrics"),
         api.get("/inventory/stock"),
         api.get("/inventory/godowns"),
         api.get("/inventory/alerts/low-stock"),
         api.get("/inventory/alerts/expiring?days=60"),
+        api.get("/parties/suppliers"),
       ]);
 
       setMetrics(metricsRes.data);
@@ -369,6 +376,7 @@ export default function InventoryPage() {
       setGodowns(godownsRes.data);
       setLowStockAlerts(alertsRes.data);
       setExpiringAlerts(expiringRes.data);
+      setSuppliersList(suppsRes.data);
 
       // Fetch Items list for drop-downs
       const itemsRes = await api.get("/items");
@@ -615,6 +623,7 @@ export default function InventoryPage() {
       godown_id: def ? def.id : "",
       supplier_name: "",
       invoice_number: "",
+      payment_mode: "credit",
       items: [
         {
           item_id: item.item_id,
@@ -716,8 +725,10 @@ export default function InventoryPage() {
     try {
       const payload = {
         godown_id: stockInForm.godown_id,
+        supplier_id: stockInForm.supplier_id || undefined,
         supplier_name: stockInForm.supplier_name,
         invoice_number: stockInForm.invoice_number,
+        payment_mode: stockInForm.payment_mode || "credit",
         items: stockInForm.items.map((row) => {
           const selItem = allItemsList.find((it) => it.id === row.item_id);
           const uPerCase = selItem?.units_per_case && selItem.units_per_case > 0 ? selItem.units_per_case : 1;
@@ -742,8 +753,10 @@ export default function InventoryPage() {
       // Reset form
       setStockInForm({
         godown_id: godowns.find((g) => g.is_default)?.id || "",
+        supplier_id: "",
         supplier_name: "",
         invoice_number: "",
+        payment_mode: "credit",
         items: [{ item_id: "", cases: 1, loose_ea: 0, batch_number: "" }],
         notes: "",
       });
@@ -1189,33 +1202,88 @@ export default function InventoryPage() {
                 </select>
               </div>
 
-              {/* Supplier Name */}
+              {/* Supplier Selector */}
               <div>
                 <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
-                  🚚 Supplier / Vendor Name
+                  🚚 Supplier / Vendor
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. National Distributors"
-                  className="input-field"
-                  value={stockInForm.supplier_name}
-                  onChange={(e) => setStockInForm({ ...stockInForm, supplier_name: e.target.value })}
-                />
+                {suppliersList.length > 0 ? (
+                  <select
+                    className="input-field"
+                    value={stockInForm.supplier_id || (stockInForm.supplier_name ? "__CUSTOM__" : "")}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "__CUSTOM__") {
+                        setStockInForm({ ...stockInForm, supplier_id: "", supplier_name: "" });
+                      } else {
+                        const found = suppliersList.find((s) => s.id === val);
+                        setStockInForm({
+                          ...stockInForm,
+                          supplier_id: val,
+                          supplier_name: found ? found.name : "",
+                        });
+                      }
+                    }}
+                  >
+                    <option value="">-- Select Registered Supplier (Optional) --</option>
+                    {suppliersList.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} {s.area_name ? `(${s.area_name})` : ""} {s.mobile ? `- 📱 ${s.mobile}` : ""}
+                      </option>
+                    ))}
+                    <option value="__CUSTOM__">➕ Enter Custom / Unregistered Supplier Name</option>
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="e.g. National Distributors"
+                    className="input-field"
+                    value={stockInForm.supplier_name}
+                    onChange={(e) => setStockInForm({ ...stockInForm, supplier_name: e.target.value })}
+                  />
+                )}
+                {(!stockInForm.supplier_id || suppliersList.length === 0) && (
+                  <input
+                    type="text"
+                    placeholder="Custom Supplier Name..."
+                    className="input-field"
+                    value={stockInForm.supplier_name}
+                    onChange={(e) => setStockInForm({ ...stockInForm, supplier_name: e.target.value, supplier_id: "" })}
+                    style={{ marginTop: "6px", fontSize: "0.825rem" }}
+                  />
+                )}
               </div>
             </div>
 
-            {/* Invoice Number */}
-            <div>
-              <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
-                📄 Supplier Purchase Invoice / Ref Number
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. INV-PUR-9821"
-                className="input-field"
-                value={stockInForm.invoice_number}
-                onChange={(e) => setStockInForm({ ...stockInForm, invoice_number: e.target.value })}
-              />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              {/* Payment Mode */}
+              <div>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  💳 Purchase Payment Terms
+                </label>
+                <select
+                  className="input-field"
+                  value={stockInForm.payment_mode}
+                  onChange={(e) => setStockInForm({ ...stockInForm, payment_mode: e.target.value as "credit" | "cash" })}
+                >
+                  <option value="credit">📒 Credit Purchase (Adds to Supplier Payable Outstanding)</option>
+                  <option value="cash">💵 Cash Purchase (Immediate Payment Settled)</option>
+                </select>
+              </div>
+
+              {/* Invoice Number */}
+              <div>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  📄 Supplier Purchase Invoice / Ref Number
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. INV-PUR-9821"
+                  className="input-field"
+                  value={stockInForm.invoice_number}
+                  onChange={(e) => setStockInForm({ ...stockInForm, invoice_number: e.target.value })}
+                />
+              </div>
             </div>
 
             {/* Line Items */}

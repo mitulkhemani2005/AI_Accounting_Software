@@ -17,8 +17,8 @@ class AccountGroupResponse(BaseModel):
 
 
 class AccountCreate(BaseModel):
-    code: str = Field(..., description="Unique account code, e.g. 1010, 5010")
-    name: str = Field(..., description="Account name, e.g. Cash in Hand")
+    code: Optional[str] = Field(None, description="Unique account code, e.g. 1010, 5010 (auto-generated if omitted)")
+    name: str = Field(..., description="Account name, e.g. Printing & Stationery")
     nature: str = Field(..., description="asset, liability, equity, income, expense")
     account_type: str = Field("general", description="cash, bank, debtor, creditor, tax, sales, purchase, general")
     group_id: Optional[str] = None

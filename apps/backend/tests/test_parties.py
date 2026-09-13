@@ -141,3 +141,107 @@ async def test_party_management(async_client: AsyncClient):
     ajay = next((c for c in cust_check.json() if c["id"] == cust_id), None)
     assert ajay is not None
     assert ajay["current_balance"] == 1000.0
+
+
+@pytest.mark.asyncio
+async def test_supplier_credit_stock_in_and_payable_ledger(async_client: AsyncClient):
+    # 1. Admin Signup
+    res = await async_client.post(
+        "/api/v1/auth/signup-admin",
+        json={
+            "business_name": "Metro Retailers",
+            "admin_name": "Suresh Metro",
+            "mobile_number": "9400000002",
+            "password": "Password123!"
+        }
+    )
+    admin_token = res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # 2. Create Supplier
+    supp_res = await async_client.post(
+        "/api/v1/parties/suppliers",
+        json={
+            "name": "Tata Consumer Products Distributor",
+            "mobile": "9820000099",
+            "opening_balance": 5000.0
+        },
+        headers=headers
+    )
+    assert supp_res.status_code == 201
+    supp_id = supp_res.json()["id"]
+
+    # 3. Create Item
+    item_res = await async_client.post(
+        "/api/v1/items",
+        json={
+            "name": "Tata Salt 1kg",
+            "sale_price": 28.0,
+            "purchase_price": 22.0,
+            "unit": "PKT",
+            "gst_rate": 0.0
+        },
+        headers=headers
+    )
+    assert item_res.status_code == 201
+    item_id = item_res.json()["id"]
+
+    godowns = await async_client.get("/api/v1/inventory/godowns", headers=headers)
+    godown_id = godowns.json()[0]["id"]
+
+    # 4. Stock-In with supplier on credit: 100 PKT @ 22.0 = 2200.0
+    stock_in_res = await async_client.post(
+        "/api/v1/inventory/stock-in",
+        json={
+            "godown_id": godown_id,
+            "supplier_id": supp_id,
+            "payment_mode": "credit",
+            "items": [
+                {
+                    "item_id": item_id,
+                    "quantity": 100.0,
+                    "purchase_price": 22.0,
+                    "batch_number": "BATCH-SALT-01"
+                }
+            ],
+            "notes": "Credit purchase from Tata distributor"
+        },
+        headers=headers
+    )
+    assert stock_in_res.status_code == 200
+
+    # 5. Check Supplier balance: 5000 (opening) + 2200 (credit purchase) = 7200.0
+    supp_list = await async_client.get("/api/v1/parties/suppliers", headers=headers)
+    assert supp_list.status_code == 200
+    tata_supp = next((s for s in supp_list.json() if s["id"] == supp_id), None)
+    assert tata_supp is not None
+    assert tata_supp["current_balance"] == 7200.0
+
+    # 6. Check Supplier ledger
+    ledger_res = await async_client.get(f"/api/v1/parties/supplier/{supp_id}/ledger", headers=headers)
+    assert ledger_res.status_code == 200
+    ledger_data = ledger_res.json()
+    assert ledger_data["opening_balance"] == 5000.0
+    assert ledger_data["current_balance"] == 7200.0
+    assert any(tx.get("type") == "purchase_invoice" for tx in ledger_data["transactions"])
+
+    # 7. Record payment made to Supplier: 3200.0
+    pay_res = await async_client.post(
+        "/api/v1/parties/payments",
+        json={
+            "party_type": "supplier",
+            "party_id": supp_id,
+            "payment_type": "payment",
+            "amount": 3200.0,
+            "payment_mode": "bank_transfer",
+            "reference_number": "NEFT-TATA-001"
+        },
+        headers=headers
+    )
+    assert pay_res.status_code == 201
+
+    # 8. Check Supplier balance after payment: 7200 - 3200 = 4000.0
+    supp_list2 = await async_client.get("/api/v1/parties/suppliers", headers=headers)
+    tata_supp2 = next((s for s in supp_list2.json() if s["id"] == supp_id), None)
+    assert tata_supp2["current_balance"] == 4000.0
+

@@ -380,14 +380,47 @@ async def record_stock_in(
     raw_total = total_taxable + total_gst
     final_amount = float(round(raw_total))
     round_off = round(final_amount - raw_total, 2)
-    # Check if a Supplier exists with this name to link party_id
-    supplier_obj = (await db.execute(
-        select(Supplier).where(
-            Supplier.tenant_id == tenant_id,
-            func.lower(Supplier.name) == supplier_name.lower()
-        )
-    )).scalar_one_or_none()
-    supplier_party_id = supplier_obj.id if supplier_obj else None
+
+    # Check if a Supplier exists with this ID or name to link party_id
+    supplier_party_id = payload.supplier_id
+    supplier_obj = None
+    if supplier_party_id:
+        supplier_obj = (await db.execute(
+            select(Supplier).where(Supplier.tenant_id == tenant_id, Supplier.id == supplier_party_id)
+        )).scalar_one_or_none()
+    elif supplier_name:
+        supplier_obj = (await db.execute(
+            select(Supplier).where(
+                Supplier.tenant_id == tenant_id,
+                func.lower(Supplier.name) == supplier_name.lower()
+            )
+        )).scalar_one_or_none()
+        if supplier_obj:
+            supplier_party_id = supplier_obj.id
+
+    if supplier_obj:
+        supplier_name = supplier_obj.name
+
+    # Determine payment mode and paid amount
+    if supplier_party_id:
+        payment_mode = payload.payment_mode or "credit"
+        if payload.paid_amount is not None:
+            paid_amount = float(payload.paid_amount)
+        else:
+            paid_amount = final_amount if payment_mode == "cash" else 0.0
+    else:
+        payment_mode = payload.payment_mode or "cash"
+        paid_amount = float(payload.paid_amount) if payload.paid_amount is not None else final_amount
+
+    if payload.payment_status:
+        payment_status = payload.payment_status
+    else:
+        if paid_amount >= final_amount:
+            payment_status = "paid"
+        elif paid_amount > 0:
+            payment_status = "partial"
+        else:
+            payment_status = "unpaid"
 
     purchase_bill = Bill(
         tenant_id=tenant_id,
@@ -405,9 +438,9 @@ async def record_stock_in(
         igst_amount=0.0,
         round_off=round_off,
         total_amount=final_amount,
-        payment_mode="cash",
-        payment_status="paid",
-        paid_amount=final_amount,
+        payment_mode=payment_mode,
+        payment_status=payment_status,
+        paid_amount=paid_amount,
         status="active",
         is_reviewed_by_admin=True,
         notes=f"Auto-recorded into Purchase Book from Stock-In Inward. Godown: {target_godown_id}. {payload.notes or ''}".strip(),
@@ -442,6 +475,7 @@ async def record_stock_in(
 
     # Auto-Post Double-Entry Purchase Journal Voucher
     from app.services.accounting_service import record_purchase_journal_entry
+    is_cash_pur = supplier_party_id is None or payment_mode == "cash" or payment_status == "paid"
     await record_purchase_journal_entry(
         db=db,
         tenant_id=tenant_id,
@@ -449,7 +483,7 @@ async def record_stock_in(
         purchase_bill_id=purchase_bill.id,
         purchase_bill_number=purchase_bill.bill_number,
         supplier_name=supplier_name,
-        is_cash=supplier_party_id is None,
+        is_cash=is_cash_pur,
         supplier_id=supplier_party_id,
         taxable_amount=total_taxable,
         cgst_amount=total_cgst,
@@ -458,7 +492,7 @@ async def record_stock_in(
         discount_amount=0.0,
         round_off=round_off,
         total_amount=final_amount,
-        payment_mode="cash" if supplier_party_id is None else "credit"
+        payment_mode=payment_mode
     )
 
     await db.commit()

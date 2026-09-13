@@ -1,6 +1,7 @@
 from typing import List, Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
+from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 from datetime import datetime, timezone
 from app.models.bill import Bill, BillItem
@@ -194,9 +195,10 @@ async def create_bill(
     if paid_amount is None:
         paid_amount = totals["total_amount"] if payload.payment_status == "paid" else 0.0
 
-    # 6. Flag review status (Sub-user bills need review by default)
+    # 6. Flag review status (Sub-user bills need admin review & confirmation by default)
     is_admin = current_user.role and current_user.role.name == "admin"
     is_reviewed = True if is_admin else False
+    bill_status = "active" if is_admin else "under_review"
 
     # 7. Create Bill Record
     bill = Bill(
@@ -224,7 +226,7 @@ async def create_bill(
         payment_status=payload.payment_status,
         paid_amount=paid_amount,
         offline_sync_id=payload.offline_sync_id,
-        status="active",
+        status=bill_status,
         is_reviewed_by_admin=is_reviewed,
         notes=payload.notes
     )
@@ -253,43 +255,42 @@ async def create_bill(
         )
         db.add(bill_item)
 
-    # 9. Update Party Balance
-    if payload.party_id:
-        p_type = "customer" if bill.type == "sale" else "supplier"
-        await recalculate_party_balance(db, tenant_id, payload.party_id, p_type)
+    # 9. If created directly by Admin, finalize financial postings immediately
+    if is_admin:
+        if payload.party_id:
+            p_type = "customer" if bill.type == "sale" else "supplier"
+            await recalculate_party_balance(db, tenant_id, payload.party_id, p_type)
 
-    # 10. Auto-Deduct Inventory Stock
-    if bill.type == "sale":
-        await record_stock_out_for_bill(
-            db=db,
-            tenant_id=tenant_id,
-            user=current_user,
-            bill_id=bill.id,
-            bill_number=bill.bill_number,
-            bill_items=items_breakdown,
-            godown_id=payload.godown_id
-        )
+        if bill.type == "sale":
+            await record_stock_out_for_bill(
+                db=db,
+                tenant_id=tenant_id,
+                user=current_user,
+                bill_id=bill.id,
+                bill_number=bill.bill_number,
+                bill_items=items_breakdown,
+                godown_id=payload.godown_id
+            )
 
-        # 10.5 Auto-Post Double-Entry Journal Voucher
-        is_cash_sale = payload.payment_mode == "cash" or not payload.party_id
-        await record_sale_journal_entry(
-            db=db,
-            tenant_id=tenant_id,
-            user_id=current_user.id,
-            bill_id=bill.id,
-            bill_number=bill.bill_number,
-            is_cash=is_cash_sale,
-            party_id=payload.party_id,
-            party_name=bill.party_name or "Walk-in Cash Customer",
-            taxable_amount=bill.taxable_amount,
-            cgst_amount=bill.cgst_amount,
-            sgst_amount=bill.sgst_amount,
-            igst_amount=bill.igst_amount,
-            discount_amount=bill.discount_amount,
-            round_off=bill.round_off,
-            total_amount=bill.total_amount,
-            payment_mode=payload.payment_mode or "cash"
-        )
+            is_cash_sale = payload.payment_mode == "cash" or not payload.party_id
+            await record_sale_journal_entry(
+                db=db,
+                tenant_id=tenant_id,
+                user_id=current_user.id,
+                bill_id=bill.id,
+                bill_number=bill.bill_number,
+                is_cash=is_cash_sale,
+                party_id=payload.party_id,
+                party_name=bill.party_name or "Walk-in Cash Customer",
+                taxable_amount=bill.taxable_amount,
+                cgst_amount=bill.cgst_amount,
+                sgst_amount=bill.sgst_amount,
+                igst_amount=bill.igst_amount,
+                discount_amount=bill.discount_amount,
+                round_off=bill.round_off,
+                total_amount=bill.total_amount,
+                payment_mode=payload.payment_mode or "cash"
+            )
 
     await db.commit()
     await db.refresh(bill)
@@ -306,8 +307,136 @@ async def create_bill(
             "bill_number": bill.bill_number,
             "total_amount": bill.total_amount,
             "created_by": current_user.name,
+            "status": bill.status,
+            "is_reviewed": bill.is_reviewed_by_admin,
             "role": current_user.role.name if current_user.role else "sub_user"
         },
+        ip_address=client_ip
+    )
+
+    return format_bill_response(bill)
+
+
+async def confirm_staff_bill(
+    db: AsyncSession,
+    tenant_id: str,
+    admin_user: User,
+    bill_id: str,
+    client_ip: Optional[str] = None
+) -> BillResponse:
+    """Admin confirms and finalizes a staff-submitted bill: deducts stock, posts journal voucher, updates customer balance, and sets active"""
+    result = await db.execute(
+        select(Bill).options(selectinload(Bill.items)).where(Bill.tenant_id == tenant_id, Bill.id == bill_id)
+    )
+    bill = result.scalar_one_or_none()
+    if not bill:
+        raise HTTPException(status_code=404, detail="Bill not found")
+
+    if bill.status == "void":
+        raise HTTPException(status_code=400, detail="Cannot confirm a voided bill")
+
+    if bill.is_reviewed_by_admin and bill.status == "active":
+        return format_bill_response(bill)
+
+    # 1. Validate line items & stock at confirmation time
+    if bill.type == "sale":
+        def_godown = await get_or_create_default_godown(db, tenant_id)
+        godown_id = def_godown.id
+
+        items_breakdown = []
+        for itm in bill.items:
+            if itm.item_id:
+                u_per_case = 1.0
+                it_obj = (await db.execute(select(Item).where(Item.id == itm.item_id))).scalar_one_or_none()
+                if it_obj and it_obj.units_per_case and it_obj.units_per_case > 1:
+                    u_per_case = it_obj.units_per_case
+
+                effective_qty = itm.quantity
+                unit_str = (itm.unit or "").strip().upper()
+                if unit_str in ["CS", "CASE", "CASES", "BOX", "CTN"]:
+                    effective_qty = itm.quantity * u_per_case
+
+                stock_rec = (await db.execute(
+                    select(Stock).where(Stock.tenant_id == tenant_id, Stock.godown_id == godown_id, Stock.item_id == itm.item_id)
+                )).scalar_one_or_none()
+                avail = stock_rec.quantity if stock_rec else 0.0
+                if avail < effective_qty:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Cannot confirm bill: '{itm.item_name}' only has {avail:.2f} units available in stock, but {effective_qty:.2f} units required."
+                    )
+
+            items_breakdown.append({
+                "item_id": itm.item_id,
+                "item_name": itm.item_name,
+                "hsn_code": itm.hsn_code,
+                "quantity": itm.quantity,
+                "unit": itm.unit,
+                "rate": itm.rate,
+                "purchase_price": itm.purchase_price or 0.0,
+                "discount_amount": itm.discount_amount,
+                "gst_rate": itm.gst_rate,
+                "is_tax_inclusive": itm.is_tax_inclusive,
+                "taxable_amount": itm.taxable_amount,
+                "cgst_amount": itm.cgst_amount,
+                "sgst_amount": itm.sgst_amount,
+                "igst_amount": itm.igst_amount,
+                "total_amount": itm.total_amount
+            })
+
+        # Deduct stock
+        await record_stock_out_for_bill(
+            db=db,
+            tenant_id=tenant_id,
+            user=admin_user,
+            bill_id=bill.id,
+            bill_number=bill.bill_number,
+            bill_items=items_breakdown,
+            godown_id=godown_id
+        )
+
+        # Auto-Post Double-Entry Journal Voucher
+        is_cash_sale = bill.payment_mode == "cash" or not bill.party_id
+        await record_sale_journal_entry(
+            db=db,
+            tenant_id=tenant_id,
+            user_id=admin_user.id,
+            bill_id=bill.id,
+            bill_number=bill.bill_number,
+            is_cash=is_cash_sale,
+            party_id=bill.party_id,
+            party_name=bill.party_name or "Walk-in Cash Customer",
+            taxable_amount=bill.taxable_amount,
+            cgst_amount=bill.cgst_amount,
+            sgst_amount=bill.sgst_amount,
+            igst_amount=bill.igst_amount,
+            discount_amount=bill.discount_amount,
+            round_off=bill.round_off,
+            total_amount=bill.total_amount,
+            payment_mode=bill.payment_mode or "cash"
+        )
+
+    # 2. Update status to active and reviewed
+    bill.is_reviewed_by_admin = True
+    bill.status = "active"
+    await db.flush()
+
+    # 3. Update Party Balance
+    if bill.party_id:
+        p_type = "customer" if bill.type == "sale" else "supplier"
+        await recalculate_party_balance(db, tenant_id, bill.party_id, p_type)
+
+    await db.commit()
+    await db.refresh(bill)
+
+    await log_audit_event(
+        db=db,
+        tenant_id=tenant_id,
+        user_id=admin_user.id,
+        action="CONFIRM_STAFF_BILL",
+        entity_type="Bill",
+        entity_id=bill.id,
+        details={"bill_number": bill.bill_number, "total_amount": bill.total_amount},
         ip_address=client_ip
     )
 
@@ -320,9 +449,10 @@ async def list_bills(
     current_user: User,
     bill_type: Optional[str] = None,
     payment_status: Optional[str] = None,
+    review_status: Optional[str] = None,
     search: Optional[str] = None
 ) -> List[BillResponse]:
-    """List bills with role-based scoping (Admin sees all; Sub-users see their own if view_own)"""
+    """List bills with role-based scoping and review status filtering"""
     query = select(Bill).where(Bill.tenant_id == tenant_id)
 
     # If sub-user with only bill.view_own permission
@@ -334,6 +464,12 @@ async def list_bills(
         query = query.where(Bill.type == bill_type)
     if payment_status:
         query = query.where(Bill.payment_status == payment_status)
+    if review_status:
+        if review_status.lower() in ["reviewed", "confirmed"]:
+            query = query.where(Bill.is_reviewed_by_admin == True, Bill.status == "active")
+        elif review_status.lower() in ["pending", "pending_review", "under_review", "unreviewed"]:
+            query = query.where((Bill.is_reviewed_by_admin == False) | (Bill.status == "under_review"))
+
     if search:
         term = f"%{search.strip()}%"
         query = query.where(

@@ -121,15 +121,12 @@ export default function StaffBillsReviewPage() {
   const handleApproveBill = async (billId: string) => {
     setActionLoading(true);
     try {
-      await api.put(`/bills/${billId}`, {
-        notes: editNotes,
-        payment_status: editPaymentStatus,
-      });
-      setSuccessMsg("Bill reviewed and updated successfully!");
+      await api.post(`/bills/${billId}/confirm`);
+      setSuccessMsg("Order confirmed and finalized successfully! Stock deducted & official Sales invoice generated.");
       fetchBills();
       setTimeout(() => setSelectedBill(null), 1200);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || "Failed to update bill review status");
+      setErrorMsg(err.response?.data?.detail || "Failed to confirm bill");
     } finally {
       setActionLoading(false);
     }

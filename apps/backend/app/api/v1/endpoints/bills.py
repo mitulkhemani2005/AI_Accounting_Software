@@ -17,6 +17,7 @@ from app.models.user import User
 from app.api.deps import get_current_user, require_permission, require_admin
 from app.services.bill_service import (
     create_bill,
+    confirm_staff_bill,
     list_bills,
     get_staff_bills_review_queue,
     update_bill_by_admin,
@@ -48,10 +49,29 @@ async def make_bill(
     )
 
 
+@router.post("/{bill_id}/confirm", response_model=BillResponse)
+async def confirm_bill(
+    bill_id: str,
+    request: Request,
+    current_user: User = Depends(require_permission("bill.edit")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Admin confirms a staff-created bill: deducts inventory, posts journal voucher, and activates invoice"""
+    client_ip = request.client.host if request.client else None
+    return await confirm_staff_bill(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        admin_user=current_user,
+        bill_id=bill_id,
+        client_ip=client_ip
+    )
+
+
 @router.get("", response_model=List[BillResponse])
 async def get_all_bills(
     bill_type: Optional[str] = Query(None, description="Filter by type: sale, purchase, credit_note"),
     payment_status: Optional[str] = Query(None, description="Filter by payment status: paid, partial, unpaid"),
+    review_status: Optional[str] = Query(None, description="Filter by review status: reviewed, pending_review, all"),
     search: Optional[str] = Query(None, description="Search by bill number, party name, mobile"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -63,6 +83,7 @@ async def get_all_bills(
         current_user=current_user,
         bill_type=bill_type,
         payment_status=payment_status,
+        review_status=review_status,
         search=search
     )
 

@@ -582,8 +582,8 @@ async def recalculate_party_balance(
 ) -> float:
     """
     Recalculates current outstanding balance for a customer or supplier with 100% mathematical precision:
-    - Customer Outstanding (Receivable) = Opening Balance + Sum(Unpaid/Credit Sale Invoices) - Sum(Payment In) + Sum(Payment Out)
-    - Supplier Outstanding (Payable) = Opening Balance + Sum(Unpaid/Credit Purchase Inward) - Sum(Payment Out) + Sum(Payment In)
+    - Customer Outstanding (Receivable) = Opening Balance + Sum(Confirmed Unpaid Sale Invoices) - Sum(Payment In) + Sum(Payment Out)
+    - Supplier Outstanding (Payable) = Opening Balance + Sum(Confirmed Unpaid Purchase Inward) - Sum(Payment Out) + Sum(Payment In)
     """
     if party_type == "customer":
         cust_res = await db.execute(
@@ -593,21 +593,21 @@ async def recalculate_party_balance(
         if not customer:
             return 0.0
 
-        # 1. Sum active sale bills
+        # 1. Sum active & confirmed sale bills (unreviewed staff bills do not alter financial balance until confirmed)
         bills_res = await db.execute(
             select(Bill).where(
                 Bill.tenant_id == tenant_id,
                 Bill.party_id == party_id,
                 Bill.type == "sale",
-                Bill.status == "active"
+                Bill.status == "active",
+                Bill.is_reviewed_by_admin == True
             )
         )
         bills = list(bills_res.scalars().all())
 
         unpaid_sales_debt = 0.0
         for b in bills:
-            if b.payment_mode == "credit" or b.payment_status in ["unpaid", "partial"]:
-                unpaid_sales_debt += max(0.0, b.total_amount - (b.paid_amount or 0.0))
+            unpaid_sales_debt += max(0.0, float(b.total_amount) - float(b.paid_amount or 0.0))
 
         # 2. Sum active payment records
         payments_res = await db.execute(
@@ -620,10 +620,10 @@ async def recalculate_party_balance(
         )
         payments = list(payments_res.scalars().all())
 
-        total_payments_in = sum(p.amount for p in payments if p.payment_type in ["payment_in", "receipt", "in"])
-        total_payments_out = sum(p.amount for p in payments if p.payment_type in ["payment_out", "voucher", "payment", "out"])
+        total_payments_in = sum(float(p.amount) for p in payments if p.payment_type in ["payment_in", "receipt", "in", "receive"])
+        total_payments_out = sum(float(p.amount) for p in payments if p.payment_type in ["payment_out", "voucher", "payment", "out", "refund"])
 
-        new_balance = round((customer.opening_balance or 0.0) + unpaid_sales_debt - total_payments_in + total_payments_out, 2)
+        new_balance = round((float(customer.opening_balance) or 0.0) + unpaid_sales_debt - total_payments_in + total_payments_out, 2)
         customer.current_balance = new_balance
         await db.flush()
         return new_balance
@@ -640,7 +640,7 @@ async def recalculate_party_balance(
         bills_res = await db.execute(
             select(Bill).where(
                 Bill.tenant_id == tenant_id,
-                or_(Bill.party_id == party_id, Bill.party_name == supplier.name),
+                or_(Bill.party_id == party_id, func.lower(Bill.party_name) == func.lower(supplier.name)),
                 Bill.type == "purchase",
                 Bill.status == "active"
             )
@@ -649,8 +649,7 @@ async def recalculate_party_balance(
 
         unpaid_purchases_debt = 0.0
         for b in bills:
-            if b.payment_mode == "credit" or b.payment_status in ["unpaid", "partial"]:
-                unpaid_purchases_debt += max(0.0, b.total_amount - (b.paid_amount or 0.0))
+            unpaid_purchases_debt += max(0.0, float(b.total_amount) - float(b.paid_amount or 0.0))
 
         # 2. Sum active payments
         payments_res = await db.execute(
@@ -663,10 +662,10 @@ async def recalculate_party_balance(
         )
         payments = list(payments_res.scalars().all())
 
-        total_payments_out = sum(p.amount for p in payments if p.payment_type == "payment_out")
-        total_payments_in = sum(p.amount for p in payments if p.payment_type == "payment_in")
+        total_payments_out = sum(float(p.amount) for p in payments if p.payment_type in ["payment_out", "voucher", "payment", "out", "pay"])
+        total_payments_in = sum(float(p.amount) for p in payments if p.payment_type in ["payment_in", "receipt", "in", "refund"])
 
-        new_balance = round((supplier.opening_balance or 0.0) + unpaid_purchases_debt - total_payments_out + total_payments_in, 2)
+        new_balance = round((float(supplier.opening_balance) or 0.0) + unpaid_purchases_debt - total_payments_out + total_payments_in, 2)
         supplier.current_balance = new_balance
         await db.flush()
         return new_balance
@@ -835,6 +834,21 @@ async def get_party_ledger(
                         running_balance=0.0
                     )
                 )
+            elif not b.is_reviewed_by_admin or b.status == "under_review":
+                transactions.append(
+                    PartyLedgerEntry(
+                        id=b.id,
+                        date=b.bill_date or b.created_at,
+                        type="bill_under_review",
+                        type_label="Order (Under Admin Review)",
+                        reference_no=b.bill_number,
+                        description=f"Staff Order #{b.bill_number} (Pending Admin Confirmation)",
+                        payment_mode=b.payment_mode,
+                        debit=0.0,
+                        credit=0.0,
+                        running_balance=0.0
+                    )
+                )
             else:
                 transactions.append(
                     PartyLedgerEntry(
@@ -887,17 +901,20 @@ async def get_party_ledger(
 
         transactions.sort(key=lambda x: x.date)
 
-        running = cust.opening_balance or 0.0
+        running = float(cust.opening_balance) or 0.0
         total_invoiced = 0.0
         total_paid = 0.0
 
         for tx in transactions:
             if tx.type == "opening_balance":
                 tx.running_balance = running
-            elif tx.type != "bill_void":
+            elif tx.type not in ["bill_void", "bill_under_review"]:
                 running = round(running + tx.debit - tx.credit, 2)
-                total_invoiced += tx.debit
-                total_paid += tx.credit
+                if tx.type == "sale_invoice":
+                    total_invoiced += tx.debit
+                    total_paid += tx.credit
+                elif tx.type == "payment_in":
+                    total_paid += tx.credit
                 tx.running_balance = running
             else:
                 tx.running_balance = running
@@ -929,7 +946,7 @@ async def get_party_ledger(
         bills = list((await db.execute(
             select(Bill).where(
                 Bill.tenant_id == tenant_id,
-                or_(Bill.party_id == party_id, Bill.party_name == supp.name),
+                or_(Bill.party_id == party_id, func.lower(Bill.party_name) == func.lower(supp.name)),
                 Bill.type == "purchase"
             ).order_by(Bill.bill_date.asc(), Bill.created_at.asc())
         )).scalars().all())
@@ -1024,7 +1041,7 @@ async def get_party_ledger(
 
         transactions.sort(key=lambda x: x.date)
 
-        running = supp.opening_balance or 0.0
+        running = float(supp.opening_balance) or 0.0
         total_invoiced = 0.0
         total_paid = 0.0
 
@@ -1033,8 +1050,11 @@ async def get_party_ledger(
                 tx.running_balance = running
             elif tx.type != "bill_void":
                 running = round(running + tx.credit - tx.debit, 2)
-                total_invoiced += tx.credit
-                total_paid += tx.debit
+                if tx.type == "purchase_invoice":
+                    total_invoiced += tx.credit
+                    total_paid += tx.debit
+                elif tx.type == "payment_out":
+                    total_paid += tx.debit
                 tx.running_balance = running
             else:
                 tx.running_balance = running

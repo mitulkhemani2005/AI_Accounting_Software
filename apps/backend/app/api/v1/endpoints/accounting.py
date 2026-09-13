@@ -2,7 +2,7 @@ from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, Query, Request, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.db.session import get_db
 from app.api.deps import get_current_user, require_permission
@@ -107,17 +107,52 @@ async def create_custom_account(
 ):
     """Create a new custom ledger account in the Chart of Accounts"""
     await seed_default_chart_of_accounts(db, current_user.tenant_id)
+
+    code = (payload.code or "").strip().upper()
+    if not code:
+        # Auto-generate account code based on nature prefix
+        prefix_map = {
+            "asset": "1",
+            "liability": "2",
+            "equity": "3",
+            "income": "4",
+            "expense": "5"
+        }
+        pfx = prefix_map.get(payload.nature.lower(), "5")
+        count_res = await db.execute(
+            select(func.count(Account.id)).where(Account.tenant_id == current_user.tenant_id, Account.code.like(f"{pfx}%"))
+        )
+        c = (count_res.scalar() or 0) + 1
+        code = f"{pfx}{str(c).zfill(3)}"
+        # Guarantee uniqueness
+        while (await db.execute(select(Account).where(Account.tenant_id == current_user.tenant_id, Account.code == code))).scalar_one_or_none():
+            c += 1
+            code = f"{pfx}{str(c).zfill(3)}"
+
     # Check duplicate code
     exist = await db.execute(
-        select(Account).where(Account.tenant_id == current_user.tenant_id, Account.code == payload.code.strip().upper())
+        select(Account).where(Account.tenant_id == current_user.tenant_id, Account.code == code)
     )
     if exist.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail=f"Account code '{payload.code}' already exists")
+        raise HTTPException(status_code=400, detail=f"Account code '{code}' already exists")
+
+    # If group_id is not specified, auto-link to default root group for this nature
+    group_id = payload.group_id
+    if not group_id:
+        def_grp = (await db.execute(
+            select(AccountGroup).where(
+                AccountGroup.tenant_id == current_user.tenant_id,
+                AccountGroup.nature == payload.nature.lower(),
+                AccountGroup.is_system == True
+            )
+        )).scalars().first()
+        if def_grp:
+            group_id = def_grp.id
 
     acc = Account(
         tenant_id=current_user.tenant_id,
-        group_id=payload.group_id,
-        code=payload.code.strip().upper(),
+        group_id=group_id,
+        code=code,
         name=payload.name.strip(),
         nature=payload.nature.lower(),
         account_type=payload.account_type.lower(),

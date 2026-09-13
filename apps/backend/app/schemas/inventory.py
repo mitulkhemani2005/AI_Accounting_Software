@@ -131,6 +131,9 @@ class StockInRequest(BaseModel):
     supplier_name: Optional[str] = None
     invoice_number: Optional[str] = None
     invoice_date: Optional[date] = None
+    payment_mode: Optional[str] = "credit"  # "credit", "cash", "bank_transfer", "upi", "cheque"
+    paid_amount: Optional[float] = 0.0
+    payment_status: Optional[str] = None  # "paid", "partial", "unpaid" (auto-computed if None)
     items: List[StockInItemRequest]
     notes: Optional[str] = None
 

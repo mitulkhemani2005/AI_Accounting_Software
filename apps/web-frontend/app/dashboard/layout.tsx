@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { ERPHeader } from "@/components/erp/ERPHeader";
-import { ERPStatusBar } from "@/components/erp/ERPStatusBar";
+import { Navbar } from "@/components/Navbar";
+import { Sidebar } from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
@@ -48,12 +48,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="erp-window-frame" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#f8fafc" }}>
-      <ERPHeader />
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", background: "#f1f5f9" }}>
-        {children}
-      </main>
-      <ERPStatusBar />
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#0b132b" }}>
+      <Navbar />
+      <div style={{ display: "flex", flex: 1 }}>
+        <Sidebar />
+        <main style={{ flex: 1, padding: "32px", overflowY: "auto", maxWidth: "1200px" }}>
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
