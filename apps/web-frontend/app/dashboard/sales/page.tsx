@@ -96,6 +96,7 @@ export default function SalesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
   const [paymentModeFilter, setPaymentModeFilter] = useState("all");
+  const [billTypeFilter, setBillTypeFilter] = useState<"all" | "sale" | "purchase">("all");
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [isVoiding, setIsVoiding] = useState(false);
@@ -182,15 +183,15 @@ export default function SalesPage() {
     try {
       const res = await api.get<Bill[]>("/bills", {
         params: {
-          bill_type: "sale",
+          bill_type: billTypeFilter !== "all" ? billTypeFilter : undefined,
           payment_status: paymentStatusFilter !== "all" ? paymentStatusFilter : undefined,
           search: searchQuery.trim() || undefined,
         },
       });
       setBills(res.data);
     } catch (err: any) {
-      console.error("Failed to load sales bills:", err);
-      setErrorMsg(err.response?.data?.detail || "Could not load sales bills");
+      console.error("Failed to load bills:", err);
+      setErrorMsg(err.response?.data?.detail || "Could not load bills");
     } finally {
       setLoading(false);
     }
@@ -212,7 +213,7 @@ export default function SalesPage() {
   useEffect(() => {
     fetchBills();
     fetchAuxData();
-  }, [paymentStatusFilter]);
+  }, [paymentStatusFilter, billTypeFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -779,6 +780,18 @@ export default function SalesPage() {
           </form>
 
           <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+            {/* Voucher / Bill Type Filter */}
+            <select
+              className="input-field"
+              value={billTypeFilter}
+              onChange={(e) => setBillTypeFilter(e.target.value as any)}
+              style={{ width: "auto", fontSize: "0.85rem", padding: "8px 12px", borderColor: "rgba(59, 130, 246, 0.5)" }}
+            >
+              <option value="all">📂 All Vouchers (Sales & Purchases)</option>
+              <option value="sale">🧾 Sales Invoices Only</option>
+              <option value="purchase">📥 Purchase Book Only</option>
+            </select>
+
             {/* Payment Status Filter */}
             <select
               className="input-field"

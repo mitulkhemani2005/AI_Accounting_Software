@@ -19,6 +19,7 @@ import {
   ClipboardCheck,
   Contact,
   Boxes,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -30,6 +31,7 @@ export function Sidebar() {
     { label: "POS Counter Sale", href: "/dashboard/pos", icon: Receipt, allowed: true },
     { label: "Sales & Invoices", href: "/dashboard/sales", icon: ShoppingBag, allowed: true },
     { label: "Products & Stock", href: "/dashboard/inventory", icon: Boxes, allowed: true },
+    { label: "Purchase Book", href: "/dashboard/inventory?tab=purchases", icon: FileSpreadsheet, adminOnly: true },
     { label: "Parties & Ledger", href: "/dashboard/parties", icon: Contact, adminOnly: true },
     { label: "Staff Bills Review", href: "/dashboard/staff-bills", icon: ClipboardCheck, adminOnly: true },
     { label: "Staff & Sub-users", href: "/dashboard/staff", icon: Users, adminOnly: true },

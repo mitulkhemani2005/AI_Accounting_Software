@@ -391,3 +391,74 @@ async def test_dual_unit_packaging_and_case_stock_in(async_client: AsyncClient):
     assert sum_item["units_per_case"] == 24.0
     assert sum_item["total_cases"] == 5.0
 
+
+@pytest.mark.asyncio
+async def test_stock_in_creates_purchase_book_record(async_client: AsyncClient):
+    """Test that every stock-in inward consignment automatically records into Purchase Book"""
+    admin_headers = await get_admin_headers(async_client)
+
+    # 1. Create a product
+    item_res = await async_client.post(
+        "/api/v1/items",
+        json={
+            "name": "Tata Tea Gold 500g",
+            "sku": "TEA-500",
+            "hsn_code": "0902",
+            "unit": "EA",
+            "secondary_unit": "CS",
+            "units_per_case": 10.0,
+            "sale_price": 320.0,
+            "purchase_price": 250.0,
+            "gst_rate": 5.0,
+        },
+        headers=admin_headers
+    )
+    assert item_res.status_code == 201
+    item = item_res.json()
+
+    # 2. Record Stock In / Purchase Goods
+    stock_in_payload = {
+        "supplier_name": "Tata Consumer Products Distributors",
+        "invoice_number": "PUR-INV-9988",
+        "items": [
+            {
+                "item_id": item["id"],
+                "quantity": 20.0,  # 20 EA
+                "unit": "EA",
+                "purchase_price": 250.0,
+                "batch_number": "TTG-2026-B1"
+            }
+        ],
+        "notes": "Direct Inward Consignment from Distributor"
+    }
+    stock_in_res = await async_client.post("/api/v1/inventory/stock-in", json=stock_in_payload, headers=admin_headers)
+    assert stock_in_res.status_code == 200
+    stk_data = stock_in_res.json()
+    assert "purchase_bill_id" in stk_data
+    assert stk_data["purchase_bill_number"] == "PUR-INV-9988"
+    assert stk_data["purchase_total_amount"] == 5250.0  # (20 * 250) = 5000 + 5% GST (250) = 5250
+
+    # 3. Query Purchase Book via /api/v1/bills?bill_type=purchase
+    pur_book_res = await async_client.get("/api/v1/bills?bill_type=purchase", headers=admin_headers)
+    assert pur_book_res.status_code == 200
+    pur_bills = pur_book_res.json()
+    assert len(pur_bills) >= 1
+    
+    matching_bill = next((b for b in pur_bills if b["bill_number"] == "PUR-INV-9988"), None)
+    assert matching_bill is not None
+    assert matching_bill["type"] == "purchase"
+    assert matching_bill["party_name"] == "Tata Consumer Products Distributors"
+    assert matching_bill["taxable_amount"] == 5000.0
+    assert matching_bill["gst_amount"] == 250.0
+    assert matching_bill["total_amount"] == 5250.0
+    assert len(matching_bill["items"]) == 1
+    assert matching_bill["items"][0]["item_name"] == "Tata Tea Gold 500g"
+    assert matching_bill["items"][0]["quantity"] == 20.0
+
+    # 4. Verify PDF Generation for the Purchase Voucher
+    pdf_res = await async_client.get(f"/api/v1/bills/{matching_bill['id']}/pdf?format=half_a4", headers=admin_headers)
+    assert pdf_res.status_code == 200
+    assert pdf_res.headers["content-type"] == "application/pdf"
+    assert len(pdf_res.content) > 1000
+
+

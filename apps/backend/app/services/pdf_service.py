@@ -118,21 +118,21 @@ def _build_bill_story_elements(bill: Bill, tenant: Tenant, is_a5: bool, styles) 
         address_lines.append(b_addr)
     if city_state_str:
         address_lines.append(city_state_str)
-    
-    full_store_addr = "<br/>".join(address_lines) if address_lines else "Retail Store Address"
-    store_phone = tenant.phone or "—"
-    store_gst = tenant.gst_number or "Unregistered"
+    full_address = "<br/>".join(address_lines) if address_lines else "—"
 
     store_html = (
-        f"<font size='{11 if is_a5 else 14}' color='#0f172a'><b>{tenant.business_name}</b></font><br/>"
-        f"<b>Address:</b> {full_store_addr}<br/>"
-        f"<b>Phone:</b> {store_phone} &bull; <b>GSTIN:</b> {store_gst}"
+        f"<b>{tenant.business_name}</b><br/>"
+        f"{full_address}<br/>"
+        f"<b>Phone:</b> {tenant.phone or '—'} &bull; <b>GSTIN:</b> {tenant.gst_number or '—'}"
     )
     if tenant.email:
         store_html += f" &bull; <b>Email:</b> {tenant.email}"
 
+    voucher_title = "PURCHASE VOUCHER (INWARD)" if bill.type == "purchase" else "TAX INVOICE"
+    party_label = "PURCHASED FROM (SUPPLIER):" if bill.type == "purchase" else "BILLED TO (CUSTOMER):"
+
     invoice_meta_html = (
-        f"<b>TAX INVOICE</b><br/>"
+        f"<b>{voucher_title}</b><br/>"
         f"Invoice No: <b>{bill.bill_number}</b><br/>"
         f"Date: <b>{bill.created_at.strftime('%d-%m-%Y')}</b><br/>"
         f"Time: <b>{bill.created_at.strftime('%I:%M %p')}</b><br/>"
@@ -161,7 +161,7 @@ def _build_bill_story_elements(bill: Bill, tenant: Tenant, is_a5: bool, styles) 
     cust_gst = bill.party_gst or (bill.customer.gst_number if getattr(bill, "customer", None) and bill.customer else None) or "—"
 
     customer_html = (
-        f"<b>BILLED TO (CUSTOMER):</b><br/>"
+        f"<b>{party_label}</b><br/>"
         f"<b>Name:</b> <font color='#0f172a'><b>{bill.party_name}</b></font><br/>"
         f"<b>Address:</b> {cust_addr}<br/>"
         f"<b>Phone:</b> {cust_phone} &bull; <b>GSTIN:</b> {cust_gst}"

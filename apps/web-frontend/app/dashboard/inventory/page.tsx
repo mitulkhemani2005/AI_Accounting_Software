@@ -35,6 +35,11 @@ import {
   Loader2,
   Sparkles,
   SlidersHorizontal,
+  FileText,
+  Printer,
+  Eye,
+  IndianRupee,
+  Receipt,
 } from "lucide-react";
 
 interface Godown {
@@ -164,7 +169,7 @@ interface ExpiringBatchAlert {
 
 export default function InventoryPage() {
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<"overview" | "stock_in" | "godowns" | "transfers" | "movements" | "alerts">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "stock_in" | "purchases" | "godowns" | "transfers" | "movements" | "alerts">("overview");
 
   // State
   const [metrics, setMetrics] = useState<InventoryMetrics | null>(null);
@@ -174,6 +179,12 @@ export default function InventoryPage() {
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [lowStockAlerts, setLowStockAlerts] = useState<LowStockAlert[]>([]);
   const [expiringAlerts, setExpiringAlerts] = useState<ExpiringBatchAlert[]>([]);
+  const [purchaseBills, setPurchaseBills] = useState<any[]>([]);
+  const [purchaseSearchTerm, setPurchaseSearchTerm] = useState("");
+  const [purchaseSupplierFilter, setPurchaseSupplierFilter] = useState("all");
+  const [selectedPurchaseBill, setSelectedPurchaseBill] = useState<any | null>(null);
+  const [isDownloadingPurchasePdf, setIsDownloadingPurchasePdf] = useState(false);
+  const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Filters
@@ -294,8 +305,51 @@ export default function InventoryPage() {
   }[]>([]);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const tabParam = new URLSearchParams(window.location.search).get("tab");
+      if (tabParam && ["overview", "stock_in", "purchases", "godowns", "transfers", "movements", "alerts"].includes(tabParam)) {
+        setActiveTab(tabParam as any);
+      }
+    }
     loadAllData();
   }, []);
+
+  const loadPurchaseBills = async () => {
+    setIsLoadingPurchases(true);
+    try {
+      const res = await api.get("/bills", {
+        params: {
+          bill_type: "purchase",
+        },
+      });
+      setPurchaseBills(res.data);
+    } catch (err) {
+      console.error("Failed to load purchase bills", err);
+    } finally {
+      setIsLoadingPurchases(false);
+    }
+  };
+
+  const handleDownloadPurchasePdf = async (billId: string, billNumber: string) => {
+    setIsDownloadingPurchasePdf(true);
+    try {
+      const res = await api.get(`/bills/${billId}/pdf?format=half_a4`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Purchase_${billNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      alert("Failed to download purchase PDF voucher");
+    } finally {
+      setIsDownloadingPurchasePdf(false);
+    }
+  };
 
   const loadAllData = async () => {
     setIsLoading(true);
@@ -317,6 +371,9 @@ export default function InventoryPage() {
       // Fetch Items list for drop-downs
       const itemsRes = await api.get("/items");
       setAllItemsList(itemsRes.data);
+
+      // Load purchase bills
+      loadPurchaseBills();
 
       // Pre-set default godown in forms
       const def = godownsRes.data.find((g: Godown) => g.is_default) || godownsRes.data[0];
@@ -353,6 +410,7 @@ export default function InventoryPage() {
   useEffect(() => {
     if (activeTab === "movements") loadMovements();
     if (activeTab === "transfers") loadTransfers();
+    if (activeTab === "purchases") loadPurchaseBills();
   }, [activeTab, movementTypeFilter]);
 
   // --- Product Master CRUD & Quick Restock ---
@@ -654,8 +712,9 @@ export default function InventoryPage() {
         notes: stockInForm.notes,
       };
 
-      await api.post("/inventory/stock-in", payload);
-      alert("✅ Stock-in recorded successfully!");
+      const res = await api.post("/inventory/stock-in", payload);
+      const purBillNo = res.data?.purchase_bill_number || res.data?.purchase_bill_id || "";
+      alert(`✅ Stock-in recorded successfully and added to Purchase Book${purBillNo ? ` as Voucher #${purBillNo}` : ""}!`);
       // Reset form
       setStockInForm({
         godown_id: godowns.find((g) => g.is_default)?.id || "",
@@ -664,8 +723,9 @@ export default function InventoryPage() {
         items: [{ item_id: "", cases: 1, loose_ea: 0, batch_number: "" }],
         notes: "",
       });
-      loadAllData();
-      setActiveTab("overview");
+      await loadAllData();
+      await loadPurchaseBills();
+      setActiveTab("purchases");
     } catch (err: any) {
       alert(err.response?.data?.detail || "Failed to record stock-in");
     }
@@ -839,6 +899,7 @@ export default function InventoryPage() {
         {[
           { id: "overview", label: "Products & Stock Master", icon: Package },
           { id: "stock_in", label: "Stock-In (Purchase)", icon: Plus, adminOnly: true },
+          { id: "purchases", label: `Purchase Book (${purchaseBills.length})`, icon: FileSpreadsheet, adminOnly: true },
           { id: "godowns", label: "Godowns & Branches", icon: Warehouse },
           { id: "transfers", label: "Stock Transfers", icon: ArrowRightLeft },
           { id: "movements", label: "Movement Ledger", icon: History },
@@ -1349,6 +1410,301 @@ export default function InventoryPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* --- TAB: PURCHASE BOOK (INWARD REGISTER) --- */}
+      {activeTab === "purchases" && isAdmin && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {/* Purchase Summary KPI Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
+            <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", borderLeft: "4px solid #3b82f6" }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Total Inward Purchases</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#38bdf8", marginTop: "4px" }}>
+                ₹{purchaseBills.reduce((acc, b) => acc + (b.total_amount || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                Across {purchaseBills.length} purchase vouchers
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", borderLeft: "4px solid #10b981" }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Taxable Inward Value</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#34d399", marginTop: "4px" }}>
+                ₹{purchaseBills.reduce((acc, b) => acc + (b.taxable_amount || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                Net cost of goods acquired
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", borderLeft: "4px solid #f59e0b" }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Input GST Credit (ITC)</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#fbbf24", marginTop: "4px" }}>
+                ₹{purchaseBills.reduce((acc, b) => acc + (b.gst_amount || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                Eligible input tax credit
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", borderLeft: "4px solid #8b5cf6" }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Suppliers & Vendors</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#a78bfa", marginTop: "4px" }}>
+                {Array.from(new Set(purchaseBills.map((b) => b.party_name).filter(Boolean))).length}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                Active registered trade vendors
+              </div>
+            </div>
+          </div>
+
+          {/* Filters & Actions Bar */}
+          <div className="glass-panel" style={{ padding: "16px", borderRadius: "12px", display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "280px" }}>
+              {/* Search */}
+              <div style={{ position: "relative", flex: 1, minWidth: "220px" }}>
+                <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                <input
+                  type="text"
+                  placeholder="Search by Voucher #, Supplier Name, Item..."
+                  className="input-field"
+                  style={{ paddingLeft: "36px" }}
+                  value={purchaseSearchTerm}
+                  onChange={(e) => setPurchaseSearchTerm(e.target.value)}
+                />
+              </div>
+
+              {/* Supplier Filter */}
+              <select
+                className="input-field"
+                style={{ width: "auto", minWidth: "180px" }}
+                value={purchaseSupplierFilter}
+                onChange={(e) => setPurchaseSupplierFilter(e.target.value)}
+              >
+                <option value="all">All Suppliers ({Array.from(new Set(purchaseBills.map((b) => b.party_name).filter(Boolean))).length})</option>
+                {Array.from(new Set(purchaseBills.map((b) => b.party_name).filter(Boolean))).map((sup) => (
+                  <option key={sup} value={sup}>{sup}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <button
+                onClick={loadPurchaseBills}
+                className="btn-secondary"
+                style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                title="Refresh Purchase Book"
+              >
+                <RefreshCw size={14} className={isLoadingPurchases ? "animate-spin" : ""} />
+                <span>Refresh</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("stock_in")}
+                className="btn-primary"
+                style={{ display: "flex", alignItems: "center", gap: "6px" }}
+              >
+                <Plus size={16} />
+                <span>+ Stock-In / Purchase Goods</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Purchases Register Table */}
+          <div className="glass-panel" style={{ borderRadius: "12px", overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <FileSpreadsheet size={18} color="#38bdf8" />
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+                  Official Purchase Book Register
+                </h3>
+              </div>
+              <span className="badge badge-blue" style={{ fontSize: "0.75rem" }}>
+                {purchaseBills.filter((b) => {
+                  if (purchaseSupplierFilter !== "all" && b.party_name !== purchaseSupplierFilter) return false;
+                  if (purchaseSearchTerm.trim()) {
+                    const q = purchaseSearchTerm.toLowerCase();
+                    const inNumber = b.bill_number?.toLowerCase().includes(q);
+                    const inParty = b.party_name?.toLowerCase().includes(q);
+                    const inNotes = b.notes?.toLowerCase().includes(q);
+                    const inItems = b.items?.some((it: any) => it.item_name?.toLowerCase().includes(q));
+                    if (!inNumber && !inParty && !inNotes && !inItems) return false;
+                  }
+                  return true;
+                }).length} Vouchers Recorded
+              </span>
+            </div>
+
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
+                <thead>
+                  <tr style={{ background: "rgba(15, 23, 42, 0.8)", borderBottom: "1px solid var(--border)", color: "var(--text-muted)" }}>
+                    <th style={{ padding: "12px 16px", fontWeight: 600 }}>VOUCHER / INVOICE #</th>
+                    <th style={{ padding: "12px 16px", fontWeight: 600 }}>DATE & TIME</th>
+                    <th style={{ padding: "12px 16px", fontWeight: 600 }}>SUPPLIER / VENDOR</th>
+                    <th style={{ padding: "12px 16px", fontWeight: 600 }}>PURCHASED ITEMS</th>
+                    <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>TAXABLE (₹)</th>
+                    <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>GST (₹)</th>
+                    <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>TOTAL (₹)</th>
+                    <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "center" }}>STATUS</th>
+                    <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "center" }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {purchaseBills
+                    .filter((b) => {
+                      if (purchaseSupplierFilter !== "all" && b.party_name !== purchaseSupplierFilter) return false;
+                      if (purchaseSearchTerm.trim()) {
+                        const q = purchaseSearchTerm.toLowerCase();
+                        const inNumber = b.bill_number?.toLowerCase().includes(q);
+                        const inParty = b.party_name?.toLowerCase().includes(q);
+                        const inNotes = b.notes?.toLowerCase().includes(q);
+                        const inItems = b.items?.some((it: any) => it.item_name?.toLowerCase().includes(q));
+                        if (!inNumber && !inParty && !inNotes && !inItems) return false;
+                      }
+                      return true;
+                    })
+                    .map((pb) => {
+                      const purDate = new Date(pb.created_at);
+                      const itemsList = pb.items || [];
+                      return (
+                        <tr key={pb.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", transition: "background 0.15s ease" }} className="hover-row">
+                          {/* Invoice # */}
+                          <td style={{ padding: "14px 16px", verticalAlign: "middle" }}>
+                            <div style={{ fontWeight: 700, color: "#38bdf8", display: "flex", alignItems: "center", gap: "6px" }}>
+                              <Receipt size={14} color="#38bdf8" />
+                              <span>{pb.bill_number}</span>
+                            </div>
+                            <span className="badge badge-secondary" style={{ fontSize: "0.65rem", marginTop: "4px" }}>
+                              PURCHASE INWARD
+                            </span>
+                          </td>
+
+                          {/* Date */}
+                          <td style={{ padding: "14px 16px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                            <div style={{ color: "#f8fafc", fontWeight: 500 }}>
+                              {purDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                            </div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                              {purDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                          </td>
+
+                          {/* Supplier */}
+                          <td style={{ padding: "14px 16px", verticalAlign: "middle" }}>
+                            <div style={{ fontWeight: 600, color: "#f8fafc", display: "flex", alignItems: "center", gap: "6px" }}>
+                              <Building2 size={14} color="#94a3b8" />
+                              <span>{pb.party_name}</span>
+                            </div>
+                            {pb.party_gst && (
+                              <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                                GST: {pb.party_gst}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Items Summary */}
+                          <td style={{ padding: "14px 16px", verticalAlign: "middle", maxWidth: "260px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              {itemsList.slice(0, 3).map((it: any, idx: number) => {
+                                const itMaster = allItemsList.find((m) => m.id === it.item_id);
+                                const uPerCase = itMaster?.units_per_case && itMaster.units_per_case > 0 ? itMaster.units_per_case : 1;
+                                const csCount = (uPerCase > 1 && it.quantity >= uPerCase) ? Math.floor(it.quantity / uPerCase) : 0;
+                                const looseCount = uPerCase > 1 ? (it.quantity % uPerCase) : it.quantity;
+
+                                return (
+                                  <div key={idx} style={{ fontSize: "0.8rem", color: "#e2e8f0", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#38bdf8", flexShrink: 0 }}></span>
+                                    <span style={{ fontWeight: 500 }}>{it.item_name}</span>
+                                    <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                                      {csCount > 0 ? `(${csCount} CS${looseCount > 0 ? ` + ${looseCount} EA` : ""})` : `(${it.quantity} ${it.unit || "EA"})`}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                              {itemsList.length > 3 && (
+                                <span style={{ fontSize: "0.75rem", color: "#38bdf8" }}>
+                                  +{itemsList.length - 3} more items...
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Taxable */}
+                          <td style={{ padding: "14px 16px", verticalAlign: "middle", textAlign: "right", color: "#94a3b8" }}>
+                            ₹{(pb.taxable_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+
+                          {/* GST */}
+                          <td style={{ padding: "14px 16px", verticalAlign: "middle", textAlign: "right", color: "#fbbf24" }}>
+                            ₹{(pb.gst_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+
+                          {/* Grand Total */}
+                          <td style={{ padding: "14px 16px", verticalAlign: "middle", textAlign: "right" }}>
+                            <div style={{ fontWeight: 700, color: "#34d399", fontSize: "0.95rem" }}>
+                              ₹{(pb.total_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+                          </td>
+
+                          {/* Status */}
+                          <td style={{ padding: "14px 16px", verticalAlign: "middle", textAlign: "center" }}>
+                            <span className="badge badge-success" style={{ fontSize: "0.7rem" }}>
+                              Recorded
+                            </span>
+                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                              {pb.creator_name || "Admin"}
+                            </div>
+                          </td>
+
+                          {/* Actions */}
+                          <td style={{ padding: "14px 16px", verticalAlign: "middle", textAlign: "center" }}>
+                            <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+                              <button
+                                onClick={() => setSelectedPurchaseBill(pb)}
+                                className="btn-secondary"
+                                style={{ padding: "6px 10px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "4px" }}
+                                title="View Purchase Voucher Details"
+                              >
+                                <Eye size={13} /> View
+                              </button>
+                              <button
+                                onClick={() => handleDownloadPurchasePdf(pb.id, pb.bill_number)}
+                                className="btn-secondary"
+                                style={{ padding: "6px 10px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "4px" }}
+                                title="Download PDF Voucher"
+                                disabled={isDownloadingPurchasePdf}
+                              >
+                                <Printer size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                  {purchaseBills.length === 0 && (
+                    <tr>
+                      <td colSpan={9} style={{ padding: "48px 20px", textAlign: "center", color: "var(--text-muted)" }}>
+                        <FileSpreadsheet size={40} style={{ margin: "0 auto 12px auto", opacity: 0.4 }} />
+                        <div style={{ fontSize: "1rem", fontWeight: 600, color: "#f8fafc" }}>No Purchase Inward Vouchers Recorded Yet</div>
+                        <div style={{ fontSize: "0.85rem", marginTop: "4px", marginBottom: "16px" }}>
+                          Whenever you receive stock via Stock-In, it is automatically cataloged in this Purchase Book.
+                        </div>
+                        <button
+                          onClick={() => setActiveTab("stock_in")}
+                          className="btn-primary"
+                          style={{ margin: "0 auto", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                        >
+                          <Plus size={16} /> Record First Purchase Stock-In
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
@@ -2342,6 +2698,166 @@ export default function InventoryPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL: PURCHASE VOUCHER DETAILS & PRINT --- */}
+      {selectedPurchaseBill && (
+        <div className="modal-overlay" onClick={() => setSelectedPurchaseBill(null)}>
+          <div
+            className="glass-panel"
+            style={{
+              width: "100%",
+              maxWidth: "750px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              padding: "24px",
+              borderRadius: "14px",
+              background: "#0f172a",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Receipt size={20} color="#38bdf8" />
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+                    Purchase Voucher — {selectedPurchaseBill.bill_number}
+                  </h3>
+                </div>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                  Recorded on {new Date(selectedPurchaseBill.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedPurchaseBill(null)}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Vendor & General Details Box */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "rgba(30, 41, 59, 0.4)", padding: "14px", borderRadius: "8px", marginBottom: "16px", fontSize: "0.85rem" }}>
+              <div>
+                <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 600 }}>Supplier / Vendor</div>
+                <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "1rem", marginTop: "2px" }}>{selectedPurchaseBill.party_name}</div>
+                {selectedPurchaseBill.party_gst && (
+                  <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "2px" }}>GSTIN: {selectedPurchaseBill.party_gst}</div>
+                )}
+                {selectedPurchaseBill.party_address && (
+                  <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "2px" }}>Address: {selectedPurchaseBill.party_address}</div>
+                )}
+              </div>
+              <div>
+                <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 600 }}>Voucher Info & Audit</div>
+                <div style={{ color: "#f8fafc", marginTop: "2px" }}>
+                  Status: <span className="badge badge-success" style={{ fontSize: "0.7rem" }}>Recorded</span>
+                </div>
+                <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "2px" }}>
+                  Billed By: {selectedPurchaseBill.creator_name || "Admin"}
+                </div>
+                {selectedPurchaseBill.notes && (
+                  <div style={{ color: "#cbd5e1", fontSize: "0.8rem", marginTop: "4px", background: "rgba(15,23,42,0.5)", padding: "4px 8px", borderRadius: "4px" }}>
+                    <strong>Notes:</strong> {selectedPurchaseBill.notes}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Line Items Table */}
+            <div style={{ border: "1px solid var(--border)", borderRadius: "8px", overflow: "hidden", marginBottom: "16px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", textAlign: "left" }}>
+                <thead>
+                  <tr style={{ background: "rgba(15, 23, 42, 0.8)", borderBottom: "1px solid var(--border)", color: "var(--text-muted)" }}>
+                    <th style={{ padding: "8px 12px" }}>#</th>
+                    <th style={{ padding: "8px 12px" }}>Item Description</th>
+                    <th style={{ padding: "8px 12px", textAlign: "center" }}>Qty</th>
+                    <th style={{ padding: "8px 12px", textAlign: "right" }}>Cost Rate (₹)</th>
+                    <th style={{ padding: "8px 12px", textAlign: "right" }}>Taxable (₹)</th>
+                    <th style={{ padding: "8px 12px", textAlign: "right" }}>GST</th>
+                    <th style={{ padding: "8px 12px", textAlign: "right" }}>Total (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(selectedPurchaseBill.items || []).map((it: any, idx: number) => (
+                    <tr key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                      <td style={{ padding: "8px 12px", color: "var(--text-muted)" }}>{idx + 1}</td>
+                      <td style={{ padding: "8px 12px", fontWeight: 600, color: "#f8fafc" }}>
+                        {it.item_name}
+                        {it.hsn_code && <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: "6px" }}>HSN: {it.hsn_code}</span>}
+                      </td>
+                      <td style={{ padding: "8px 12px", textAlign: "center", color: "#38bdf8" }}>
+                        {it.quantity} {it.unit || "EA"}
+                      </td>
+                      <td style={{ padding: "8px 12px", textAlign: "right", color: "#94a3b8" }}>
+                        ₹{(it.rate || it.purchase_price || 0).toFixed(2)}
+                      </td>
+                      <td style={{ padding: "8px 12px", textAlign: "right", color: "#94a3b8" }}>
+                        ₹{(it.taxable_amount || (it.quantity * (it.rate || it.purchase_price || 0))).toFixed(2)}
+                      </td>
+                      <td style={{ padding: "8px 12px", textAlign: "right", color: "#fbbf24" }}>
+                        {it.gst_rate}% (₹{(it.cgst_amount + it.sgst_amount || it.gst_amount || 0).toFixed(2)})
+                      </td>
+                      <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, color: "#34d399" }}>
+                        ₹{(it.total_amount || 0).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Financial Summary */}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "20px" }}>
+              <div style={{ width: "280px", background: "rgba(30, 41, 59, 0.4)", padding: "12px 16px", borderRadius: "8px", fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
+                  <span>Taxable Subtotal:</span>
+                  <span style={{ color: "#f8fafc", fontWeight: 600 }}>₹{(selectedPurchaseBill.taxable_amount || 0).toFixed(2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
+                  <span>CGST (Central):</span>
+                  <span style={{ color: "#fbbf24", fontWeight: 600 }}>₹{(selectedPurchaseBill.cgst_amount || 0).toFixed(2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
+                  <span>SGST (State):</span>
+                  <span style={{ color: "#fbbf24", fontWeight: 600 }}>₹{(selectedPurchaseBill.sgst_amount || 0).toFixed(2)}</span>
+                </div>
+                {selectedPurchaseBill.round_off !== 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
+                    <span>Round Off:</span>
+                    <span style={{ color: "#f8fafc" }}>{selectedPurchaseBill.round_off > 0 ? `+₹${selectedPurchaseBill.round_off.toFixed(2)}` : `-₹${Math.abs(selectedPurchaseBill.round_off).toFixed(2)}`}</span>
+                  </div>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border)", paddingTop: "6px", marginTop: "4px", fontSize: "1rem", fontWeight: 700 }}>
+                  <span style={{ color: "#f8fafc" }}>Grand Total:</span>
+                  <span style={{ color: "#34d399" }}>₹{(selectedPurchaseBill.total_amount || 0).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => setSelectedPurchaseBill(null)}
+                className="btn-secondary"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDownloadPurchasePdf(selectedPurchaseBill.id, selectedPurchaseBill.bill_number)}
+                className="btn-primary"
+                style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                disabled={isDownloadingPurchasePdf}
+              >
+                <Printer size={16} />
+                <span>{isDownloadingPurchasePdf ? "Generating PDF..." : "Print / Download PDF Voucher"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

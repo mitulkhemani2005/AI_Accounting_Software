@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 
 from app.models.inventory import Godown, Stock, StockBatch, StockMovement, StockTransfer, StockTransferItem
 from app.models.item import Item
+from app.models.bill import Bill, BillItem
 from app.models.user import User
 from app.schemas.inventory import (
     GodownCreate,
@@ -232,6 +233,7 @@ async def record_stock_in(
             raise HTTPException(status_code=404, detail="Selected Godown not found")
 
     processed_items = []
+    bill_items_data = []
     total_qty_added = 0.0
 
     for item_req in payload.items:
@@ -320,6 +322,29 @@ async def record_stock_in(
         )
         db.add(movement)
 
+        # Purchase Book line item financial calculation
+        taxable_item = round(effective_qty * cost, 2)
+        gst_r = item.gst_rate if item.gst_rate is not None else 0.0
+        gst_item = round(taxable_item * (gst_r / 100.0), 2)
+        cgst_item = round(gst_item / 2.0, 2)
+        sgst_item = round(gst_item / 2.0, 2)
+        total_item = taxable_item + gst_item
+
+        bill_items_data.append({
+            "item_id": item.id,
+            "item_name": item.name,
+            "hsn_code": item.hsn_code,
+            "quantity": effective_qty,
+            "unit": item.unit or "EA",
+            "rate": cost,
+            "gst_rate": gst_r,
+            "taxable_amount": taxable_item,
+            "gst_amount": gst_item,
+            "cgst_amount": cgst_item,
+            "sgst_amount": sgst_item,
+            "total_amount": total_item
+        })
+
         total_qty_added += effective_qty
         processed_items.append({
             "item_id": item.id,
@@ -330,6 +355,77 @@ async def record_stock_in(
             "batch_number": batch_num
         })
 
+    # --- Create Official Purchase Book Entry (Bill of type 'purchase') ---
+    supplier_name = payload.supplier_name.strip() if payload.supplier_name else "Supplier / Vendor"
+    pur_bill_number = payload.invoice_number.strip() if payload.invoice_number else ""
+    if pur_bill_number:
+        # Check if invoice number already exists for this tenant
+        exist_check = await db.execute(
+            select(Bill).where(Bill.tenant_id == tenant_id, Bill.bill_number == pur_bill_number)
+        )
+        if exist_check.scalar_one_or_none():
+            year = datetime.now(timezone.utc).year
+            p_count = (await db.execute(select(func.count(Bill.id)).where(Bill.tenant_id == tenant_id, Bill.type == "purchase"))).scalar() or 0
+            pur_bill_number = f"PUR-{year}-{str(p_count + 1).zfill(4)}"
+    else:
+        year = datetime.now(timezone.utc).year
+        p_count = (await db.execute(select(func.count(Bill.id)).where(Bill.tenant_id == tenant_id, Bill.type == "purchase"))).scalar() or 0
+        pur_bill_number = f"PUR-{year}-{str(p_count + 1).zfill(4)}"
+
+    total_taxable = round(sum(b["taxable_amount"] for b in bill_items_data), 2)
+    total_gst = round(sum(b["gst_amount"] for b in bill_items_data), 2)
+    total_cgst = round(sum(b["cgst_amount"] for b in bill_items_data), 2)
+    total_sgst = round(sum(b["sgst_amount"] for b in bill_items_data), 2)
+    grand_total = total_taxable + total_gst
+    round_off = round(round(grand_total) - grand_total, 2)
+    final_amount = round(grand_total + round_off, 2)
+
+    purchase_bill = Bill(
+        tenant_id=tenant_id,
+        bill_number=pur_bill_number,
+        type="purchase",
+        party_name=supplier_name,
+        created_by_user_id=user.id,
+        subtotal=total_taxable,
+        discount_amount=0.0,
+        taxable_amount=total_taxable,
+        gst_amount=total_gst,
+        cgst_amount=total_cgst,
+        sgst_amount=total_sgst,
+        igst_amount=0.0,
+        round_off=round_off,
+        total_amount=final_amount,
+        payment_mode="credit",
+        payment_status="paid",
+        paid_amount=final_amount,
+        status="active",
+        is_reviewed_by_admin=True,
+        notes=f"Auto-recorded into Purchase Book from Stock-In Inward. Godown: {target_godown_id}. {payload.notes or ''}".strip(),
+    )
+    db.add(purchase_bill)
+    await db.flush()
+
+    for it_data in bill_items_data:
+        b_item = BillItem(
+            bill_id=purchase_bill.id,
+            item_id=it_data["item_id"],
+            item_name=it_data["item_name"],
+            hsn_code=it_data.get("hsn_code"),
+            quantity=it_data["quantity"],
+            unit=it_data["unit"],
+            rate=it_data["rate"],
+            purchase_price=it_data["rate"],
+            discount_amount=0.0,
+            gst_rate=it_data["gst_rate"],
+            is_tax_inclusive=False,
+            taxable_amount=it_data["taxable_amount"],
+            cgst_amount=it_data["cgst_amount"],
+            sgst_amount=it_data["sgst_amount"],
+            igst_amount=0.0,
+            total_amount=it_data["total_amount"],
+        )
+        db.add(b_item)
+
     await db.commit()
 
     await log_audit_event(
@@ -339,14 +435,17 @@ async def record_stock_in(
         action="STOCK_IN",
         entity_type="Stock",
         entity_id=target_godown_id,
-        details={"items_count": len(processed_items), "total_qty": total_qty_added, "supplier": payload.supplier_name},
+        details={"items_count": len(processed_items), "total_qty": total_qty_added, "supplier": supplier_name, "purchase_bill": purchase_bill.bill_number},
         ip_address=client_ip
     )
 
     return {
         "status": "success",
-        "message": f"Successfully stocked in {len(processed_items)} item(s)",
+        "message": f"Successfully stocked in {len(processed_items)} item(s) and recorded in Purchase Book (#{purchase_bill.bill_number})",
         "godown_id": target_godown_id,
+        "purchase_bill_id": purchase_bill.id,
+        "purchase_bill_number": purchase_bill.bill_number,
+        "purchase_total_amount": final_amount,
         "items": processed_items
     }
 
