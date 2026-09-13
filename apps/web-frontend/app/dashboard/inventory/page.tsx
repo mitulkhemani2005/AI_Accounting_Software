@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { CSVImportModal } from "@/components/CSVImportModal";
@@ -796,23 +796,27 @@ export default function InventoryPage() {
   };
 
   // Filtered Stock List
-  const filteredStocks = stocks.filter((s) => {
-    const matchSearch =
-      s.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (s.sku && s.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (s.barcode && s.barcode.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredStocks = useMemo(() => {
+    return stocks.filter((s) => {
+      const matchSearch =
+        s.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.sku && s.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (s.barcode && s.barcode.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchCategory = categoryFilter === "all" || s.category.toLowerCase() === categoryFilter.toLowerCase();
-    const matchLowStock = !lowStockOnly || s.is_low_stock;
+      const matchCategory = categoryFilter === "all" || s.category.toLowerCase() === categoryFilter.toLowerCase();
+      const matchLowStock = !lowStockOnly || s.is_low_stock;
 
-    const matchGodown =
-      godownFilter === "all" ||
-      s.godown_breakdown.some((g) => g.godown_id === godownFilter && g.quantity > 0);
+      const matchGodown =
+        godownFilter === "all" ||
+        s.godown_breakdown.some((g) => g.godown_id === godownFilter && g.quantity > 0);
 
-    return matchSearch && matchCategory && matchLowStock && matchGodown;
-  });
+      return matchSearch && matchCategory && matchLowStock && matchGodown;
+    });
+  }, [stocks, searchTerm, categoryFilter, lowStockOnly, godownFilter]);
 
-  const categories = Array.from(new Set(stocks.map((s) => s.category))).filter(Boolean);
+  const categories = useMemo(() => {
+    return Array.from(new Set(stocks.map((s) => s.category))).filter(Boolean);
+  }, [stocks]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", color: "var(--text-main)" }}>
@@ -820,8 +824,8 @@ export default function InventoryPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <Boxes size={28} color="#38bdf8" />
-            <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+            <Boxes size={28} color="#2563eb" />
+            <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
               Products & Inventory Master
             </h1>
             <span className="badge badge-purple" style={{ fontSize: "0.75rem" }}>Unified Master</span>
@@ -838,7 +842,7 @@ export default function InventoryPage() {
           {isAdmin && (
             <>
               <button onClick={() => setShowImportModal(true)} className="btn-secondary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <FileSpreadsheet size={15} color="#38bdf8" /> Import CSV
+                <FileSpreadsheet size={15} color="#2563eb" /> Import CSV
               </button>
               <button onClick={openCreateProduct} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <Plus size={16} /> + Add Product
@@ -861,26 +865,26 @@ export default function InventoryPage() {
       {metrics && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
           {/* Total Units */}
-          <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "14px" }}>
-            <div style={{ background: "rgba(56, 189, 248, 0.15)", padding: "12px", borderRadius: "10px", color: "#38bdf8" }}>
+          <div className="glass-panel" style={{ padding: "18px", borderRadius: "8px", display: "flex", alignItems: "center", gap: "14px", background: "#ffffff" }}>
+            <div style={{ background: "#eff6ff", padding: "12px", borderRadius: "8px", color: "#2563eb" }}>
               <Package size={24} />
             </div>
             <div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Total Stock On Hand</div>
-              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#f8fafc" }}>{metrics.total_stock_units} <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Units</span></div>
-              <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>{metrics.total_items_count} catalog items</div>
+              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#0f172a" }}>{metrics.total_stock_units} <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Units</span></div>
+              <div style={{ fontSize: "0.7rem", color: "#64748b" }}>{metrics.total_items_count} catalog items</div>
             </div>
           </div>
 
           {/* Valuation Cost */}
-          <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "14px" }}>
-            <div style={{ background: "rgba(16, 185, 129, 0.15)", padding: "12px", borderRadius: "10px", color: "#34d399" }}>
+          <div className="glass-panel" style={{ padding: "18px", borderRadius: "8px", display: "flex", alignItems: "center", gap: "14px", background: "#ffffff" }}>
+            <div style={{ background: "#dcfce7", padding: "12px", borderRadius: "8px", color: "#16a34a" }}>
               <DollarSign size={24} />
             </div>
             <div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Valuation (Cost)</div>
-              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#34d399" }}>₹{metrics.total_inventory_valuation_cost.toLocaleString("en-IN")}</div>
-              <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Retail value: ₹{metrics.total_inventory_valuation_sale.toLocaleString("en-IN")}</div>
+              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#16a34a" }}>₹{metrics.total_inventory_valuation_cost.toLocaleString("en-IN")}</div>
+              <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Retail value: ₹{metrics.total_inventory_valuation_sale.toLocaleString("en-IN")}</div>
             </div>
           </div>
 
@@ -889,11 +893,12 @@ export default function InventoryPage() {
             className="glass-panel"
             style={{
               padding: "18px",
-              borderRadius: "12px",
+              borderRadius: "8px",
               display: "flex",
               alignItems: "center",
               gap: "14px",
-              border: metrics.low_stock_items_count > 0 ? "1px solid rgba(245, 158, 11, 0.4)" : undefined,
+              border: metrics.low_stock_items_count > 0 ? "1px solid #fcd34d" : undefined,
+              background: metrics.low_stock_items_count > 0 ? "#fffbeb" : "#ffffff",
               cursor: "pointer",
             }}
             onClick={() => {
@@ -901,13 +906,13 @@ export default function InventoryPage() {
               setLowStockOnly(true);
             }}
           >
-            <div style={{ background: "rgba(245, 158, 11, 0.15)", padding: "12px", borderRadius: "10px", color: "#fbbf24" }}>
+            <div style={{ background: "#fef3c7", padding: "12px", borderRadius: "8px", color: "#b45309" }}>
               <AlertTriangle size={24} />
             </div>
             <div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Low / Out of Stock</div>
-              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#fbbf24" }}>{metrics.low_stock_items_count} <span style={{ fontSize: "0.8rem", color: "#f87171" }}>({metrics.out_of_stock_items_count} Out)</span></div>
-              <div style={{ fontSize: "0.7rem", color: "#38bdf8" }}>Click to filter low stock items</div>
+              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#b45309" }}>{metrics.low_stock_items_count} <span style={{ fontSize: "0.8rem", color: "#dc2626" }}>({metrics.out_of_stock_items_count} Out)</span></div>
+              <div style={{ fontSize: "0.7rem", color: "#2563eb" }}>Click to filter low stock items</div>
             </div>
           </div>
 
@@ -916,22 +921,23 @@ export default function InventoryPage() {
             className="glass-panel"
             style={{
               padding: "18px",
-              borderRadius: "12px",
+              borderRadius: "8px",
               display: "flex",
               alignItems: "center",
               gap: "14px",
-              border: metrics.expiring_soon_batches_count > 0 ? "1px solid rgba(239, 68, 68, 0.4)" : undefined,
+              border: metrics.expiring_soon_batches_count > 0 ? "1px solid #fca5a5" : undefined,
+              background: metrics.expiring_soon_batches_count > 0 ? "#fef2f2" : "#ffffff",
               cursor: "pointer",
             }}
             onClick={() => setActiveTab("alerts")}
           >
-            <div style={{ background: "rgba(239, 68, 68, 0.15)", padding: "12px", borderRadius: "10px", color: "#f87171" }}>
+            <div style={{ background: "#fee2e2", padding: "12px", borderRadius: "8px", color: "#dc2626" }}>
               <Clock size={24} />
             </div>
             <div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Expiring Soon (60d)</div>
-              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#f87171" }}>{metrics.expiring_soon_batches_count} <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Batches</span></div>
-              <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Across {metrics.active_godowns_count} active godowns</div>
+              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#dc2626" }}>{metrics.expiring_soon_batches_count} <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Batches</span></div>
+              <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Across {metrics.active_godowns_count} active godowns</div>
             </div>
           </div>
         </div>
@@ -978,7 +984,7 @@ export default function InventoryPage() {
       {activeTab === "overview" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Filters & Actions Bar */}
-          <div className="glass-panel" style={{ padding: "16px", borderRadius: "12px", display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", justifyContent: "space-between" }}>
+          <div className="glass-panel" style={{ padding: "16px", borderRadius: "8px", display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "280px" }}>
               {/* Search */}
               <div style={{ position: "relative", flex: 1, minWidth: "220px" }}>
@@ -1012,7 +1018,7 @@ export default function InventoryPage() {
 
             {/* Quick Actions & Low Stock Toggle */}
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.85rem", color: lowStockOnly ? "#fbbf24" : "var(--text-muted)" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.85rem", color: lowStockOnly ? "#b45309" : "var(--text-muted)", fontWeight: lowStockOnly ? 700 : 500 }}>
                 <input
                   type="checkbox"
                   checked={lowStockOnly}
@@ -1035,7 +1041,7 @@ export default function InventoryPage() {
           </div>
 
           {/* Table */}
-          <div className="glass-panel" style={{ borderRadius: "12px", overflow: "hidden" }}>
+          <div className="glass-panel" style={{ borderRadius: "8px", overflow: "hidden" }}>
             <table className="custom-table" style={{ width: "100%", fontSize: "0.875rem" }}>
               <thead>
                 <tr>
@@ -1063,12 +1069,12 @@ export default function InventoryPage() {
                       <tr key={item.item_id}>
                         <td>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <div style={{ fontWeight: 600, color: "#f8fafc", fontSize: "0.95rem" }}>{item.item_name}</div>
+                            <div style={{ fontWeight: 700, color: "#0f172a", fontSize: "0.95rem" }}>{item.item_name}</div>
                             <span className="badge badge-purple" style={{ fontSize: "0.68rem" }}>{item.category}</span>
                           </div>
                           <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "3px" }}>
-                            {item.sku && <span>SKU: <strong style={{ color: "#cbd5e1" }}>{item.sku}</strong></span>}
-                            {item.barcode && <span style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}><Barcode size={12} color="#38bdf8" /> {item.barcode}</span>}
+                            {item.sku && <span>SKU: <strong style={{ color: "#475569" }}>{item.sku}</strong></span>}
+                            {item.barcode && <span style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}><Barcode size={12} color="#2563eb" /> {item.barcode}</span>}
                             {(fullItem as any)?.hsn_code && <span>HSN: {(fullItem as any).hsn_code}</span>}
                             {(fullItem as any)?.is_tax_inclusive && <span className="badge badge-blue" style={{ fontSize: "0.62rem" }}>Tax Incl. (MRP)</span>}
                           </div>
@@ -1086,7 +1092,7 @@ export default function InventoryPage() {
                         <td>
                           <div style={{ fontSize: "0.75rem" }}>
                             {item.godown_breakdown.length === 0 ? (
-                              <span style={{ color: "#ef4444" }}>No stock in any godown</span>
+                              <span style={{ color: "#dc2626", fontWeight: 600 }}>No stock in any godown</span>
                             ) : (
                               item.godown_breakdown.map((gb) => (
                                 <div key={gb.godown_id} style={{ display: "flex", justifyContent: "space-between", gap: "8px", color: gb.quantity > 0 ? "var(--text-main)" : "var(--text-muted)" }}>
@@ -1097,20 +1103,20 @@ export default function InventoryPage() {
                             )}
                           </div>
                         </td>
-                        <td style={{ textAlign: "right", color: "var(--text-muted)" }}>₹{item.purchase_price.toFixed(2)}</td>
+                        <td style={{ textAlign: "right", color: "var(--text-muted)", fontWeight: 500 }}>₹{item.purchase_price.toFixed(2)}</td>
                         <td style={{ textAlign: "right" }}>
-                          <div style={{ color: "#38bdf8", fontWeight: 700 }}>₹{item.sale_price.toFixed(2)}</div>
+                          <div style={{ color: "#1d4ed8", fontWeight: 700 }}>₹{item.sale_price.toFixed(2)}</div>
                           {(fullItem as any)?.gst_rate !== undefined && (
                             <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>GST: {(fullItem as any).gst_rate}%</div>
                           )}
                         </td>
                         <td style={{ textAlign: "right" }}>
-                          <div style={{ fontSize: "1.05rem", fontWeight: 700, color: item.is_out_of_stock ? "#ef4444" : item.is_low_stock ? "#fbbf24" : "#34d399" }}>
+                          <div style={{ fontSize: "1.05rem", fontWeight: 800, color: item.is_out_of_stock ? "#dc2626" : item.is_low_stock ? "#b45309" : "#16a34a" }}>
                             {item.total_quantity} <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>{item.unit || "EA"}</span>
                           </div>
                           {item.units_per_case && item.units_per_case > 1 && (
                             <div style={{ marginTop: "2px" }}>
-                              <div style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: 600 }}>
+                              <div style={{ fontSize: "0.75rem", color: "#1d4ed8", fontWeight: 600 }}>
                                 {Math.floor(item.total_quantity / item.units_per_case)} {item.secondary_unit || "CS"}
                                 {item.total_quantity % item.units_per_case > 0 ? ` + ${(item.total_quantity % item.units_per_case).toFixed(0)} ${item.unit || "EA"}` : ""}
                               </div>
@@ -1120,7 +1126,7 @@ export default function InventoryPage() {
                             </div>
                           )}
                         </td>
-                        <td style={{ textAlign: "right", fontWeight: 600, color: "#f8fafc" }}>
+                        <td style={{ textAlign: "right", fontWeight: 700, color: "#0f172a" }}>
                           ₹{item.total_valuation_cost.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </td>
                         <td>
@@ -1154,7 +1160,7 @@ export default function InventoryPage() {
                               <button
                                 onClick={() => quickStockInItem(item)}
                                 className="btn-secondary"
-                                style={{ padding: "4px 8px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "3px", color: "#34d399", borderColor: "rgba(52, 211, 153, 0.4)" }}
+                                style={{ padding: "4px 8px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "3px", color: "#059669", borderColor: "#6ee7b7" }}
                                 title="Quick Restock / Stock-In"
                               >
                                 <Plus size={12} /> Stock-In
@@ -1182,10 +1188,10 @@ export default function InventoryPage() {
 
       {/* --- TAB 2: STOCK-IN / PURCHASE ENTRY --- */}
       {activeTab === "stock_in" && isAdmin && (
-        <div className="glass-panel" style={{ padding: "24px", borderRadius: "14px", maxWidth: "800px", margin: "0 auto", width: "100%" }}>
+        <div className="glass-panel" style={{ padding: "24px", borderRadius: "8px", maxWidth: "800px", margin: "0 auto", width: "100%", background: "#ffffff" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>
-            <Plus size={22} color="#34d399" />
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>Record Stock-In / Purchase Goods</h2>
+            <Plus size={22} color="#16a34a" />
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>Record Stock-In / Purchase Goods</h2>
           </div>
 
           <form onSubmit={handleStockInSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -1297,14 +1303,14 @@ export default function InventoryPage() {
             <div style={{ borderTop: "1px solid var(--border)", paddingTop: "14px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
                 <div>
-                  <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#f8fafc" }}>Restock Line Items</span>
+                  <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0f172a" }}>Restock Line Items</span>
                 </div>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button
                     type="button"
                     onClick={() => openCreateProductForStockIn(stockInForm.items.length)}
                     className="btn-secondary"
-                    style={{ padding: "5px 10px", fontSize: "0.75rem", color: "#38bdf8", borderColor: "rgba(56, 189, 248, 0.4)", display: "flex", alignItems: "center", gap: "4px" }}
+                    style={{ padding: "5px 10px", fontSize: "0.75rem", color: "#2563eb", borderColor: "#93c5fd", background: "#eff6ff", display: "flex", alignItems: "center", gap: "4px" }}
                   >
                     <Plus size={13} /> + Add New Product to Catalog
                   </button>
@@ -1354,9 +1360,9 @@ export default function InventoryPage() {
                   <div
                     key={idx}
                     style={{
-                      background: "rgba(15, 23, 42, 0.6)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "10px",
+                      background: "#f8fafc",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "8px",
                       padding: "10px",
                       marginBottom: "10px",
                       display: "flex",
@@ -1383,7 +1389,7 @@ export default function InventoryPage() {
                           style={{ fontSize: "0.825rem", flex: 1 }}
                         >
                           <option value="">Select Item...</option>
-                          <option value="__NEW_PRODUCT__" style={{ color: "#38bdf8", fontWeight: 700 }}>
+                          <option value="__NEW_PRODUCT__" style={{ color: "#2563eb", fontWeight: 700 }}>
                             ➕ + Create New Product...
                           </option>
                           {allItemsList.map((it) => (
@@ -1397,7 +1403,7 @@ export default function InventoryPage() {
                           title="Add New Catalog Product"
                           onClick={() => openCreateProductForStockIn(idx)}
                           className="btn-secondary"
-                          style={{ padding: "6px 8px", color: "#38bdf8", borderColor: "rgba(56, 189, 248, 0.3)" }}
+                          style={{ padding: "6px 8px", color: "#2563eb", borderColor: "#93c5fd" }}
                         >
                           <Plus size={14} />
                         </button>
@@ -1463,7 +1469,7 @@ export default function InventoryPage() {
                           const updated = stockInForm.items.filter((_, i) => i !== idx);
                           setStockInForm({ ...stockInForm, items: updated });
                         }}
-                        style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", display: "flex", justifyContent: "center" }}
+                        style={{ background: "transparent", border: "none", color: "#dc2626", cursor: "pointer", display: "flex", justifyContent: "center" }}
                       >
                         <X size={16} />
                       </button>
@@ -1473,7 +1479,7 @@ export default function InventoryPage() {
                     {selItem && (
                       <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "flex", gap: "12px", alignItems: "center", paddingLeft: "4px" }}>
                         <span>
-                          Ratio: <strong style={{ color: "#f8fafc" }}>1 {selItem.secondary_unit || "CS"} = {unitsPerCase} {selItem.unit || "EA"}</strong>
+                          Ratio: <strong style={{ color: "#0f172a" }}>1 {selItem.secondary_unit || "CS"} = {unitsPerCase} {selItem.unit || "EA"}</strong>
                         </span>
                         <span className="badge badge-blue" style={{ fontSize: "0.68rem" }}>
                           📦 Total Received: <strong>{totalUnits.toFixed(0)} {selItem.unit || "EA"}</strong>
@@ -1517,9 +1523,9 @@ export default function InventoryPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {/* Purchase Summary KPI Cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
-            <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", borderLeft: "4px solid #3b82f6" }}>
+            <div className="glass-panel" style={{ padding: "18px", borderRadius: "8px", borderLeft: "4px solid #2563eb", background: "#ffffff" }}>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Total Inward Purchases</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#38bdf8", marginTop: "4px" }}>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#2563eb", marginTop: "4px" }}>
                 ₹{purchaseBills.reduce((acc, b) => acc + (b.total_amount || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
@@ -1527,9 +1533,9 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", borderLeft: "4px solid #10b981" }}>
+            <div className="glass-panel" style={{ padding: "18px", borderRadius: "8px", borderLeft: "4px solid #16a34a", background: "#ffffff" }}>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Taxable Inward Value</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#34d399", marginTop: "4px" }}>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#16a34a", marginTop: "4px" }}>
                 ₹{purchaseBills.reduce((acc, b) => acc + (b.taxable_amount || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
@@ -1537,9 +1543,9 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", borderLeft: "4px solid #f59e0b" }}>
+            <div className="glass-panel" style={{ padding: "18px", borderRadius: "8px", borderLeft: "4px solid #d97706", background: "#ffffff" }}>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Input GST Credit (ITC)</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#fbbf24", marginTop: "4px" }}>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#d97706", marginTop: "4px" }}>
                 ₹{purchaseBills.reduce((acc, b) => acc + (b.gst_amount || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
@@ -1547,9 +1553,9 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", borderLeft: "4px solid #8b5cf6" }}>
+            <div className="glass-panel" style={{ padding: "18px", borderRadius: "8px", borderLeft: "4px solid #7c3aed", background: "#ffffff" }}>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Suppliers & Vendors</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#a78bfa", marginTop: "4px" }}>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#7c3aed", marginTop: "4px" }}>
                 {Array.from(new Set(purchaseBills.map((b) => b.party_name).filter(Boolean))).length}
               </div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
@@ -1559,7 +1565,7 @@ export default function InventoryPage() {
           </div>
 
           {/* Filters & Actions Bar */}
-          <div className="glass-panel" style={{ padding: "16px", borderRadius: "12px", display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", justifyContent: "space-between" }}>
+          <div className="glass-panel" style={{ padding: "16px", borderRadius: "8px", display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "280px" }}>
               {/* Search */}
               <div style={{ position: "relative", flex: 1, minWidth: "220px" }}>
@@ -1610,11 +1616,11 @@ export default function InventoryPage() {
           </div>
 
           {/* Purchases Register Table */}
-          <div className="glass-panel" style={{ borderRadius: "12px", overflow: "hidden" }}>
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="glass-panel" style={{ borderRadius: "8px", overflow: "hidden" }}>
+            <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <FileSpreadsheet size={18} color="#38bdf8" />
-                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+                <FileSpreadsheet size={18} color="#2563eb" />
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
                   Official Purchase Book Register
                 </h3>
               </div>
@@ -1635,18 +1641,18 @@ export default function InventoryPage() {
             </div>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem", background: "#ffffff" }}>
                 <thead>
-                  <tr style={{ background: "rgba(15, 23, 42, 0.8)", borderBottom: "1px solid var(--border)", color: "var(--text-muted)" }}>
-                    <th style={{ padding: "12px 16px", fontWeight: 600 }}>VOUCHER / INVOICE #</th>
-                    <th style={{ padding: "12px 16px", fontWeight: 600 }}>DATE & TIME</th>
-                    <th style={{ padding: "12px 16px", fontWeight: 600 }}>SUPPLIER / VENDOR</th>
-                    <th style={{ padding: "12px 16px", fontWeight: 600 }}>PURCHASED ITEMS</th>
-                    <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>TAXABLE (₹)</th>
-                    <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>GST (₹)</th>
-                    <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "right" }}>TOTAL (₹)</th>
-                    <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "center" }}>STATUS</th>
-                    <th style={{ padding: "12px 16px", fontWeight: 600, textAlign: "center" }}>ACTIONS</th>
+                  <tr>
+                    <th style={{ padding: "10px 14px", fontWeight: 700, background: "#f8fafc", color: "#475569", borderBottom: "1px solid #cbd5e1" }}>VOUCHER / INVOICE #</th>
+                    <th style={{ padding: "10px 14px", fontWeight: 700, background: "#f8fafc", color: "#475569", borderBottom: "1px solid #cbd5e1" }}>DATE & TIME</th>
+                    <th style={{ padding: "10px 14px", fontWeight: 700, background: "#f8fafc", color: "#475569", borderBottom: "1px solid #cbd5e1" }}>SUPPLIER / VENDOR</th>
+                    <th style={{ padding: "10px 14px", fontWeight: 700, background: "#f8fafc", color: "#475569", borderBottom: "1px solid #cbd5e1" }}>PURCHASED ITEMS</th>
+                    <th style={{ padding: "10px 14px", fontWeight: 700, background: "#f8fafc", color: "#475569", borderBottom: "1px solid #cbd5e1", textAlign: "right" }}>TAXABLE (₹)</th>
+                    <th style={{ padding: "10px 14px", fontWeight: 700, background: "#f8fafc", color: "#475569", borderBottom: "1px solid #cbd5e1", textAlign: "right" }}>GST (₹)</th>
+                    <th style={{ padding: "10px 14px", fontWeight: 700, background: "#f8fafc", color: "#475569", borderBottom: "1px solid #cbd5e1", textAlign: "right" }}>TOTAL (₹)</th>
+                    <th style={{ padding: "10px 14px", fontWeight: 700, background: "#f8fafc", color: "#475569", borderBottom: "1px solid #cbd5e1", textAlign: "center" }}>STATUS</th>
+                    <th style={{ padding: "10px 14px", fontWeight: 700, background: "#f8fafc", color: "#475569", borderBottom: "1px solid #cbd5e1", textAlign: "center" }}>ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1667,11 +1673,11 @@ export default function InventoryPage() {
                       const purDate = new Date(pb.created_at);
                       const itemsList = pb.items || [];
                       return (
-                        <tr key={pb.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", transition: "background 0.15s ease" }} className="hover-row">
+                        <tr key={pb.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
                           {/* Invoice # */}
-                          <td style={{ padding: "14px 16px", verticalAlign: "middle" }}>
-                            <div style={{ fontWeight: 700, color: "#38bdf8", display: "flex", alignItems: "center", gap: "6px" }}>
-                              <Receipt size={14} color="#38bdf8" />
+                          <td style={{ padding: "12px 14px", verticalAlign: "middle" }}>
+                            <div style={{ fontWeight: 700, color: "#2563eb", display: "flex", alignItems: "center", gap: "6px" }}>
+                              <Receipt size={14} color="#2563eb" />
                               <span>{pb.bill_number}</span>
                             </div>
                             <span className="badge badge-secondary" style={{ fontSize: "0.65rem", marginTop: "4px" }}>
@@ -1680,8 +1686,8 @@ export default function InventoryPage() {
                           </td>
 
                           {/* Date */}
-                          <td style={{ padding: "14px 16px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-                            <div style={{ color: "#f8fafc", fontWeight: 500 }}>
+                          <td style={{ padding: "12px 14px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                            <div style={{ color: "#0f172a", fontWeight: 600 }}>
                               {purDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                             </div>
                             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
@@ -1690,9 +1696,9 @@ export default function InventoryPage() {
                           </td>
 
                           {/* Supplier */}
-                          <td style={{ padding: "14px 16px", verticalAlign: "middle" }}>
-                            <div style={{ fontWeight: 600, color: "#f8fafc", display: "flex", alignItems: "center", gap: "6px" }}>
-                              <Building2 size={14} color="#94a3b8" />
+                          <td style={{ padding: "12px 14px", verticalAlign: "middle" }}>
+                            <div style={{ fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: "6px" }}>
+                              <Building2 size={14} color="#64748b" />
                               <span>{pb.party_name}</span>
                             </div>
                             {pb.party_gst && (
@@ -1703,7 +1709,7 @@ export default function InventoryPage() {
                           </td>
 
                           {/* Items Summary */}
-                          <td style={{ padding: "14px 16px", verticalAlign: "middle", maxWidth: "260px" }}>
+                          <td style={{ padding: "12px 14px", verticalAlign: "middle", maxWidth: "260px" }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                               {itemsList.slice(0, 3).map((it: any, idx: number) => {
                                 const itMaster = allItemsList.find((m) => m.id === it.item_id);
@@ -1712,9 +1718,9 @@ export default function InventoryPage() {
                                 const looseCount = uPerCase > 1 ? (it.quantity % uPerCase) : it.quantity;
 
                                 return (
-                                  <div key={idx} style={{ fontSize: "0.8rem", color: "#e2e8f0", display: "flex", alignItems: "center", gap: "6px" }}>
-                                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#38bdf8", flexShrink: 0 }}></span>
-                                    <span style={{ fontWeight: 500 }}>{it.item_name}</span>
+                                  <div key={idx} style={{ fontSize: "0.8rem", color: "#334155", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#2563eb", flexShrink: 0 }}></span>
+                                    <span style={{ fontWeight: 600 }}>{it.item_name}</span>
                                     <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
                                       {csCount > 0 ? `(${csCount} CS${looseCount > 0 ? ` + ${looseCount} EA` : ""})` : `(${it.quantity} ${it.unit || "EA"})`}
                                     </span>
@@ -1722,7 +1728,7 @@ export default function InventoryPage() {
                                 );
                               })}
                               {itemsList.length > 3 && (
-                                <span style={{ fontSize: "0.75rem", color: "#38bdf8" }}>
+                                <span style={{ fontSize: "0.75rem", color: "#2563eb", fontWeight: 600 }}>
                                   +{itemsList.length - 3} more items...
                                 </span>
                               )}
@@ -1730,24 +1736,24 @@ export default function InventoryPage() {
                           </td>
 
                           {/* Taxable */}
-                          <td style={{ padding: "14px 16px", verticalAlign: "middle", textAlign: "right", color: "#94a3b8" }}>
+                          <td style={{ padding: "12px 14px", verticalAlign: "middle", textAlign: "right", color: "#475569", fontWeight: 500 }}>
                             ₹{(pb.taxable_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
 
                           {/* GST */}
-                          <td style={{ padding: "14px 16px", verticalAlign: "middle", textAlign: "right", color: "#fbbf24" }}>
+                          <td style={{ padding: "12px 14px", verticalAlign: "middle", textAlign: "right", color: "#b45309", fontWeight: 600 }}>
                             ₹{(pb.gst_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
 
                           {/* Grand Total */}
-                          <td style={{ padding: "14px 16px", verticalAlign: "middle", textAlign: "right" }}>
-                            <div style={{ fontWeight: 700, color: "#34d399", fontSize: "0.95rem" }}>
+                          <td style={{ padding: "12px 14px", verticalAlign: "middle", textAlign: "right" }}>
+                            <div style={{ fontWeight: 800, color: "#16a34a", fontSize: "0.95rem" }}>
                               ₹{(pb.total_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                           </td>
 
                           {/* Status */}
-                          <td style={{ padding: "14px 16px", verticalAlign: "middle", textAlign: "center" }}>
+                          <td style={{ padding: "12px 14px", verticalAlign: "middle", textAlign: "center" }}>
                             <span className="badge badge-success" style={{ fontSize: "0.7rem" }}>
                               Recorded
                             </span>
@@ -1757,12 +1763,12 @@ export default function InventoryPage() {
                           </td>
 
                           {/* Actions */}
-                          <td style={{ padding: "14px 16px", verticalAlign: "middle", textAlign: "center" }}>
+                          <td style={{ padding: "12px 14px", verticalAlign: "middle", textAlign: "center" }}>
                             <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
                               <button
                                 onClick={() => setSelectedPurchaseBill(pb)}
                                 className="btn-secondary"
-                                style={{ padding: "6px 10px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "4px" }}
+                                style={{ padding: "4px 8px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "4px" }}
                                 title="View Purchase Voucher Details"
                               >
                                 <Eye size={13} /> View
@@ -1770,7 +1776,7 @@ export default function InventoryPage() {
                               <button
                                 onClick={() => handleDownloadPurchasePdf(pb.id, pb.bill_number)}
                                 className="btn-secondary"
-                                style={{ padding: "6px 10px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "4px" }}
+                                style={{ padding: "4px 8px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "4px" }}
                                 title="Download PDF Voucher"
                                 disabled={isDownloadingPurchasePdf}
                               >
@@ -1786,7 +1792,7 @@ export default function InventoryPage() {
                     <tr>
                       <td colSpan={9} style={{ padding: "48px 20px", textAlign: "center", color: "var(--text-muted)" }}>
                         <FileSpreadsheet size={40} style={{ margin: "0 auto 12px auto", opacity: 0.4 }} />
-                        <div style={{ fontSize: "1rem", fontWeight: 600, color: "#f8fafc" }}>No Purchase Inward Vouchers Recorded Yet</div>
+                        <div style={{ fontSize: "1rem", fontWeight: 600, color: "#0f172a" }}>No Purchase Inward Vouchers Recorded Yet</div>
                         <div style={{ fontSize: "0.85rem", marginTop: "4px", marginBottom: "16px" }}>
                           Whenever you receive stock via Stock-In, it is automatically cataloged in this Purchase Book.
                         </div>
@@ -1811,7 +1817,7 @@ export default function InventoryPage() {
       {activeTab === "godowns" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
               Warehouse & Branch Locations ({godowns.length})
             </h3>
             {isAdmin && (
@@ -1823,11 +1829,11 @@ export default function InventoryPage() {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
             {godowns.map((g) => (
-              <div key={g.id} className="glass-panel" style={{ padding: "20px", borderRadius: "12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <div key={g.id} className="glass-panel" style={{ padding: "20px", borderRadius: "8px", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "#ffffff" }}>
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                     <div>
-                      <h4 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>{g.name}</h4>
+                      <h4 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>{g.name}</h4>
                       <span className="badge badge-blue" style={{ fontSize: "0.7rem", marginTop: "4px" }}>Code: {g.code}</span>
                     </div>
                     {g.is_default && (
@@ -1860,10 +1866,10 @@ export default function InventoryPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {/* Transfer Form (Admin only) */}
           {isAdmin && (
-            <div className="glass-panel" style={{ padding: "20px", borderRadius: "14px", maxWidth: "800px", margin: "0 auto", width: "100%" }}>
+            <div className="glass-panel" style={{ padding: "20px", borderRadius: "8px", maxWidth: "800px", margin: "0 auto", width: "100%", background: "#ffffff" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px", borderBottom: "1px solid var(--border)", paddingBottom: "10px" }}>
-                <ArrowRightLeft size={20} color="#38bdf8" />
-                <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>Execute Inter-Godown Stock Transfer</h3>
+                <ArrowRightLeft size={20} color="#2563eb" />
+                <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>Execute Inter-Godown Stock Transfer</h3>
               </div>
 
               <form onSubmit={handleTransferSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -1907,7 +1913,7 @@ export default function InventoryPage() {
                 {/* Transfer items */}
                 <div style={{ borderTop: "1px solid var(--border)", paddingTop: "10px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                    <span style={{ fontSize: "0.825rem", fontWeight: 700, color: "#f8fafc" }}>Items to Transfer</span>
+                    <span style={{ fontSize: "0.825rem", fontWeight: 700, color: "#0f172a" }}>Items to Transfer</span>
                     <button
                       type="button"
                       onClick={() =>
@@ -1979,7 +1985,7 @@ export default function InventoryPage() {
                           if (transferForm.items.length <= 1) return;
                           setTransferForm({ ...transferForm, items: transferForm.items.filter((_, i) => i !== idx) });
                         }}
-                        style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer" }}
+                        style={{ background: "transparent", border: "none", color: "#dc2626", cursor: "pointer" }}
                       >
                         <X size={16} />
                       </button>
@@ -2005,8 +2011,8 @@ export default function InventoryPage() {
           )}
 
           {/* Transfers History */}
-          <div className="glass-panel" style={{ borderRadius: "12px", overflow: "hidden" }}>
-            <div style={{ padding: "16px", borderBottom: "1px solid var(--border)", fontWeight: 700, color: "#f8fafc" }}>
+          <div className="glass-panel" style={{ borderRadius: "8px", overflow: "hidden" }}>
+            <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--border)", fontWeight: 700, color: "#0f172a", background: "#f8fafc" }}>
               Stock Transfer History
             </div>
             <table className="custom-table" style={{ width: "100%", fontSize: "0.875rem" }}>
@@ -2031,7 +2037,7 @@ export default function InventoryPage() {
                   transfers.map((t) => (
                     <tr key={t.id}>
                       <td>
-                        <div style={{ fontWeight: 700, color: "#38bdf8" }}>{t.transfer_number}</div>
+                        <div style={{ fontWeight: 700, color: "#2563eb" }}>{t.transfer_number}</div>
                         <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{new Date(t.transfer_date).toLocaleString("en-IN")}</div>
                       </td>
                       <td><span className="badge badge-blue">{t.from_godown_name}</span></td>
@@ -2039,7 +2045,7 @@ export default function InventoryPage() {
                       <td>
                         {t.items.map((it, idx) => (
                           <div key={idx} style={{ fontSize: "0.8rem" }}>
-                            • {it.item_name || "Item"}: <strong>{it.quantity} {it.unit}</strong>
+                            • {it.item_name || "Item"}: <strong style={{ color: "#0f172a" }}>{it.quantity} {it.unit}</strong>
                           </div>
                         ))}
                       </td>
@@ -2057,8 +2063,8 @@ export default function InventoryPage() {
       {/* --- TAB 5: MOVEMENT LEDGER --- */}
       {activeTab === "movements" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div className="glass-panel" style={{ padding: "14px", borderRadius: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontWeight: 700, color: "#f8fafc" }}>Complete Stock Movement & Audit Log</div>
+          <div className="glass-panel" style={{ padding: "14px 18px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontWeight: 700, color: "#0f172a" }}>Complete Stock Movement & Audit Log</div>
             <select
               className="input-field"
               value={movementTypeFilter}
@@ -2076,7 +2082,7 @@ export default function InventoryPage() {
             </select>
           </div>
 
-          <div className="glass-panel" style={{ borderRadius: "12px", overflow: "hidden" }}>
+          <div className="glass-panel" style={{ borderRadius: "8px", overflow: "hidden" }}>
             <table className="custom-table" style={{ width: "100%", fontSize: "0.875rem" }}>
               <thead>
                 <tr>
@@ -2105,7 +2111,7 @@ export default function InventoryPage() {
                         <td style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
                           {new Date(m.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
                         </td>
-                        <td style={{ fontWeight: 600, color: "#f8fafc" }}>{m.item_name}</td>
+                        <td style={{ fontWeight: 700, color: "#0f172a" }}>{m.item_name}</td>
                         <td>{m.godown_name}</td>
                         <td>
                           <span
@@ -2117,10 +2123,10 @@ export default function InventoryPage() {
                             {m.movement_type.replace("_", " ")}
                           </span>
                         </td>
-                        <td style={{ textAlign: "right", fontWeight: 700, color: isPositive ? "#34d399" : "#f87171" }}>
+                        <td style={{ textAlign: "right", fontWeight: 800, color: isPositive ? "#16a34a" : "#dc2626" }}>
                           {isPositive ? `+${m.quantity}` : `-${m.quantity}`} {m.item_unit}
                         </td>
-                        <td style={{ textAlign: "right", fontWeight: 600, color: "#f8fafc" }}>
+                        <td style={{ textAlign: "right", fontWeight: 700, color: "#0f172a" }}>
                           {m.balance_after} {m.item_unit}
                         </td>
                         <td style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
@@ -2142,27 +2148,27 @@ export default function InventoryPage() {
       {activeTab === "alerts" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
           {/* Low Stock Alerts */}
-          <div className="glass-panel" style={{ padding: "20px", borderRadius: "14px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px", color: "#fbbf24" }}>
+          <div className="glass-panel" style={{ padding: "20px", borderRadius: "8px", background: "#ffffff" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px", color: "#b45309" }}>
               <AlertTriangle size={20} />
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
                 Low Stock Threshold Alerts ({lowStockAlerts.length})
               </h3>
             </div>
 
             {lowStockAlerts.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "24px", color: "#34d399" }}>
+              <div style={{ textAlign: "center", padding: "24px", color: "#16a34a" }}>
                 <CheckCircle2 size={36} style={{ margin: "0 auto 8px auto" }} />
                 <div>All inventory items have healthy stock levels!</div>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {lowStockAlerts.map((a) => (
-                  <div key={a.item_id} style={{ padding: "12px", background: "rgba(30, 41, 59, 0.5)", borderRadius: "8px", border: "1px solid rgba(245, 158, 11, 0.3)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div key={a.item_id} style={{ padding: "12px", background: "#fffbeb", borderRadius: "8px", border: "1px solid #fcd34d", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontWeight: 600, color: "#f8fafc" }}>{a.item_name}</div>
+                      <div style={{ fontWeight: 700, color: "#0f172a" }}>{a.item_name}</div>
                       <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                        Current: <strong style={{ color: "#ef4444" }}>{a.total_quantity} {a.unit}</strong> | Min Alert: <strong>{a.min_stock_alert} {a.unit}</strong>
+                        Current: <strong style={{ color: "#dc2626" }}>{a.total_quantity} {a.unit}</strong> | Min Alert: <strong>{a.min_stock_alert} {a.unit}</strong>
                       </div>
                     </div>
                     {isAdmin && (
@@ -2187,29 +2193,29 @@ export default function InventoryPage() {
           </div>
 
           {/* Expiring Batches */}
-          <div className="glass-panel" style={{ padding: "20px", borderRadius: "14px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px", color: "#f87171" }}>
+          <div className="glass-panel" style={{ padding: "20px", borderRadius: "8px", background: "#ffffff" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px", color: "#dc2626" }}>
               <Clock size={20} />
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
                 Batches Expiring Soon ({expiringAlerts.length})
               </h3>
             </div>
 
             {expiringAlerts.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "24px", color: "#34d399" }}>
+              <div style={{ textAlign: "center", padding: "24px", color: "#16a34a" }}>
                 <CheckCircle2 size={36} style={{ margin: "0 auto 8px auto" }} />
                 <div>No active batches expiring within the next 60 days.</div>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {expiringAlerts.map((b) => (
-                  <div key={b.batch_id} style={{ padding: "12px", background: "rgba(30, 41, 59, 0.5)", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.3)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div key={b.batch_id} style={{ padding: "12px", background: "#fef2f2", borderRadius: "8px", border: "1px solid #fca5a5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontWeight: 600, color: "#f8fafc" }}>{b.item_name}</div>
+                      <div style={{ fontWeight: 700, color: "#0f172a" }}>{b.item_name}</div>
                       <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                         Batch: <strong>{b.batch_number}</strong> ({b.quantity} {b.unit}) | Godown: {b.godown_name}
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: b.days_to_expiry < 0 ? "#ef4444" : "#fbbf24", marginTop: "2px" }}>
+                      <div style={{ fontSize: "0.75rem", color: b.days_to_expiry < 0 ? "#dc2626" : "#b45309", marginTop: "2px", fontWeight: 600 }}>
                         Expiry: {b.expiry_date} ({b.days_to_expiry < 0 ? "EXPIRED" : `${b.days_to_expiry} days remaining`})
                       </div>
                     </div>
@@ -2232,8 +2238,8 @@ export default function InventoryPage() {
             style={{
               padding: "28px",
               borderRadius: "16px",
-              border: "1px solid rgba(139, 92, 246, 0.3)",
-              background: "linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 27, 75, 0.7))",
+              border: "1px solid #c4b5fd",
+              background: "linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -2243,12 +2249,12 @@ export default function InventoryPage() {
           >
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                <Sparkles size={22} color="#c084fc" />
-                <h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#ffffff", margin: 0 }}>
+                <Sparkles size={22} color="#7c3aed" />
+                <h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#1e1b4b", margin: 0 }}>
                   AI Predictive Restock & Velocity Forecasting
                 </h3>
               </div>
-              <p style={{ color: "#94a3b8", fontSize: "0.9rem", maxWidth: "600px", margin: 0, lineHeight: 1.5 }}>
+              <p style={{ color: "#475569", fontSize: "0.9rem", maxWidth: "600px", margin: 0, lineHeight: 1.5 }}>
                 Our Exponential Smoothing algorithm computes daily consumption velocity, dynamic safety stocks, and predicted runout days for all your catalog items.
               </p>
             </div>
@@ -2262,11 +2268,11 @@ export default function InventoryPage() {
                   alignItems: "center",
                   gap: "8px",
                   padding: "10px 20px",
-                  background: "linear-gradient(135deg, #8b5cf6, #ec4899)",
+                  background: "linear-gradient(135deg, #7c3aed, #db2777)",
                   textDecoration: "none",
                   fontWeight: 700,
                   fontSize: "0.9rem",
-                  boxShadow: "0 0 15px rgba(139, 92, 246, 0.4)",
+                  boxShadow: "0 4px 12px rgba(124, 58, 237, 0.25)",
                 }}
               >
                 <Sparkles size={16} />
@@ -2281,21 +2287,36 @@ export default function InventoryPage() {
       {/* --- MODAL: CREATE / EDIT PRODUCT MASTER --- */}
       {showProductModal && (
         <div className="modal-overlay" onClick={() => setShowProductModal(false)}>
-          <div className="glass-panel" style={{ width: "100%", maxWidth: "600px", maxHeight: "90vh", overflowY: "auto", padding: "24px", borderRadius: "14px", background: "#0f172a" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "10px" }}>
+          <div
+            className="glass-panel"
+            style={{
+              width: "100%",
+              maxWidth: "600px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              padding: "24px",
+              borderRadius: "14px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              color: "#0f172a",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Package size={20} color="#38bdf8" />
-                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+                <Package size={20} color="#0284c7" />
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
                   {editingProduct ? `Edit Product Master — ${editingProduct.name}` : "Create New Catalog Product"}
                 </h3>
               </div>
-              <button onClick={() => setShowProductModal(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+              <button onClick={() => setShowProductModal(false)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             {productError && (
-              <div style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", color: "#f87171", padding: "10px", borderRadius: "8px", fontSize: "0.85rem", marginBottom: "14px" }}>
+              <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", color: "#b91c1c", padding: "10px", borderRadius: "8px", fontSize: "0.85rem", marginBottom: "14px" }}>
                 {productError}
               </div>
             )}
@@ -2303,7 +2324,7 @@ export default function InventoryPage() {
             <form onSubmit={handleSaveProduct} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               {/* Product Name */}
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Product Name *
                 </label>
                 <input
@@ -2320,7 +2341,7 @@ export default function InventoryPage() {
               {/* Category & Unit */}
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "12px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     Category *
                   </label>
                   <input
@@ -2347,7 +2368,7 @@ export default function InventoryPage() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     Base Unit of Measurement *
                   </label>
                   <select
@@ -2373,16 +2394,16 @@ export default function InventoryPage() {
               </div>
 
               {/* Packaging & Case Conversion (1 CS = X EA) */}
-              <div style={{ background: "rgba(56, 189, 248, 0.08)", padding: "12px", borderRadius: "10px", border: "1px solid rgba(56, 189, 248, 0.25)" }}>
-                <div style={{ fontSize: "0.825rem", fontWeight: 700, color: "#38bdf8", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <div style={{ background: "#f0f9ff", padding: "12px", borderRadius: "10px", border: "1px solid #bae6fd" }}>
+                <div style={{ fontSize: "0.825rem", fontWeight: 700, color: "#0284c7", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
                   <Package size={16} /> Packaging & Bulk Case Ratio (1 CS = X EA)
                 </div>
-                <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "0 0 10px 0" }}>
+                <p style={{ fontSize: "0.72rem", color: "#64748b", margin: "0 0 10px 0" }}>
                   Configure dual-unit stock tracking for bulk cases (CS) and loose units/pieces ({productForm.unit || "EA"}).
                 </p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   <div>
-                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                       Secondary / Case Unit
                     </label>
                     <input
@@ -2392,10 +2413,10 @@ export default function InventoryPage() {
                       value={productForm.secondary_unit}
                       onChange={(e) => setProductForm({ ...productForm, secondary_unit: e.target.value.toUpperCase() })}
                     />
-                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>Default: CS (Cases / Cartons / Master Packs)</span>
+                    <span style={{ fontSize: "0.68rem", color: "#64748b" }}>Default: CS (Cases / Cartons / Master Packs)</span>
                   </div>
                   <div>
-                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                       Units Per Case (1 CS = ? {productForm.unit}) *
                     </label>
                     <input
@@ -2408,7 +2429,7 @@ export default function InventoryPage() {
                       onChange={(e) => setProductForm({ ...productForm, units_per_case: e.target.value })}
                       required
                     />
-                    <span style={{ fontSize: "0.68rem", color: "#38bdf8", fontWeight: 600 }}>
+                    <span style={{ fontSize: "0.68rem", color: "#0284c7", fontWeight: 600 }}>
                       1 {productForm.secondary_unit || "CS"} = {productForm.units_per_case || "1"} {productForm.unit || "EA"}
                     </span>
                   </div>
@@ -2418,7 +2439,7 @@ export default function InventoryPage() {
               {/* Barcode, SKU, HSN */}
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.9fr 0.9fr", gap: "10px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     Barcode
                   </label>
                   <div style={{ position: "relative" }}>
@@ -2430,12 +2451,12 @@ export default function InventoryPage() {
                       onChange={(e) => setProductForm({ ...productForm, barcode: e.target.value })}
                       style={{ paddingLeft: "32px" }}
                     />
-                    <Barcode size={15} color="#38bdf8" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+                    <Barcode size={15} color="#0284c7" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     SKU / Code
                   </label>
                   <input
@@ -2448,7 +2469,7 @@ export default function InventoryPage() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     HSN Code
                   </label>
                   <input
@@ -2462,7 +2483,7 @@ export default function InventoryPage() {
               </div>
 
               {/* Pricing & GST Section with 1EA / 1CS Unit Options */}
-              <div style={{ background: "rgba(30, 41, 59, 0.4)", padding: "14px", borderRadius: "10px", border: "1px solid var(--border)" }}>
+              <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
                 {(() => {
                   const uPerCase = parseFloat(productForm.units_per_case) || 1.0;
                   const rawSale = parseFloat(productForm.sale_price) || 0;
@@ -2480,11 +2501,11 @@ export default function InventoryPage() {
                   return (
                     <>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                        <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#38bdf8", textTransform: "uppercase" }}>
+                        <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0284c7", textTransform: "uppercase" }}>
                           Pricing & GST Configuration
                         </div>
                         {uPerCase > 1 && (
-                          <span style={{ fontSize: "0.7rem", color: "#38bdf8", background: "rgba(56, 189, 248, 0.15)", padding: "2px 8px", borderRadius: "4px", border: "1px solid rgba(56, 189, 248, 0.3)", fontWeight: 600 }}>
+                          <span style={{ fontSize: "0.7rem", color: "#0369a1", background: "#e0f2fe", padding: "2px 8px", borderRadius: "4px", border: "1px solid #bae6fd", fontWeight: 600 }}>
                             1 {productForm.secondary_unit || "CS"} = {uPerCase} {productForm.unit || "EA"}
                           </span>
                         )}
@@ -2494,10 +2515,10 @@ export default function InventoryPage() {
                         {/* Selling Price with 1 EA / 1 CS Toggle */}
                         <div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)" }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569" }}>
                               Selling Price (₹) *
                             </label>
-                            <div style={{ display: "flex", gap: "2px", background: "rgba(15, 23, 42, 0.8)", padding: "2px", borderRadius: "4px", border: "1px solid var(--border)" }}>
+                            <div style={{ display: "flex", gap: "2px", background: "#f1f5f9", padding: "2px", borderRadius: "4px", border: "1px solid #cbd5e1" }}>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -2514,7 +2535,7 @@ export default function InventoryPage() {
                                   border: "none",
                                   cursor: "pointer",
                                   background: productForm.sale_price_mode === "EA" ? "#10b981" : "transparent",
-                                  color: productForm.sale_price_mode === "EA" ? "#fff" : "var(--text-muted)",
+                                  color: productForm.sale_price_mode === "EA" ? "#fff" : "#64748b",
                                   fontWeight: 700,
                                 }}
                                 title="Enter Selling Price per single piece/unit"
@@ -2537,7 +2558,7 @@ export default function InventoryPage() {
                                   border: "none",
                                   cursor: "pointer",
                                   background: productForm.sale_price_mode === "CS" ? "#10b981" : "transparent",
-                                  color: productForm.sale_price_mode === "CS" ? "#fff" : "var(--text-muted)",
+                                  color: productForm.sale_price_mode === "CS" ? "#fff" : "#64748b",
                                   fontWeight: 700,
                                 }}
                                 title="Enter Selling Price per full bulk case"
@@ -2555,10 +2576,10 @@ export default function InventoryPage() {
                               className="input-field"
                               value={productForm.sale_price}
                               onChange={(e) => setProductForm({ ...productForm, sale_price: e.target.value })}
-                              style={{ fontWeight: 700, color: "#34d399", paddingRight: "48px" }}
+                              style={{ fontWeight: 700, color: "#059669", paddingRight: "48px" }}
                               required
                             />
-                            <span style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", fontSize: "0.7rem", color: "#34d399", fontWeight: 700 }}>
+                            <span style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", fontSize: "0.7rem", color: "#059669", fontWeight: 700 }}>
                               /{productForm.sale_price_mode === "CS" ? (productForm.secondary_unit || "CS") : (productForm.unit || "EA")}
                             </span>
                           </div>
@@ -2567,10 +2588,10 @@ export default function InventoryPage() {
                         {/* Purchase Cost with 1 EA / 1 CS Toggle */}
                         <div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)" }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569" }}>
                               Purchase Cost (₹)
                             </label>
-                            <div style={{ display: "flex", gap: "2px", background: "rgba(15, 23, 42, 0.8)", padding: "2px", borderRadius: "4px", border: "1px solid var(--border)" }}>
+                            <div style={{ display: "flex", gap: "2px", background: "#f1f5f9", padding: "2px", borderRadius: "4px", border: "1px solid #cbd5e1" }}>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -2586,8 +2607,8 @@ export default function InventoryPage() {
                                   borderRadius: "3px",
                                   border: "none",
                                   cursor: "pointer",
-                                  background: productForm.cost_price_mode === "EA" ? "#38bdf8" : "transparent",
-                                  color: productForm.cost_price_mode === "EA" ? "#fff" : "var(--text-muted)",
+                                  background: productForm.cost_price_mode === "EA" ? "#0284c7" : "transparent",
+                                  color: productForm.cost_price_mode === "EA" ? "#fff" : "#64748b",
                                   fontWeight: 700,
                                 }}
                                 title="Enter Purchase Cost per single piece/unit"
@@ -2609,8 +2630,8 @@ export default function InventoryPage() {
                                   borderRadius: "3px",
                                   border: "none",
                                   cursor: "pointer",
-                                  background: productForm.cost_price_mode === "CS" ? "#38bdf8" : "transparent",
-                                  color: productForm.cost_price_mode === "CS" ? "#fff" : "var(--text-muted)",
+                                  background: productForm.cost_price_mode === "CS" ? "#0284c7" : "transparent",
+                                  color: productForm.cost_price_mode === "CS" ? "#fff" : "#64748b",
                                   fontWeight: 700,
                                 }}
                                 title="Enter Purchase Cost per full bulk case"
@@ -2630,7 +2651,7 @@ export default function InventoryPage() {
                               onChange={(e) => setProductForm({ ...productForm, purchase_price: e.target.value })}
                               style={{ paddingRight: "48px" }}
                             />
-                            <span style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                            <span style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>
                               /{productForm.cost_price_mode === "CS" ? (productForm.secondary_unit || "CS") : (productForm.unit || "EA")}
                             </span>
                           </div>
@@ -2638,7 +2659,7 @@ export default function InventoryPage() {
 
                         {/* GST Rate */}
                         <div>
-                          <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                          <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                             GST Rate (%)
                           </label>
                           <select
@@ -2657,25 +2678,25 @@ export default function InventoryPage() {
 
                       {/* Live Bidirectional Conversion Helper Bar */}
                       {uPerCase > 1 && (
-                        <div style={{ marginTop: "12px", padding: "10px 12px", background: "rgba(15, 23, 42, 0.6)", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.25)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <div style={{ marginTop: "12px", padding: "10px 12px", background: "#ffffff", borderRadius: "8px", border: "1px solid #cbd5e1", display: "flex", flexDirection: "column", gap: "6px" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.75rem", flexWrap: "wrap", gap: "6px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <span style={{ color: "var(--text-muted)" }}>🏷️ Selling Price:</span>
-                              <strong style={{ color: "#34d399" }}>₹{eaSale.toFixed(2)} / {productForm.unit || "EA"}</strong>
+                              <span style={{ color: "#64748b" }}>🏷️ Selling Price:</span>
+                              <strong style={{ color: "#059669" }}>₹{eaSale.toFixed(2)} / {productForm.unit || "EA"}</strong>
                               <span style={{ color: "#64748b" }}>⇄</span>
-                              <strong style={{ color: "#34d399" }}>₹{csSale.toFixed(2)} / {productForm.secondary_unit || "CS"} ({uPerCase} {productForm.unit || "EA"})</strong>
+                              <strong style={{ color: "#059669" }}>₹{csSale.toFixed(2)} / {productForm.secondary_unit || "CS"} ({uPerCase} {productForm.unit || "EA"})</strong>
                             </div>
                             {rawCost > 0 && (
                               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                <span style={{ color: "var(--text-muted)" }}>📦 Purchase Cost:</span>
-                                <strong style={{ color: "#38bdf8" }}>₹{eaCost.toFixed(2)} / {productForm.unit || "EA"}</strong>
+                                <span style={{ color: "#64748b" }}>📦 Purchase Cost:</span>
+                                <strong style={{ color: "#0284c7" }}>₹{eaCost.toFixed(2)} / {productForm.unit || "EA"}</strong>
                                 <span style={{ color: "#64748b" }}>⇄</span>
-                                <strong style={{ color: "#38bdf8" }}>₹{csCost.toFixed(2)} / {productForm.secondary_unit || "CS"}</strong>
+                                <strong style={{ color: "#0284c7" }}>₹{csCost.toFixed(2)} / {productForm.secondary_unit || "CS"}</strong>
                               </div>
                             )}
                           </div>
                           {rawCost > 0 && rawSale > 0 && (
-                            <div style={{ fontSize: "0.72rem", color: profitPerEa >= 0 ? "#a7f3d0" : "#fca5a5", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div style={{ fontSize: "0.72rem", color: profitPerEa >= 0 ? "#047857" : "#b91c1c", display: "flex", alignItems: "center", gap: "6px" }}>
                               <span>📈 Gross Profit:</span>
                               <strong>₹{profitPerEa.toFixed(2)} / {productForm.unit || "EA"} (₹{profitPerCs.toFixed(2)} / {productForm.secondary_unit || "CS"})</strong>
                               <span>• Margin: {marginPct}%</span>
@@ -2685,7 +2706,7 @@ export default function InventoryPage() {
                       )}
 
                       <div style={{ marginTop: "10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.82rem", color: "#f8fafc" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.82rem", color: "#0f172a" }}>
                           <input
                             type="checkbox"
                             checked={productForm.is_tax_inclusive}
@@ -2701,7 +2722,7 @@ export default function InventoryPage() {
 
               {/* Min Stock Alert */}
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Minimum Stock Alert Level (Units)
                 </label>
                 <input
@@ -2713,20 +2734,20 @@ export default function InventoryPage() {
                   value={productForm.min_stock_alert}
                   onChange={(e) => setProductForm({ ...productForm, min_stock_alert: e.target.value })}
                 />
-                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
                   Dashboard will trigger low stock alert when on-hand quantity drops below this level.
                 </span>
               </div>
 
               {/* Opening Stock (Only when creating new item) */}
               {!editingProduct && (
-                <div style={{ background: "rgba(56, 189, 248, 0.08)", padding: "12px", borderRadius: "10px", border: "1px dashed rgba(56, 189, 248, 0.4)" }}>
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#38bdf8", marginBottom: "8px" }}>
+                <div style={{ background: "#f0f9ff", padding: "12px", borderRadius: "10px", border: "1px dashed #7dd3fc" }}>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0284c7", marginBottom: "8px" }}>
                     📦 Initial Opening Stock (Optional)
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px" }}>
                     <div>
-                      <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                      <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                         Initial Quantity
                       </label>
                       <input
@@ -2740,7 +2761,7 @@ export default function InventoryPage() {
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                      <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                         Assign to Godown
                       </label>
                       <select
@@ -2794,19 +2815,32 @@ export default function InventoryPage() {
       {/* --- MODAL: CREATE / EDIT GODOWN --- */}
       {showGodownModal && (
         <div className="modal-overlay" onClick={() => setShowGodownModal(false)}>
-          <div className="glass-panel" style={{ width: "100%", maxWidth: "500px", padding: "24px", borderRadius: "14px", background: "#0f172a" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "10px" }}>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+          <div
+            className="glass-panel"
+            style={{
+              width: "100%",
+              maxWidth: "500px",
+              padding: "24px",
+              borderRadius: "14px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              color: "#0f172a",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
                 {editingGodown ? "Edit Godown Location" : "Add New Godown / Warehouse"}
               </h3>
-              <button onClick={() => setShowGodownModal(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+              <button onClick={() => setShowGodownModal(false)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSaveGodown} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Godown Name *
                 </label>
                 <input
@@ -2820,7 +2854,7 @@ export default function InventoryPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Godown Code (Unique) *
                 </label>
                 <input
@@ -2834,7 +2868,7 @@ export default function InventoryPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Address / Location
                 </label>
                 <textarea
@@ -2881,7 +2915,7 @@ export default function InventoryPage() {
               </div>
 
               <div style={{ display: "flex", gap: "16px", marginTop: "6px" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.85rem" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.85rem", color: "#0f172a" }}>
                   <input
                     type="checkbox"
                     checked={godownForm.is_default}
@@ -2889,7 +2923,7 @@ export default function InventoryPage() {
                   />
                   Default Counter Warehouse
                 </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.85rem" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.85rem", color: "#0f172a" }}>
                   <input
                     type="checkbox"
                     checked={godownForm.is_active}
@@ -2915,20 +2949,33 @@ export default function InventoryPage() {
       {/* --- MODAL: STOCK ADJUSTMENT --- */}
       {showAdjustModal && adjustTargetItem && (
         <div className="modal-overlay" onClick={() => setShowAdjustModal(false)}>
-          <div className="glass-panel" style={{ width: "100%", maxWidth: "450px", padding: "24px", borderRadius: "14px", background: "#0f172a" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", borderBottom: "1px solid var(--border)", paddingBottom: "10px" }}>
+          <div
+            className="glass-panel"
+            style={{
+              width: "100%",
+              maxWidth: "450px",
+              padding: "24px",
+              borderRadius: "14px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              color: "#0f172a",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
               <div>
-                <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>Adjust Item Stock</h3>
-                <div style={{ fontSize: "0.8rem", color: "#38bdf8" }}>{adjustTargetItem.item_name}</div>
+                <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>Adjust Item Stock</h3>
+                <div style={{ fontSize: "0.8rem", color: "#0284c7" }}>{adjustTargetItem.item_name}</div>
               </div>
-              <button onClick={() => setShowAdjustModal(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+              <button onClick={() => setShowAdjustModal(false)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSaveAdjustment} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Godown / Location *
                 </label>
                 <select
@@ -2944,7 +2991,7 @@ export default function InventoryPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Adjustment Action *
                 </label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
@@ -2967,7 +3014,7 @@ export default function InventoryPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Quantity ({adjustTargetItem.unit}) *
                 </label>
                 <input
@@ -2982,7 +3029,7 @@ export default function InventoryPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Reason *
                 </label>
                 <select
@@ -3000,7 +3047,7 @@ export default function InventoryPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Notes
                 </label>
                 <input
@@ -3037,53 +3084,56 @@ export default function InventoryPage() {
               overflowY: "auto",
               padding: "24px",
               borderRadius: "14px",
-              background: "#0f172a",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              color: "#0f172a",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "1px solid #e2e8f0", paddingBottom: "12px" }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Receipt size={20} color="#38bdf8" />
-                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+                  <Receipt size={20} color="#0284c7" />
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
                     Purchase Voucher — {selectedPurchaseBill.bill_number}
                   </h3>
                 </div>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px" }}>
                   Recorded on {new Date(selectedPurchaseBill.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
                 </div>
               </div>
               <button
                 onClick={() => setSelectedPurchaseBill(null)}
-                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+                style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer" }}
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* Vendor & General Details Box */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "rgba(30, 41, 59, 0.4)", padding: "14px", borderRadius: "8px", marginBottom: "16px", fontSize: "0.85rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "#f8fafc", padding: "14px", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "16px", fontSize: "0.85rem" }}>
               <div>
-                <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 600 }}>Supplier / Vendor</div>
-                <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "1rem", marginTop: "2px" }}>{selectedPurchaseBill.party_name}</div>
+                <div style={{ color: "#64748b", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 600 }}>Supplier / Vendor</div>
+                <div style={{ fontWeight: 700, color: "#0f172a", fontSize: "1rem", marginTop: "2px" }}>{selectedPurchaseBill.party_name}</div>
                 {selectedPurchaseBill.party_gst && (
-                  <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "2px" }}>GSTIN: {selectedPurchaseBill.party_gst}</div>
+                  <div style={{ color: "#475569", fontSize: "0.8rem", marginTop: "2px" }}>GSTIN: {selectedPurchaseBill.party_gst}</div>
                 )}
                 {selectedPurchaseBill.party_address && (
-                  <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "2px" }}>Address: {selectedPurchaseBill.party_address}</div>
+                  <div style={{ color: "#475569", fontSize: "0.8rem", marginTop: "2px" }}>Address: {selectedPurchaseBill.party_address}</div>
                 )}
               </div>
               <div>
-                <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 600 }}>Voucher Info & Audit</div>
-                <div style={{ color: "#f8fafc", marginTop: "2px" }}>
+                <div style={{ color: "#64748b", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 600 }}>Voucher Info & Audit</div>
+                <div style={{ color: "#0f172a", marginTop: "2px" }}>
                   Status: <span className="badge badge-success" style={{ fontSize: "0.7rem" }}>Recorded</span>
                 </div>
-                <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "2px" }}>
+                <div style={{ color: "#475569", fontSize: "0.8rem", marginTop: "2px" }}>
                   Billed By: {selectedPurchaseBill.creator_name || "Admin"}
                 </div>
                 {selectedPurchaseBill.notes && (
-                  <div style={{ color: "#cbd5e1", fontSize: "0.8rem", marginTop: "4px", background: "rgba(15,23,42,0.5)", padding: "4px 8px", borderRadius: "4px" }}>
+                  <div style={{ color: "#334155", fontSize: "0.8rem", marginTop: "4px", background: "#f1f5f9", padding: "4px 8px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
                     <strong>Notes:</strong> {selectedPurchaseBill.notes}
                   </div>
                 )}
@@ -3091,10 +3141,10 @@ export default function InventoryPage() {
             </div>
 
             {/* Line Items Table */}
-            <div style={{ border: "1px solid var(--border)", borderRadius: "8px", overflow: "hidden", marginBottom: "16px" }}>
+            <div style={{ border: "1px solid #cbd5e1", borderRadius: "8px", overflow: "hidden", marginBottom: "16px" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", textAlign: "left" }}>
                 <thead>
-                  <tr style={{ background: "rgba(15, 23, 42, 0.8)", borderBottom: "1px solid var(--border)", color: "var(--text-muted)" }}>
+                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #cbd5e1", color: "#475569" }}>
                     <th style={{ padding: "8px 12px" }}>#</th>
                     <th style={{ padding: "8px 12px" }}>Item Description</th>
                     <th style={{ padding: "8px 12px", textAlign: "center" }}>Qty</th>
@@ -3106,25 +3156,25 @@ export default function InventoryPage() {
                 </thead>
                 <tbody>
                   {(selectedPurchaseBill.items || []).map((it: any, idx: number) => (
-                    <tr key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                      <td style={{ padding: "8px 12px", color: "var(--text-muted)" }}>{idx + 1}</td>
-                      <td style={{ padding: "8px 12px", fontWeight: 600, color: "#f8fafc" }}>
+                    <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <td style={{ padding: "8px 12px", color: "#64748b" }}>{idx + 1}</td>
+                      <td style={{ padding: "8px 12px", fontWeight: 600, color: "#0f172a" }}>
                         {it.item_name}
-                        {it.hsn_code && <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: "6px" }}>HSN: {it.hsn_code}</span>}
+                        {it.hsn_code && <span style={{ fontSize: "0.7rem", color: "#64748b", marginLeft: "6px" }}>HSN: {it.hsn_code}</span>}
                       </td>
-                      <td style={{ padding: "8px 12px", textAlign: "center", color: "#38bdf8" }}>
+                      <td style={{ padding: "8px 12px", textAlign: "center", color: "#0284c7", fontWeight: 600 }}>
                         {it.quantity} {it.unit || "EA"}
                       </td>
-                      <td style={{ padding: "8px 12px", textAlign: "right", color: "#94a3b8" }}>
+                      <td style={{ padding: "8px 12px", textAlign: "right", color: "#334155" }}>
                         ₹{(it.rate || it.purchase_price || 0).toFixed(2)}
                       </td>
-                      <td style={{ padding: "8px 12px", textAlign: "right", color: "#94a3b8" }}>
+                      <td style={{ padding: "8px 12px", textAlign: "right", color: "#334155" }}>
                         ₹{(it.taxable_amount || (it.quantity * (it.rate || it.purchase_price || 0))).toFixed(2)}
                       </td>
-                      <td style={{ padding: "8px 12px", textAlign: "right", color: "#fbbf24" }}>
+                      <td style={{ padding: "8px 12px", textAlign: "right", color: "#b45309", fontWeight: 600 }}>
                         {it.gst_rate}% (₹{(it.cgst_amount + it.sgst_amount || it.gst_amount || 0).toFixed(2)})
                       </td>
-                      <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, color: "#34d399" }}>
+                      <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, color: "#059669" }}>
                         ₹{(it.total_amount || 0).toFixed(2)}
                       </td>
                     </tr>
@@ -3135,28 +3185,28 @@ export default function InventoryPage() {
 
             {/* Financial Summary */}
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "20px" }}>
-              <div style={{ width: "280px", background: "rgba(30, 41, 59, 0.4)", padding: "12px 16px", borderRadius: "8px", fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: "6px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
+              <div style={{ width: "280px", background: "#f8fafc", padding: "12px 16px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b" }}>
                   <span>Taxable Subtotal:</span>
-                  <span style={{ color: "#f8fafc", fontWeight: 600 }}>₹{(selectedPurchaseBill.taxable_amount || 0).toFixed(2)}</span>
+                  <span style={{ color: "#0f172a", fontWeight: 600 }}>₹{(selectedPurchaseBill.taxable_amount || 0).toFixed(2)}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b" }}>
                   <span>CGST (Central):</span>
-                  <span style={{ color: "#fbbf24", fontWeight: 600 }}>₹{(selectedPurchaseBill.cgst_amount || 0).toFixed(2)}</span>
+                  <span style={{ color: "#b45309", fontWeight: 600 }}>₹{(selectedPurchaseBill.cgst_amount || 0).toFixed(2)}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b" }}>
                   <span>SGST (State):</span>
-                  <span style={{ color: "#fbbf24", fontWeight: 600 }}>₹{(selectedPurchaseBill.sgst_amount || 0).toFixed(2)}</span>
+                  <span style={{ color: "#b45309", fontWeight: 600 }}>₹{(selectedPurchaseBill.sgst_amount || 0).toFixed(2)}</span>
                 </div>
                 {selectedPurchaseBill.round_off !== 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b" }}>
                     <span>Round Off:</span>
-                    <span style={{ color: "#f8fafc" }}>{selectedPurchaseBill.round_off > 0 ? `+₹${selectedPurchaseBill.round_off.toFixed(2)}` : `-₹${Math.abs(selectedPurchaseBill.round_off).toFixed(2)}`}</span>
+                    <span style={{ color: "#0f172a" }}>{selectedPurchaseBill.round_off > 0 ? `+₹${selectedPurchaseBill.round_off.toFixed(2)}` : `-₹${Math.abs(selectedPurchaseBill.round_off).toFixed(2)}`}</span>
                   </div>
                 )}
-                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border)", paddingTop: "6px", marginTop: "4px", fontSize: "1rem", fontWeight: 700 }}>
-                  <span style={{ color: "#f8fafc" }}>Grand Total:</span>
-                  <span style={{ color: "#34d399" }}>₹{(selectedPurchaseBill.total_amount || 0).toFixed(2)}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #cbd5e1", paddingTop: "6px", marginTop: "4px", fontSize: "1rem", fontWeight: 700 }}>
+                  <span style={{ color: "#0f172a" }}>Grand Total:</span>
+                  <span style={{ color: "#059669" }}>₹{(selectedPurchaseBill.total_amount || 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>

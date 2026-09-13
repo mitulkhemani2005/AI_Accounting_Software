@@ -93,18 +93,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Fetch fresh profile from API
       const res = await api.get("/auth/me");
       if (res.data) {
-        setUser({
+        const freshUser = {
           id: res.data.id,
           name: res.data.name,
           mobile_number: res.data.mobile_number,
           email: res.data.email,
           role: res.data.role,
-        });
-        if (res.data.tenant) {
-          setTenant(res.data.tenant);
+        };
+        const freshTenant = res.data.tenant || null;
+        const freshPermissions = res.data.permissions || [];
+        const freshEntitlements = res.data.entitlements || [];
+
+        setUser(freshUser);
+        if (freshTenant) {
+          setTenant(freshTenant);
         }
-        setPermissions(res.data.permissions || []);
-        setEntitlements(res.data.entitlements || []);
+        setPermissions(freshPermissions);
+        setEntitlements(freshEntitlements);
+
+        // Persist fresh session to localStorage
+        localStorage.setItem(
+          "auth_session",
+          JSON.stringify({
+            access_token: storedToken,
+            user: freshUser,
+            tenant: freshTenant,
+            permissions: freshPermissions,
+            entitlements: freshEntitlements,
+          })
+        );
       }
     } catch (err: any) {
       console.warn("Session validation error:", err?.message || err);

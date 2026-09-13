@@ -52,7 +52,7 @@ export function Sidebar() {
       style={{
         width: "260px",
         minHeight: "calc(100vh - 64px)",
-        background: "rgba(15, 23, 42, 0.7)",
+        background: "#f8fafc",
         borderRight: "1px solid var(--border)",
         padding: "24px 16px",
         display: "flex",
@@ -98,7 +98,7 @@ export function Sidebar() {
                   color: "#64748b",
                   fontSize: "0.9rem",
                   cursor: "not-allowed",
-                  background: "rgba(30, 41, 59, 0.2)",
+                  background: "#f1f5f9",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -181,7 +181,7 @@ export function Sidebar() {
                     borderRadius: "8px",
                     fontSize: "0.825rem",
                     color: "var(--text-muted)",
-                    background: "rgba(30, 41, 59, 0.2)",
+                    background: "#f1f5f9",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -207,7 +207,7 @@ export function Sidebar() {
           borderLeft: isAdmin ? "3px solid #10b981" : "3px solid #3b82f6",
         }}
       >
-        <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#f8fafc", marginBottom: "4px" }}>
+        <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#0f172a", marginBottom: "4px" }}>
           {isAdmin ? "Admin Workspace" : "Staff Counter Mode"}
         </div>
         <div style={{ fontSize: "0.725rem", color: "var(--text-muted)", lineHeight: 1.4 }}>

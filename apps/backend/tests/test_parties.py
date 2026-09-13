@@ -122,6 +122,11 @@ async def test_party_management(async_client: AsyncClient):
     assert pay_res.status_code == 201
     assert pay_res.json()["amount"] == 500.0
 
+    # 9.1 Verify GET /api/v1/parties/payments
+    list_payments_res = await async_client.get("/api/v1/parties/payments?payment_type=receipt", headers=headers)
+    assert list_payments_res.status_code == 200
+    assert any(p["id"] == pay_res.json()["id"] for p in list_payments_res.json())
+
     # 10. Check Customer Ledger and Running Balance
     ledger_res = await async_client.get(f"/api/v1/parties/customer/{cust_id}/ledger", headers=headers)
     assert ledger_res.status_code == 200

@@ -1,4 +1,5 @@
 from typing import List, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, Request, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
@@ -30,6 +31,7 @@ from app.services.party_service import (
     list_suppliers,
     update_supplier,
     record_party_payment,
+    list_party_payments,
     get_party_ledger,
     recalculate_all_parties,
 )
@@ -232,6 +234,28 @@ async def edit_supplier(
 # ==============================================================================
 # Payment Receipts & Ledger Statements
 # ==============================================================================
+
+@router.get("/payments", response_model=List[PaymentResponse])
+async def get_payments(
+    party_type: Optional[str] = Query(None, description="customer or supplier"),
+    payment_type: Optional[str] = Query(None, description="payment_in (receipt) or payment_out (voucher)"),
+    search: Optional[str] = Query(None, description="Search party name or reference"),
+    start_date: Optional[datetime] = Query(None),
+    end_date: Optional[datetime] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """List customer receipts and supplier payments with optional filters"""
+    return await list_party_payments(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        party_type=party_type,
+        payment_type=payment_type,
+        search=search,
+        start_date=start_date,
+        end_date=end_date
+    )
+
 
 @router.post("/payments", response_model=PaymentResponse, status_code=status.HTTP_201_CREATED)
 async def record_payment(

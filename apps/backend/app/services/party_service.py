@@ -774,6 +774,63 @@ async def record_party_payment(
     )
 
 
+async def list_party_payments(
+    db: AsyncSession,
+    tenant_id: str,
+    party_type: Optional[str] = None,
+    payment_type: Optional[str] = None,
+    search: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+) -> List[PaymentResponse]:
+    """List customer receipts and supplier payments with optional filters"""
+    query = select(Payment).where(Payment.tenant_id == tenant_id)
+    if party_type:
+        query = query.where(Payment.party_type == party_type.lower())
+    if payment_type:
+        ptype = payment_type.lower().strip()
+        if ptype in ["receipt", "payment_in", "in", "receive"]:
+            query = query.where(Payment.payment_type == "payment_in")
+        elif ptype in ["payment", "payment_out", "out", "voucher", "pay"]:
+            query = query.where(Payment.payment_type == "payment_out")
+        else:
+            query = query.where(Payment.payment_type == ptype)
+    if start_date:
+        query = query.where(Payment.payment_date >= start_date)
+    if end_date:
+        query = query.where(Payment.payment_date <= end_date)
+    if search:
+        term = f"%{search.strip()}%"
+        query = query.where(
+            or_(
+                Payment.party_name.ilike(term),
+                Payment.reference_number.ilike(term),
+                Payment.notes.ilike(term)
+            )
+        )
+    query = query.order_by(desc(Payment.payment_date), desc(Payment.created_at))
+    res = await db.execute(query)
+    payments = res.scalars().all()
+    return [
+        PaymentResponse(
+            id=p.id,
+            tenant_id=p.tenant_id,
+            party_type=p.party_type,
+            party_id=p.party_id,
+            party_name=p.party_name,
+            payment_type=p.payment_type,
+            amount=p.amount,
+            payment_mode=p.payment_mode,
+            reference_number=p.reference_number,
+            payment_date=p.payment_date,
+            notes=p.notes,
+            status=p.status,
+            created_at=p.created_at
+        )
+        for p in payments
+    ]
+
+
 async def get_party_ledger(
     db: AsyncSession,
     tenant_id: str,

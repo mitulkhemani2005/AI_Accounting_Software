@@ -137,7 +137,7 @@ export default function Home() {
               padding: "20px",
               borderRadius: "12px",
               minWidth: "260px",
-              background: "rgba(15, 23, 42, 0.8)",
+              background: "#f8fafc",
             }}
           >
             <h4 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "12px", color: "#38bdf8" }}>

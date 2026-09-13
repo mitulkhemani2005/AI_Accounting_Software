@@ -152,7 +152,7 @@ export function CSVImportModal({
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 700, color: "#f8fafc", margin: 0 }}>
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
               Bulk CSV Data Import
             </h2>
             <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: "4px 0 0 0" }}>
@@ -222,7 +222,7 @@ export function CSVImportModal({
         {/* Upload Form */}
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#f8fafc" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#0f172a" }}>
               {useRawText ? "Paste CSV Text" : "Upload CSV File"}
             </span>
             <button
@@ -247,7 +247,7 @@ export function CSVImportModal({
                 borderRadius: "12px",
                 padding: "28px",
                 textAlign: "center",
-                background: "rgba(15, 23, 42, 0.4)",
+                background: "#f8fafc",
                 cursor: "pointer",
               }}
               onClick={() => document.getElementById("csv-file-input")?.click()}
@@ -260,7 +260,7 @@ export function CSVImportModal({
                 style={{ display: "none" }}
               />
               <Upload size={32} color="#60a5fa" style={{ margin: "0 auto 8px auto" }} />
-              <div style={{ fontWeight: 600, color: "#f8fafc", fontSize: "0.9rem" }}>
+              <div style={{ fontWeight: 600, color: "#0f172a", fontSize: "0.9rem" }}>
                 {file ? file.name : "Click to select or drag & drop CSV file"}
               </div>
               <div style={{ color: "var(--text-muted)", fontSize: "0.775rem", marginTop: "4px" }}>
@@ -303,7 +303,7 @@ export function CSVImportModal({
             style={{
               padding: "16px",
               borderRadius: "10px",
-              background: "rgba(15, 23, 42, 0.8)",
+              background: "#f8fafc",
               border: "1px solid var(--border)",
               display: "flex",
               flexDirection: "column",
@@ -311,7 +311,7 @@ export function CSVImportModal({
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 600, color: "#f8fafc", fontSize: "0.9rem" }}>
+              <span style={{ fontWeight: 600, color: "#0f172a", fontSize: "0.9rem" }}>
                 {resultSummary.message}
               </span>
               <div style={{ display: "flex", gap: "8px", fontSize: "0.8rem" }}>

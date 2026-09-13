@@ -556,14 +556,14 @@ export default function PartiesPage() {
               <button
                 onClick={() => setSelectedAreaFilter("all")}
                 style={{
-                  padding: "4px 12px",
+                  padding: "5px 12px",
                   borderRadius: "20px",
                   fontSize: "0.75rem",
                   fontWeight: 600,
                   cursor: "pointer",
-                  border: selectedAreaFilter === "all" ? "1px solid #38bdf8" : "1px solid var(--border)",
-                  background: selectedAreaFilter === "all" ? "rgba(56, 189, 248, 0.2)" : "rgba(30, 41, 59, 0.4)",
-                  color: selectedAreaFilter === "all" ? "#38bdf8" : "var(--text-muted)",
+                  border: selectedAreaFilter === "all" ? "1px solid #2563eb" : "1px solid #cbd5e1",
+                  background: selectedAreaFilter === "all" ? "#eff6ff" : "#ffffff",
+                  color: selectedAreaFilter === "all" ? "#1d4ed8" : "#475569",
                 }}
               >
                 All Areas
@@ -576,7 +576,7 @@ export default function PartiesPage() {
                     key={a.id}
                     onClick={() => setSelectedAreaFilter(a.id)}
                     style={{
-                      padding: "4px 12px",
+                      padding: "5px 12px",
                       borderRadius: "20px",
                       fontSize: "0.75rem",
                       fontWeight: 600,
@@ -584,13 +584,13 @@ export default function PartiesPage() {
                       display: "flex",
                       alignItems: "center",
                       gap: "4px",
-                      border: isSel ? "1px solid #38bdf8" : "1px solid var(--border)",
-                      background: isSel ? "rgba(56, 189, 248, 0.2)" : "rgba(30, 41, 59, 0.4)",
-                      color: isSel ? "#38bdf8" : "var(--text-muted)",
+                      border: isSel ? "1px solid #2563eb" : "1px solid #cbd5e1",
+                      background: isSel ? "#eff6ff" : "#ffffff",
+                      color: isSel ? "#1d4ed8" : "#475569",
                     }}
                   >
                     <span>📍 {a.name}</span>
-                    <span style={{ fontSize: "0.65rem", background: "rgba(255,255,255,0.1)", padding: "1px 5px", borderRadius: "10px" }}>{count}</span>
+                    <span style={{ fontSize: "0.65rem", background: isSel ? "#dbeafe" : "#f1f5f9", padding: "1px 6px", borderRadius: "10px", color: isSel ? "#1e40af" : "#64748b" }}>{count}</span>
                   </button>
                 );
               })}
@@ -598,16 +598,16 @@ export default function PartiesPage() {
           )}
 
           {/* Table */}
-          <div className="glass-panel" style={{ overflow: "hidden", borderRadius: "12px" }}>
+          <div className="glass-panel" style={{ overflow: "hidden", borderRadius: "8px" }}>
             {isLoading ? (
               <div style={{ padding: "40px", textAlign: "center" }}>
-                <Loader2 className="animate-spin" size={32} color="#3b82f6" style={{ margin: "0 auto 12px" }} />
+                <Loader2 className="animate-spin" size={32} color="#2563eb" style={{ margin: "0 auto 12px" }} />
                 <div style={{ color: "var(--text-muted)" }}>Loading {tab}...</div>
               </div>
             ) : parties.length === 0 ? (
               <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
                 <Users size={36} style={{ margin: "0 auto 10px auto", opacity: 0.4 }} />
-                <div style={{ fontWeight: 600, color: "#f8fafc" }}>No {tab} found in this area.</div>
+                <div style={{ fontWeight: 600, color: "#0f172a" }}>No {tab} found in this area.</div>
                 <div style={{ fontSize: "0.85rem", marginTop: "4px", marginBottom: "16px" }}>
                   {selectedAreaFilter !== "all" ? "Try selecting 'All Areas' or add a new party to this area." : `Click "Add ${tab === "customers" ? "Customer" : "Supplier"}" to register your first trade party.`}
                 </div>
@@ -618,7 +618,7 @@ export default function PartiesPage() {
             ) : (
               <table className="custom-table">
                 <thead>
-                  <tr style={{ background: "rgba(15, 23, 42, 0.8)" }}>
+                  <tr>
                     <th>Party Name & Address</th>
                     <th>Trade Area / Route</th>
                     <th>Contact & Phone</th>
@@ -639,10 +639,10 @@ export default function PartiesPage() {
                       <tr key={p.id}>
                         {/* Name & Address */}
                         <td>
-                          <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.95rem" }}>{p.name}</div>
+                          <div style={{ fontWeight: 700, color: "#0f172a", fontSize: "0.95rem" }}>{p.name}</div>
                           {p.address ? (
-                            <div style={{ fontSize: "0.75rem", color: "#94a3b8", display: "flex", alignItems: "center", gap: "3px", marginTop: "2px" }}>
-                              <MapPin size={11} color="#38bdf8" /> {p.address}
+                            <div style={{ fontSize: "0.75rem", color: "#64748b", display: "flex", alignItems: "center", gap: "3px", marginTop: "2px" }}>
+                              <MapPin size={11} color="#2563eb" /> {p.address}
                             </div>
                           ) : (
                             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontStyle: "italic", marginTop: "2px" }}>
@@ -667,7 +667,7 @@ export default function PartiesPage() {
                         {/* Contact */}
                         <td>
                           {p.mobile ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#60a5fa", fontWeight: 500 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#1d4ed8", fontWeight: 600 }}>
                               <Phone size={13} /> +91 {p.mobile}
                             </div>
                           ) : (
@@ -678,12 +678,12 @@ export default function PartiesPage() {
 
                         {/* GST */}
                         <td>
-                          <div style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "#f8fafc" }}>{p.gst_number || "Unregistered"}</div>
+                          <div style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "#0f172a", fontWeight: 600 }}>{p.gst_number || "Unregistered"}</div>
                           <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>State: {p.state}</div>
                         </td>
 
                         {/* Opening Bal */}
-                        <td style={{ textAlign: "right", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                        <td style={{ textAlign: "right", color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 500 }}>
                           ₹{(p.opening_balance || 0).toFixed(2)}
                         </td>
 
@@ -695,19 +695,19 @@ export default function PartiesPage() {
                             </span>
                           ) : isDebit ? (
                             <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end" }}>
-                              <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#f87171" }}>
+                              <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#dc2626" }}>
                                 ₹{balance.toFixed(2)}
                               </span>
-                              <span style={{ fontSize: "0.65rem", color: "#f87171", fontWeight: 600 }}>
+                              <span style={{ fontSize: "0.65rem", color: "#b91c1c", fontWeight: 600 }}>
                                 {tab === "customers" ? "Due from Customer" : "Payable to Supplier"}
                               </span>
                             </div>
                           ) : (
                             <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end" }}>
-                              <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#38bdf8" }}>
+                              <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#2563eb" }}>
                                 ₹{Math.abs(balance).toFixed(2)}
                               </span>
-                              <span style={{ fontSize: "0.65rem", color: "#38bdf8", fontWeight: 600 }}>
+                              <span style={{ fontSize: "0.65rem", color: "#1d4ed8", fontWeight: 600 }}>
                                 Advance / Credit
                               </span>
                             </div>
@@ -721,7 +721,7 @@ export default function PartiesPage() {
                             <button
                               onClick={() => openPaymentModal(p)}
                               className="btn-primary"
-                              style={{ padding: "4px 8px", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "3px", background: "#10b981", borderColor: "#059669" }}
+                              style={{ padding: "4px 10px", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "4px", background: "#16a34a", borderColor: "#15803d" }}
                               title={tab === "customers" ? "Collect payment from customer" : "Record payment to supplier"}
                             >
                               <CreditCard size={12} /> {tab === "customers" ? "Collect" : "Pay"}
@@ -731,7 +731,7 @@ export default function PartiesPage() {
                             <button
                               onClick={() => openLedgerModal(p)}
                               className="btn-secondary"
-                              style={{ padding: "4px 8px", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "3px", borderColor: "rgba(56, 189, 248, 0.4)", color: "#38bdf8" }}
+                              style={{ padding: "4px 10px", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "4px", borderColor: "#93c5fd", color: "#1d4ed8", background: "#eff6ff" }}
                               title="View full statement of account and transaction ledger"
                             >
                               <FileText size={12} /> Ledger
@@ -741,7 +741,7 @@ export default function PartiesPage() {
                             <button
                               onClick={() => openEditModal(p)}
                               className="btn-secondary"
-                              style={{ padding: "4px 8px", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "3px" }}
+                              style={{ padding: "4px 10px", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "4px" }}
                               title="Edit party details"
                             >
                               <Edit2 size={12} /> Edit
@@ -763,23 +763,23 @@ export default function PartiesPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {/* Summary KPIs */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-            <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", borderLeft: "4px solid #38bdf8" }}>
+            <div className="glass-panel" style={{ padding: "18px", borderRadius: "8px", borderLeft: "4px solid #2563eb", background: "#ffffff" }}>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Total Defined Areas</div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#f8fafc", marginTop: "4px" }}>{areas.length}</div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>{areas.length}</div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Active geographical routes</div>
             </div>
 
-            <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", borderLeft: "4px solid #34d399" }}>
+            <div className="glass-panel" style={{ padding: "18px", borderRadius: "8px", borderLeft: "4px solid #16a34a", background: "#ffffff" }}>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Total Assigned Customers</div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#34d399", marginTop: "4px" }}>
+              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#16a34a", marginTop: "4px" }}>
                 {areas.reduce((acc, a) => acc + (a.customers_count || 0), 0)}
               </div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Across all delivery routes</div>
             </div>
 
-            <div className="glass-panel" style={{ padding: "18px", borderRadius: "12px", borderLeft: "4px solid #a78bfa" }}>
+            <div className="glass-panel" style={{ padding: "18px", borderRadius: "8px", borderLeft: "4px solid #7c3aed", background: "#ffffff" }}>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Total Assigned Suppliers</div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#a78bfa", marginTop: "4px" }}>
+              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#7c3aed", marginTop: "4px" }}>
                 {areas.reduce((acc, a) => acc + (a.suppliers_count || 0), 0)}
               </div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Vendors & distributors</div>
@@ -787,11 +787,11 @@ export default function PartiesPage() {
           </div>
 
           {/* Area Cards Grid */}
-          <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
+          <div className="glass-panel" style={{ padding: "20px", borderRadius: "8px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <MapPin size={20} color="#38bdf8" />
-                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700 }}>Areas & Route Master Directory</h3>
+                <MapPin size={20} color="#2563eb" />
+                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>Areas & Route Master Directory</h3>
               </div>
               <button onClick={openCreateAreaModal} className="btn-primary" style={{ padding: "6px 14px", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "6px" }}>
                 <Plus size={16} /> + New Area / Route
@@ -800,13 +800,13 @@ export default function PartiesPage() {
 
             {isLoadingAreas ? (
               <div style={{ padding: "30px", textAlign: "center" }}>
-                <Loader2 className="animate-spin" size={28} color="#38bdf8" style={{ margin: "0 auto 8px" }} />
+                <Loader2 className="animate-spin" size={28} color="#2563eb" style={{ margin: "0 auto 8px" }} />
                 <div style={{ color: "var(--text-muted)" }}>Loading areas...</div>
               </div>
             ) : areas.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
                 <MapPin size={36} style={{ margin: "0 auto 10px", opacity: 0.4 }} />
-                <div style={{ fontWeight: 600, color: "#f8fafc" }}>No Trade Areas Defined Yet</div>
+                <div style={{ fontWeight: 600, color: "#0f172a" }}>No Trade Areas Defined Yet</div>
                 <div style={{ fontSize: "0.85rem", marginTop: "4px", marginBottom: "16px" }}>
                   Create delivery areas (e.g. "Main Market", "Sector 4", "Industrial Area") to organize your parties and enable fast route filtering in POS sales.
                 </div>
@@ -820,22 +820,21 @@ export default function PartiesPage() {
                   <div
                     key={a.id}
                     style={{
-                      background: "rgba(15, 23, 42, 0.6)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "10px",
+                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "8px",
                       padding: "16px",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
                       gap: "12px",
-                      transition: "transform 0.15s ease, border-color 0.15s ease",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
                     }}
-                    className="hover-card"
                   >
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: "1rem", color: "#f8fafc" }}>
+                          <div style={{ fontWeight: 700, fontSize: "1rem", color: "#0f172a" }}>
                             📍 {a.name}
                           </div>
                           {a.code && (
@@ -854,10 +853,10 @@ export default function PartiesPage() {
                       )}
                     </div>
 
-                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ display: "flex", gap: "12px", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                        <span>👤 <strong>{a.customers_count || 0}</strong> Cust</span>
-                        <span>🏢 <strong>{a.suppliers_count || 0}</strong> Supp</span>
+                        <span>👤 <strong style={{ color: "#0f172a" }}>{a.customers_count || 0}</strong> Cust</span>
+                        <span>🏢 <strong style={{ color: "#0f172a" }}>{a.suppliers_count || 0}</strong> Supp</span>
                       </div>
 
                       <div style={{ display: "flex", gap: "6px" }}>
@@ -872,7 +871,7 @@ export default function PartiesPage() {
                         <button
                           onClick={() => handleDeleteArea(a.id, a.name)}
                           className="btn-secondary"
-                          style={{ padding: "3px 8px", fontSize: "0.75rem", color: "#f87171", borderColor: "rgba(239, 68, 68, 0.3)" }}
+                          style={{ padding: "3px 8px", fontSize: "0.75rem", color: "#dc2626", borderColor: "#fca5a5" }}
                           title="Delete Area"
                         >
                           <Trash2 size={12} />
@@ -892,13 +891,13 @@ export default function PartiesPage() {
         <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div
             className="glass-panel"
-            style={{ width: "100%", maxWidth: "460px", padding: "26px", borderRadius: "14px", background: "#0f172a" }}
+            style={{ width: "100%", maxWidth: "460px", padding: "26px", borderRadius: "10px", background: "#ffffff", border: "1px solid #cbd5e1", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "10px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <CreditCard size={20} color="#10b981" />
-                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+                <CreditCard size={20} color="#16a34a" />
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
                   {tab === "customers" ? "Collect Customer Payment" : "Record Supplier Payment"}
                 </h3>
               </div>
@@ -908,16 +907,16 @@ export default function PartiesPage() {
             </div>
 
             {/* Target Party Info Box */}
-            <div style={{ background: "rgba(30, 41, 59, 0.5)", border: "1px solid var(--border)", borderRadius: "8px", padding: "12px", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.95rem" }}>👤 {paymentTargetParty.name}</div>
+                <div style={{ fontWeight: 700, color: "#0f172a", fontSize: "0.95rem" }}>👤 {paymentTargetParty.name}</div>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "2px" }}>
                   {paymentTargetParty.mobile ? `📱 +91 ${paymentTargetParty.mobile}` : "No phone"} {paymentTargetParty.area_name ? `• 📍 ${paymentTargetParty.area_name}` : ""}
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Current Due</div>
-                <div style={{ fontSize: "1.1rem", fontWeight: 800, color: paymentTargetParty.current_balance > 0 ? "#f87171" : "#34d399" }}>
+                <div style={{ fontSize: "1.1rem", fontWeight: 800, color: paymentTargetParty.current_balance > 0 ? "#dc2626" : "#16a34a" }}>
                   ₹{(paymentTargetParty.current_balance || 0).toFixed(2)}
                 </div>
               </div>
@@ -935,7 +934,7 @@ export default function PartiesPage() {
                   placeholder="0.00"
                   value={paymentForm.amount}
                   onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                  style={{ fontSize: "1.1rem", fontWeight: 700, color: "#10b981", borderColor: "#059669" }}
+                  style={{ fontSize: "1.1rem", fontWeight: 700, color: "#16a34a", borderColor: "#16a34a" }}
                 />
               </div>
 
@@ -992,7 +991,7 @@ export default function PartiesPage() {
                 <button type="button" onClick={() => setShowPaymentModal(false)} className="btn-secondary">
                   Cancel
                 </button>
-                <button type="submit" disabled={isSubmittingPayment} className="btn-primary" style={{ background: "#10b981", borderColor: "#059669" }}>
+                <button type="submit" disabled={isSubmittingPayment} className="btn-primary" style={{ background: "#16a34a", borderColor: "#15803d" }}>
                   {isSubmittingPayment ? <Loader2 className="animate-spin" size={16} /> : `Save & Clear Due (₹${parseFloat(paymentForm.amount || "0").toFixed(2)})`}
                 </button>
               </div>
@@ -1006,20 +1005,20 @@ export default function PartiesPage() {
         <div className="modal-overlay" onClick={() => setShowLedgerModal(false)}>
           <div
             className="glass-panel"
-            style={{ width: "100%", maxWidth: "860px", maxHeight: "90vh", display: "flex", flexDirection: "column", padding: "24px", borderRadius: "14px", background: "#0f172a" }}
+            style={{ width: "100%", maxWidth: "860px", maxHeight: "90vh", display: "flex", flexDirection: "column", padding: "24px", borderRadius: "10px", background: "#ffffff", border: "1px solid #cbd5e1", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <FileText size={22} color="#38bdf8" />
-                  <h2 style={{ fontSize: "1.3rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+                  <FileText size={22} color="#2563eb" />
+                  <h2 style={{ fontSize: "1.3rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
                     Party Statement of Account & Ledger
                   </h2>
                 </div>
                 <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "4px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                  <span>Party: <strong style={{ color: "#f8fafc" }}>{selectedPartyForLedger.name}</strong></span>
+                  <span>Party: <strong style={{ color: "#0f172a" }}>{selectedPartyForLedger.name}</strong></span>
                   {selectedPartyForLedger.address && <span>• 📍 {selectedPartyForLedger.address}</span>}
                   {selectedPartyForLedger.mobile && <span>• 📱 +91 {selectedPartyForLedger.mobile}</span>}
                   {selectedPartyForLedger.gst_number && <span>• 🆔 GST: {selectedPartyForLedger.gst_number}</span>}
@@ -1043,41 +1042,41 @@ export default function PartiesPage() {
 
             {isLoadingLedger ? (
               <div style={{ padding: "50px", textAlign: "center" }}>
-                <Loader2 className="animate-spin" size={36} color="#38bdf8" style={{ margin: "0 auto 12px" }} />
+                <Loader2 className="animate-spin" size={36} color="#2563eb" style={{ margin: "0 auto 12px" }} />
                 <div style={{ color: "var(--text-muted)" }}>Calculating statement & running balances...</div>
               </div>
             ) : ledgerData ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "16px", overflowY: "auto" }}>
                 {/* 4 Financial Summary KPI Cards */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                  <div className="glass-panel" style={{ padding: "14px", borderRadius: "10px", background: "rgba(15, 23, 42, 0.7)" }}>
+                  <div className="glass-panel" style={{ padding: "14px", borderRadius: "8px", background: "#f8fafc", border: "1px solid #e2e8f0" }}>
                     <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Opening Balance</div>
-                    <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#cbd5e1", marginTop: "2px" }}>₹{ledgerData.opening_balance.toFixed(2)}</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#0f172a", marginTop: "2px" }}>₹{ledgerData.opening_balance.toFixed(2)}</div>
                   </div>
 
-                  <div className="glass-panel" style={{ padding: "14px", borderRadius: "10px", background: "rgba(15, 23, 42, 0.7)" }}>
+                  <div className="glass-panel" style={{ padding: "14px", borderRadius: "8px", background: "#f8fafc", border: "1px solid #e2e8f0" }}>
                     <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Total Invoiced (Debits)</div>
-                    <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#f8fafc", marginTop: "2px" }}>₹{ledgerData.total_invoiced.toFixed(2)}</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#0f172a", marginTop: "2px" }}>₹{ledgerData.total_invoiced.toFixed(2)}</div>
                   </div>
 
-                  <div className="glass-panel" style={{ padding: "14px", borderRadius: "10px", background: "rgba(15, 23, 42, 0.7)" }}>
+                  <div className="glass-panel" style={{ padding: "14px", borderRadius: "8px", background: "#f8fafc", border: "1px solid #e2e8f0" }}>
                     <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Total Paid / Received</div>
-                    <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#34d399", marginTop: "2px" }}>₹{ledgerData.total_paid.toFixed(2)}</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#16a34a", marginTop: "2px" }}>₹{ledgerData.total_paid.toFixed(2)}</div>
                   </div>
 
-                  <div className="glass-panel" style={{ padding: "14px", borderRadius: "10px", background: "rgba(15, 23, 42, 0.7)", borderLeft: "4px solid #f87171" }}>
+                  <div className="glass-panel" style={{ padding: "14px", borderRadius: "8px", background: "#f8fafc", border: "1px solid #e2e8f0", borderLeft: "4px solid #dc2626" }}>
                     <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Net Outstanding Due</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: 800, color: ledgerData.current_balance > 0 ? "#f87171" : "#34d399", marginTop: "2px" }}>
+                    <div style={{ fontSize: "1.25rem", fontWeight: 800, color: ledgerData.current_balance > 0 ? "#dc2626" : "#16a34a", marginTop: "2px" }}>
                       ₹{ledgerData.current_balance.toFixed(2)}
                     </div>
                   </div>
                 </div>
 
                 {/* Ledger Transactions Table */}
-                <div style={{ border: "1px solid var(--border)", borderRadius: "10px", overflow: "hidden" }}>
+                <div style={{ border: "1px solid var(--border)", borderRadius: "8px", overflow: "hidden" }}>
                   <table className="custom-table" style={{ fontSize: "0.825rem" }}>
                     <thead>
-                      <tr style={{ background: "rgba(30, 41, 59, 0.8)" }}>
+                      <tr>
                         <th>Date</th>
                         <th>Transaction Type</th>
                         <th>Ref #</th>
@@ -1096,7 +1095,7 @@ export default function PartiesPage() {
                         </tr>
                       ) : (
                         ledgerData.transactions.map((tx, idx) => (
-                          <tr key={idx} style={{ background: tx.type === "bill_void" ? "rgba(239, 68, 68, 0.05)" : undefined }}>
+                          <tr key={idx} style={{ background: tx.type === "bill_void" ? "#fef2f2" : undefined }}>
                             <td style={{ whiteSpace: "nowrap", color: "var(--text-muted)" }}>
                               {new Date(tx.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                             </td>
@@ -1116,20 +1115,20 @@ export default function PartiesPage() {
                                 {tx.type_label}
                               </span>
                             </td>
-                            <td style={{ fontFamily: "monospace", color: "#f8fafc" }}>
+                            <td style={{ fontFamily: "monospace", color: "#0f172a", fontWeight: 600 }}>
                               {tx.reference_no}
                             </td>
                             <td style={{ color: "var(--text-muted)" }}>
                               {tx.description}
-                              {tx.payment_mode && <span style={{ marginLeft: "4px", fontSize: "0.7rem", color: "#38bdf8" }}>[{tx.payment_mode}]</span>}
+                              {tx.payment_mode && <span style={{ marginLeft: "4px", fontSize: "0.7rem", color: "#2563eb", fontWeight: 600 }}>[{tx.payment_mode}]</span>}
                             </td>
-                            <td style={{ textAlign: "right", fontWeight: tx.debit > 0 ? 700 : 400, color: tx.debit > 0 ? "#f8fafc" : "var(--text-muted)" }}>
+                            <td style={{ textAlign: "right", fontWeight: tx.debit > 0 ? 700 : 400, color: tx.debit > 0 ? "#0f172a" : "var(--text-muted)" }}>
                               {tx.debit > 0 ? `₹${tx.debit.toFixed(2)}` : "—"}
                             </td>
-                            <td style={{ textAlign: "right", fontWeight: tx.credit > 0 ? 700 : 400, color: tx.credit > 0 ? "#34d399" : "var(--text-muted)" }}>
+                            <td style={{ textAlign: "right", fontWeight: tx.credit > 0 ? 700 : 400, color: tx.credit > 0 ? "#16a34a" : "var(--text-muted)" }}>
                               {tx.credit > 0 ? `₹${tx.credit.toFixed(2)}` : "—"}
                             </td>
-                            <td style={{ textAlign: "right", fontWeight: 800, color: tx.running_balance > 0 ? "#f87171" : "#34d399" }}>
+                            <td style={{ textAlign: "right", fontWeight: 800, color: tx.running_balance > 0 ? "#dc2626" : "#16a34a" }}>
                               ₹{tx.running_balance.toFixed(2)}
                             </td>
                           </tr>
@@ -1149,13 +1148,13 @@ export default function PartiesPage() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div
             className="glass-panel"
-            style={{ width: "100%", maxWidth: "540px", padding: "26px", borderRadius: "14px", background: "#0f172a" }}
+            style={{ width: "100%", maxWidth: "540px", padding: "26px", borderRadius: "10px", background: "#ffffff", border: "1px solid #cbd5e1", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "10px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <UserCheck size={20} color="#38bdf8" />
-                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+                <UserCheck size={20} color="#2563eb" />
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
                   {editingParty ? `Edit ${tab === "customers" ? "Customer" : "Supplier"}` : `Add New ${tab === "customers" ? "Customer" : "Supplier"}`}
                 </h3>
               </div>
@@ -1191,14 +1190,14 @@ export default function PartiesPage() {
                   <button
                     type="button"
                     onClick={() => setShowQuickAddArea(!showQuickAddArea)}
-                    style={{ background: "transparent", border: "none", color: "#38bdf8", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}
+                    style={{ background: "transparent", border: "none", color: "#2563eb", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}
                   >
                     {showQuickAddArea ? "✕ Cancel Quick Area" : "+ Add New Area"}
                   </button>
                 </div>
 
                 {showQuickAddArea ? (
-                  <div style={{ display: "flex", gap: "6px", background: "rgba(56, 189, 248, 0.1)", padding: "8px", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
+                  <div style={{ display: "flex", gap: "6px", background: "#eff6ff", padding: "8px", borderRadius: "8px", border: "1px solid #bfdbfe" }}>
                     <input
                       type="text"
                       placeholder="New Area Name (e.g. Sector 14)"
@@ -1326,13 +1325,13 @@ export default function PartiesPage() {
         <div className="modal-overlay" onClick={() => setShowAreaModal(false)}>
           <div
             className="glass-panel"
-            style={{ width: "100%", maxWidth: "460px", padding: "26px", borderRadius: "14px", background: "#0f172a" }}
+            style={{ width: "100%", maxWidth: "460px", padding: "26px", borderRadius: "10px", background: "#ffffff", border: "1px solid #cbd5e1", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "10px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <MapPin size={20} color="#38bdf8" />
-                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+                <MapPin size={20} color="#2563eb" />
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
                   {editingArea ? `Edit Area — ${editingArea.name}` : "Create New Trade Area"}
                 </h3>
               </div>

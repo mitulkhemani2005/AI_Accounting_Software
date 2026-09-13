@@ -13,7 +13,7 @@ export function Navbar() {
       style={{
         height: "64px",
         borderBottom: "1px solid var(--border)",
-        background: "rgba(15, 23, 42, 0.85)",
+        background: "#f8fafc",
         backdropFilter: "blur(12px)",
         display: "flex",
         alignItems: "center",
@@ -32,23 +32,38 @@ export function Navbar() {
               width: "36px",
               height: "36px",
               borderRadius: "8px",
-              background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+              background: "linear-gradient(135deg, #1e1b4b, #2563eb)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              boxShadow: "0 2px 8px rgba(37, 99, 235, 0.3)",
             }}
           >
             <Building2 size={20} color="#ffffff" />
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: "1.05rem", color: "#f8fafc" }}>
-              {tenant?.business_name || "AI Accounting"}
-            </div>
-            {tenant?.gst_number && (
-              <div style={{ fontSize: "0.725rem", color: "var(--text-muted)" }}>
-                GSTIN: {tenant.gst_number}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span
+                style={{
+                  background: "#dc2626",
+                  color: "#ffffff",
+                  fontSize: "0.7rem",
+                  fontWeight: 800,
+                  padding: "1px 6px",
+                  borderRadius: "4px",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                FUNDSAFE
+              </span>
+              <div style={{ fontWeight: 700, fontSize: "1.05rem", color: "#0f172a" }}>
+                {tenant?.business_name || "KHEMANI BROTHERS"}
               </div>
-            )}
+            </div>
+            <div style={{ fontSize: "0.725rem", color: "var(--text-muted)", display: "flex", gap: "8px" }}>
+              <span>A/C Year 2026-2027</span>
+              {tenant?.gst_number && <span>&bull; GSTIN: {tenant.gst_number}</span>}
+            </div>
           </div>
         </Link>
       </div>

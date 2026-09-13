@@ -137,7 +137,7 @@ export default function AuditPage() {
               maxWidth: "500px",
               padding: "24px",
               borderRadius: "12px",
-              background: "#0f172a",
+              background: "#ffffff",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -147,12 +147,12 @@ export default function AuditPage() {
             </div>
             <pre
               style={{
-                background: "rgba(0, 0, 0, 0.5)",
+                background: "#1e293b",
                 padding: "16px",
                 borderRadius: "8px",
                 overflowX: "auto",
                 fontSize: "0.8rem",
-                color: "#34d399",
+                color: "#10b981",
                 fontFamily: "monospace",
               }}
             >

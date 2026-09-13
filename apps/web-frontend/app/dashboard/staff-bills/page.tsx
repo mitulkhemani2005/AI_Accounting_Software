@@ -719,7 +719,7 @@ export default function StaffBillsReviewPage() {
         ) : filteredBills.length === 0 ? (
           <div style={{ padding: "48px", textAlign: "center", color: "var(--text-muted)" }}>
             <CheckCircle2 size={42} color="#10b981" style={{ margin: "0 auto 12px auto" }} />
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#f8fafc", marginBottom: "4px" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#0f172a", marginBottom: "4px" }}>
               Queue is Clear
             </h3>
             <p style={{ fontSize: "0.875rem" }}>
@@ -776,7 +776,7 @@ export default function StaffBillsReviewPage() {
                   <td style={{ padding: "14px 16px" }}>
                     <div style={{ fontWeight: 500 }}>{bill.party_name}</div>
                     {bill.party_address && (
-                      <div style={{ fontSize: "0.72rem", color: "#94a3b8", display: "flex", alignItems: "center", gap: "3px" }}>
+                      <div style={{ fontSize: "0.72rem", color: "#64748b", display: "flex", alignItems: "center", gap: "3px" }}>
                         <MapPin size={11} /> {bill.party_address}
                       </div>
                     )}
@@ -988,7 +988,7 @@ export default function StaffBillsReviewPage() {
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
                 gap: "16px",
-                background: "rgba(30, 41, 59, 0.4)",
+                background: "#f1f5f9",
                 padding: "16px",
                 borderRadius: "10px",
                 marginBottom: "20px",
@@ -999,7 +999,7 @@ export default function StaffBillsReviewPage() {
                 <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>
                   Billed Customer
                 </div>
-                <div style={{ fontWeight: 600, fontSize: "1rem", color: "#f8fafc", marginTop: "2px" }}>
+                <div style={{ fontWeight: 600, fontSize: "1rem", color: "#0f172a", marginTop: "2px" }}>
                   {selectedBill.party_name}
                 </div>
                 {selectedBill.party_address && <div style={{ color: "#cbd5e1", marginTop: "2px" }}>📍 {selectedBill.party_address}</div>}
@@ -1024,7 +1024,7 @@ export default function StaffBillsReviewPage() {
             <div style={{ overflowX: "auto", marginBottom: "20px" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.825rem" }}>
                 <thead>
-                  <tr style={{ background: "rgba(15, 23, 42, 0.6)", textAlign: "left", color: "var(--text-muted)" }}>
+                  <tr style={{ background: "#f8fafc", textAlign: "left", color: "var(--text-muted)" }}>
                     <th style={{ padding: "10px" }}>Item Description</th>
                     <th style={{ padding: "10px" }}>HSN</th>
                     <th style={{ padding: "10px", textAlign: "right" }}>Qty</th>
@@ -1073,7 +1073,7 @@ export default function StaffBillsReviewPage() {
                   flexDirection: "column",
                   gap: "6px",
                   fontSize: "0.85rem",
-                  background: "rgba(30, 41, 59, 0.3)",
+                  background: "#f1f5f9",
                   padding: "14px",
                   borderRadius: "8px",
                 }}
@@ -1118,7 +1118,7 @@ export default function StaffBillsReviewPage() {
                     borderTop: "1px solid var(--border)",
                     fontSize: "1.05rem",
                     fontWeight: 700,
-                    color: "#f8fafc",
+                    color: "#0f172a",
                   }}
                 >
                   <span>Grand Total:</span>
@@ -1242,43 +1242,41 @@ export default function StaffBillsReviewPage() {
       {/* --- ADMIN FULL BILL EDITOR MODAL --- */}
       {editingBill && (
         <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0, 0, 0, 0.8)",
-            backdropFilter: "blur(8px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 150,
-            padding: "20px",
-          }}
+          className="modal-overlay no-print"
           onClick={() => setEditingBill(null)}
         >
           <div
             className="glass-panel"
-            style={{ width: "100%", maxWidth: "900px", maxHeight: "92vh", overflowY: "auto", padding: "24px", borderRadius: "14px", background: "#0f172a" }}
+            style={{
+              width: "100%",
+              maxWidth: "900px",
+              maxHeight: "92vh",
+              overflowY: "auto",
+              padding: "24px",
+              borderRadius: "14px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              color: "#0f172a",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "1px solid #e2e8f0", paddingBottom: "12px" }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                   <span className="badge badge-purple">ADMIN BILL OVERRIDE</span>
                   <span className="badge badge-blue">EDITING MODE</span>
                 </div>
-                <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>
+                <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
                   Edit Order / Bill: {editingBill.bill_number}
                 </h2>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                  Originally created by <strong>{editingBill.creator_name || "Counter Staff"}</strong> &bull; Changes will recalculate totals and update party balances automatically.
+                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px" }}>
+                  Originally created by <strong style={{ color: "#0f172a" }}>{editingBill.creator_name || "Counter Staff"}</strong> &bull; Changes will recalculate totals and update party balances automatically.
                 </div>
               </div>
 
-              <button onClick={() => setEditingBill(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+              <button onClick={() => setEditingBill(null)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer" }}>
                 <X size={20} />
               </button>
             </div>
@@ -1287,7 +1285,7 @@ export default function StaffBillsReviewPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" }}>
               {/* Customer Selector */}
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Customer / Party
                 </label>
                 <select
@@ -1323,7 +1321,7 @@ export default function StaffBillsReviewPage() {
               {/* Customer Mobile & GST */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     Mobile Number
                   </label>
                   <input
@@ -1336,7 +1334,7 @@ export default function StaffBillsReviewPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     GST Number
                   </label>
                   <input
@@ -1351,7 +1349,7 @@ export default function StaffBillsReviewPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Customer Billing Address
                 </label>
                 <input
@@ -1366,7 +1364,7 @@ export default function StaffBillsReviewPage() {
 
               {/* Payment Mode */}
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Payment Mode (2 Options)
                 </label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
@@ -1382,9 +1380,9 @@ export default function StaffBillsReviewPage() {
                       fontWeight: 700,
                       fontSize: "0.8rem",
                       cursor: "pointer",
-                      border: editPaymentMode === "cash" ? "2px solid #10b981" : "1px solid var(--border)",
-                      background: editPaymentMode === "cash" ? "rgba(16, 185, 129, 0.25)" : "rgba(30, 41, 59, 0.4)",
-                      color: editPaymentMode === "cash" ? "#34d399" : "var(--text-muted)",
+                      border: editPaymentMode === "cash" ? "2px solid #059669" : "1px solid #cbd5e1",
+                      background: editPaymentMode === "cash" ? "#d1fae5" : "#f1f5f9",
+                      color: editPaymentMode === "cash" ? "#065f46" : "#64748b",
                     }}
                   >
                     💵 CASH
@@ -1401,9 +1399,9 @@ export default function StaffBillsReviewPage() {
                       fontWeight: 700,
                       fontSize: "0.8rem",
                       cursor: "pointer",
-                      border: editPaymentMode === "credit" ? "2px solid #f59e0b" : "1px solid var(--border)",
-                      background: editPaymentMode === "credit" ? "rgba(245, 158, 11, 0.25)" : "rgba(30, 41, 59, 0.4)",
-                      color: editPaymentMode === "credit" ? "#fbbf24" : "var(--text-muted)",
+                      border: editPaymentMode === "credit" ? "2px solid #d97706" : "1px solid #cbd5e1",
+                      background: editPaymentMode === "credit" ? "#fef3c7" : "#f1f5f9",
+                      color: editPaymentMode === "credit" ? "#92400e" : "#64748b",
                     }}
                   >
                     📒 CREDIT
@@ -1414,7 +1412,7 @@ export default function StaffBillsReviewPage() {
               {/* Payment Status & Paid Amount */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     Payment Status
                   </label>
                   <select
@@ -1429,7 +1427,7 @@ export default function StaffBillsReviewPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     Paid Amount (₹)
                   </label>
                   <input
@@ -1446,8 +1444,8 @@ export default function StaffBillsReviewPage() {
             </div>
 
             {/* Add Product from Catalog row */}
-            <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "12px", background: "rgba(30, 41, 59, 0.3)", padding: "8px 12px", borderRadius: "8px" }}>
-              <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-muted)" }}>+ Add Product to Bill:</span>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "12px", background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#475569" }}>+ Add Product to Bill:</span>
               <select
                 className="input-field"
                 value={selectedCatalogItemToAdd}
@@ -1467,24 +1465,24 @@ export default function StaffBillsReviewPage() {
             </div>
 
             {/* Editable Items Table */}
-            <div style={{ overflowX: "auto", marginBottom: "16px" }}>
+            <div style={{ overflowX: "auto", marginBottom: "16px", border: "1px solid #cbd5e1", borderRadius: "8px" }}>
               <table className="custom-table" style={{ fontSize: "0.825rem", width: "100%" }}>
                 <thead>
-                  <tr>
-                    <th>Item Name</th>
-                    <th style={{ width: "70px", textAlign: "center" }}>Qty</th>
-                    <th style={{ width: "95px" }}>Selling ₹</th>
-                    <th style={{ width: "95px" }}>Cost ₹</th>
-                    <th style={{ width: "80px" }}>GST %</th>
-                    <th style={{ width: "90px" }}>Tax Mode</th>
-                    <th style={{ textAlign: "right" }}>Line Total</th>
-                    <th style={{ width: "40px" }}></th>
+                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #cbd5e1", color: "#475569" }}>
+                    <th style={{ padding: "8px 10px" }}>Item Name</th>
+                    <th style={{ width: "70px", textAlign: "center", padding: "8px 10px" }}>Qty</th>
+                    <th style={{ width: "95px", textAlign: "right", padding: "8px 10px" }}>Selling ₹</th>
+                    <th style={{ width: "95px", textAlign: "right", padding: "8px 10px" }}>Cost ₹</th>
+                    <th style={{ width: "80px", textAlign: "center", padding: "8px 10px" }}>GST %</th>
+                    <th style={{ width: "90px", textAlign: "center", padding: "8px 10px" }}>Tax Mode</th>
+                    <th style={{ textAlign: "right", padding: "8px 10px" }}>Line Total</th>
+                    <th style={{ width: "40px", textAlign: "center", padding: "8px 10px" }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {editItems.map((item, idx) => (
-                    <tr key={idx}>
-                      <td>
+                    <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <td style={{ padding: "6px 10px" }}>
                         <input
                           type="text"
                           className="input-field"
@@ -1501,7 +1499,7 @@ export default function StaffBillsReviewPage() {
                         />
                       </td>
 
-                      <td>
+                      <td style={{ padding: "6px 10px" }}>
                         <input
                           type="number"
                           min="1"
@@ -1513,7 +1511,7 @@ export default function StaffBillsReviewPage() {
                         />
                       </td>
 
-                      <td>
+                      <td style={{ padding: "6px 10px", textAlign: "right" }}>
                         <input
                           type="number"
                           step="0.01"
@@ -1521,11 +1519,11 @@ export default function StaffBillsReviewPage() {
                           className="input-field"
                           value={item.rate}
                           onChange={(e) => updateEditItemRate(idx, parseFloat(e.target.value) || 0)}
-                          style={{ padding: "4px 6px", fontSize: "0.8rem", color: "#38bdf8", fontWeight: 600 }}
+                          style={{ padding: "4px 6px", fontSize: "0.8rem", color: "#0284c7", fontWeight: 600, textAlign: "right" }}
                         />
                       </td>
 
-                      <td>
+                      <td style={{ padding: "6px 10px", textAlign: "right" }}>
                         <input
                           type="number"
                           step="0.01"
@@ -1533,11 +1531,11 @@ export default function StaffBillsReviewPage() {
                           className="input-field"
                           value={item.purchase_price ?? 0}
                           onChange={(e) => updateEditItemPurchasePrice(idx, parseFloat(e.target.value) || 0)}
-                          style={{ padding: "4px 6px", fontSize: "0.8rem", color: "#f59e0b", fontWeight: 600 }}
+                          style={{ padding: "4px 6px", fontSize: "0.8rem", color: "#b45309", fontWeight: 600, textAlign: "right" }}
                         />
                       </td>
 
-                      <td>
+                      <td style={{ padding: "6px 10px" }}>
                         <select
                           className="input-field"
                           value={item.gst_rate}
@@ -1552,7 +1550,7 @@ export default function StaffBillsReviewPage() {
                         </select>
                       </td>
 
-                      <td>
+                      <td style={{ padding: "6px 10px", textAlign: "center" }}>
                         <button
                           type="button"
                           onClick={() => toggleEditItemTaxInclusive(idx)}
@@ -1562,9 +1560,9 @@ export default function StaffBillsReviewPage() {
                             fontSize: "0.65rem",
                             fontWeight: 600,
                             cursor: "pointer",
-                            border: "1px solid var(--border)",
-                            background: item.is_tax_inclusive ? "rgba(59, 130, 246, 0.2)" : "rgba(100, 116, 139, 0.2)",
-                            color: item.is_tax_inclusive ? "#60a5fa" : "#94a3b8",
+                            border: "1px solid #cbd5e1",
+                            background: item.is_tax_inclusive ? "#dbeafe" : "#f1f5f9",
+                            color: item.is_tax_inclusive ? "#1d4ed8" : "#64748b",
                             whiteSpace: "nowrap",
                           }}
                         >
@@ -1572,11 +1570,11 @@ export default function StaffBillsReviewPage() {
                         </button>
                       </td>
 
-                      <td style={{ textAlign: "right", fontWeight: 700, color: "#34d399", fontSize: "0.9rem" }}>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "#059669", fontSize: "0.9rem", padding: "6px 10px" }}>
                         ₹{item.total_amount.toFixed(2)}
                       </td>
 
-                      <td style={{ textAlign: "center" }}>
+                      <td style={{ textAlign: "center", padding: "6px 10px" }}>
                         <button
                           type="button"
                           onClick={() => removeEditItem(idx)}
@@ -1595,7 +1593,7 @@ export default function StaffBillsReviewPage() {
             {/* Totals & Notes Section */}
             <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "16px", marginBottom: "16px" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Invoice Notes
                 </label>
                 <textarea
@@ -1608,30 +1606,30 @@ export default function StaffBillsReviewPage() {
                 />
               </div>
 
-              <div style={{ background: "rgba(30, 41, 59, 0.4)", padding: "12px 16px", borderRadius: "8px", fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: "4px" }}>
+              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 16px", borderRadius: "8px", fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: "4px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "var(--text-muted)" }}>Subtotal (Taxable):</span>
-                  <span>₹{editTaxable.toFixed(2)}</span>
+                  <span style={{ color: "#64748b" }}>Subtotal (Taxable):</span>
+                  <span style={{ color: "#0f172a", fontWeight: 600 }}>₹{editTaxable.toFixed(2)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "var(--text-muted)" }}>Total GST:</span>
-                  <span>₹{editTotalGst.toFixed(2)}</span>
+                  <span style={{ color: "#64748b" }}>Total GST:</span>
+                  <span style={{ color: "#b45309", fontWeight: 600 }}>₹{editTotalGst.toFixed(2)}</span>
                 </div>
                 {editRoundOff !== 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-muted)" }}>Round Off:</span>
-                    <span>{editRoundOff > 0 ? `+₹${editRoundOff.toFixed(2)}` : `-₹${Math.abs(editRoundOff).toFixed(2)}`}</span>
+                    <span style={{ color: "#64748b" }}>Round Off:</span>
+                    <span style={{ color: "#0f172a" }}>{editRoundOff > 0 ? `+₹${editRoundOff.toFixed(2)}` : `-₹${Math.abs(editRoundOff).toFixed(2)}`}</span>
                   </div>
                 )}
-                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border)", paddingTop: "6px", marginTop: "4px", fontSize: "1.1rem", fontWeight: 700 }}>
-                  <span>Grand Total:</span>
-                  <span style={{ color: "#34d399" }}>₹{editGrandTotal.toFixed(2)}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #cbd5e1", paddingTop: "6px", marginTop: "4px", fontSize: "1.1rem", fontWeight: 700 }}>
+                  <span style={{ color: "#0f172a" }}>Grand Total:</span>
+                  <span style={{ color: "#059669" }}>₹{editGrandTotal.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", borderTop: "1px solid var(--border)", paddingTop: "14px" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", borderTop: "1px solid #e2e8f0", paddingTop: "14px" }}>
               <button
                 type="button"
                 onClick={() => setEditingBill(null)}
@@ -1646,7 +1644,7 @@ export default function StaffBillsReviewPage() {
                 onClick={handleSaveEdit}
                 disabled={isSavingEdit}
                 className="btn-primary"
-                style={{ display: "flex", alignItems: "center", gap: "6px", background: "#10b981", borderColor: "#059669" }}
+                style={{ display: "flex", alignItems: "center", gap: "6px", background: "#059669", borderColor: "#047857" }}
               >
                 {isSavingEdit ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save Changes
               </button>

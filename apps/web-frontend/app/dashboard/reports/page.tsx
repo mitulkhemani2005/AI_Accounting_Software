@@ -313,9 +313,9 @@ export default function ReportsPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-muted)", fontSize: "0.875rem", marginBottom: "4px" }}>
             <span>Dashboard</span>
             <ChevronRight size={14} />
-            <span style={{ color: "#f8fafc", fontWeight: 500 }}>Outstanding & Compliance Center</span>
+            <span style={{ color: "#0f172a", fontWeight: 500 }}>Outstanding & Compliance Center</span>
           </div>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#f8fafc", margin: 0 }}>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
             Outstanding & Compliance Reports
           </h1>
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: "4px 0 0 0" }}>
@@ -374,9 +374,9 @@ export default function ReportsPage() {
                 borderRadius: "8px 8px 0 0",
                 fontSize: "0.9rem",
                 fontWeight: isActive ? 600 : 500,
-                color: isActive ? "#ffffff" : "var(--text-muted)",
-                background: isActive ? "rgba(37, 99, 235, 0.2)" : "transparent",
-                borderBottom: isActive ? "2px solid #3b82f6" : "2px solid transparent",
+                color: isActive ? "#0f172a" : "#64748b",
+                background: isActive ? "#eff6ff" : "transparent",
+                borderBottom: isActive ? "2px solid #2563eb" : "2px solid transparent",
                 borderTop: "none",
                 borderLeft: "none",
                 borderRight: "none",
@@ -385,7 +385,7 @@ export default function ReportsPage() {
                 whiteSpace: "nowrap",
               }}
             >
-              <tab.icon size={16} color={isActive ? "#60a5fa" : "#94a3b8"} />
+              <tab.icon size={16} color={isActive ? "#2563eb" : "#64748b"} />
               <span>{tab.label}</span>
             </button>
           );
@@ -397,7 +397,7 @@ export default function ReportsPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", fontSize: "0.85rem" }}>
             <Calendar size={16} color="#60a5fa" />
-            <span style={{ fontWeight: 600, color: "#f8fafc" }}>Period:</span>
+            <span style={{ fontWeight: 600, color: "#0f172a" }}>Period:</span>
           </div>
 
           <div style={{ display: "flex", gap: "4px" }}>
@@ -517,7 +517,7 @@ export default function ReportsPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
               <div className="glass-panel" style={{ padding: "16px", borderRadius: "10px", borderLeft: "4px solid #3b82f6" }}>
                 <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>Total Debtors Outstanding</div>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#f8fafc", marginTop: "4px" }}>
+                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>
                   ₹{debtorsData.total_outstanding?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>
@@ -603,7 +603,7 @@ export default function ReportsPage() {
                     .map((c: any) => (
                       <tr key={c.customer_id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
                         <td style={{ padding: "12px 8px" }}>
-                          <div style={{ fontWeight: 600, color: "#f8fafc" }}>{c.customer_name}</div>
+                          <div style={{ fontWeight: 600, color: "#0f172a" }}>{c.customer_name}</div>
                           <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                             {c.mobile || "No Mobile"} {c.gst_number ? `• GST: ${c.gst_number}` : ""}
                           </div>
@@ -623,7 +623,7 @@ export default function ReportsPage() {
                         <td style={{ padding: "12px 8px", textAlign: "right", color: c.bucket_above_90 > 0 ? "#ef4444" : "var(--text-muted)", fontWeight: c.bucket_above_90 > 0 ? 600 : 400 }}>
                           ₹{c.bucket_above_90.toFixed(2)}
                         </td>
-                        <td style={{ padding: "12px 8px", textAlign: "right", fontWeight: 700, color: "#f8fafc" }}>
+                        <td style={{ padding: "12px 8px", textAlign: "right", fontWeight: 700, color: "#0f172a" }}>
                           ₹{c.total_due.toFixed(2)}
                         </td>
                         <td style={{ padding: "12px 8px", textAlign: "center" }}>
@@ -680,7 +680,7 @@ export default function ReportsPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
               <div className="glass-panel" style={{ padding: "16px", borderRadius: "10px", borderLeft: "4px solid #8b5cf6" }}>
                 <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>Total Creditors Payables</div>
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#f8fafc", marginTop: "4px" }}>
+                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>
                   ₹{creditorsData.total_outstanding?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>
@@ -756,7 +756,7 @@ export default function ReportsPage() {
                     .map((s: any) => (
                       <tr key={s.supplier_id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
                         <td style={{ padding: "12px 8px" }}>
-                          <div style={{ fontWeight: 600, color: "#f8fafc" }}>{s.supplier_name}</div>
+                          <div style={{ fontWeight: 600, color: "#0f172a" }}>{s.supplier_name}</div>
                           <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{s.mobile || "No phone"}</div>
                         </td>
                         <td style={{ padding: "12px 8px", color: "var(--text-muted)", fontSize: "0.8rem" }}>
@@ -774,7 +774,7 @@ export default function ReportsPage() {
                         <td style={{ padding: "12px 8px", textAlign: "right", color: s.bucket_above_90 > 0 ? "#ef4444" : "var(--text-muted)" }}>
                           ₹{s.bucket_above_90.toFixed(2)}
                         </td>
-                        <td style={{ padding: "12px 8px", textAlign: "right", fontWeight: 700, color: "#f8fafc" }}>
+                        <td style={{ padding: "12px 8px", textAlign: "right", fontWeight: 700, color: "#0f172a" }}>
                           ₹{s.total_due.toFixed(2)}
                         </td>
                         <td style={{ padding: "12px 8px", textAlign: "center" }}>
@@ -849,7 +849,7 @@ export default function ReportsPage() {
           {/* Reminders List */}
           <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#f8fafc", margin: 0 }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#0f172a", margin: 0 }}>
                 Pending Due Payment Reminders ({remindersData?.total_customers || 0})
               </h3>
               <div style={{ color: "#10b981", fontWeight: 700 }}>
@@ -865,7 +865,7 @@ export default function ReportsPage() {
                   style={{
                     padding: "16px",
                     borderRadius: "10px",
-                    background: "rgba(15, 23, 42, 0.6)",
+                    background: "#f8fafc",
                     border: "1px solid rgba(255, 255, 255, 0.08)",
                     display: "flex",
                     flexDirection: "column",
@@ -876,7 +876,7 @@ export default function ReportsPage() {
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: "1rem", color: "#f8fafc" }}>
+                        <div style={{ fontWeight: 600, fontSize: "1rem", color: "#0f172a" }}>
                           {rem.customer_name}
                         </div>
                         <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
@@ -965,7 +965,7 @@ export default function ReportsPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
               <div className="glass-panel" style={{ padding: "16px", borderRadius: "10px" }}>
                 <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>Total Invoices</div>
-                <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#f8fafc", marginTop: "4px" }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>
                   {gstr1Data.summary.total_invoices}
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>B2B: {gstr1Data.summary.b2b_invoices_count} | B2CS: {gstr1Data.summary.b2cs_groups_count}</div>
@@ -1044,7 +1044,7 @@ export default function ReportsPage() {
                       r.invoices.map((inv: any) => (
                         <tr key={inv.invoice_number} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
                           <td style={{ padding: "10px 8px", fontWeight: 600, color: "#60a5fa" }}>{r.ctin}</td>
-                          <td style={{ padding: "10px 8px", color: "#f8fafc" }}>{r.customer_name}</td>
+                          <td style={{ padding: "10px 8px", color: "#0f172a" }}>{r.customer_name}</td>
                           <td style={{ padding: "10px 8px", fontWeight: 500 }}>{inv.invoice_number}</td>
                           <td style={{ padding: "10px 8px", color: "var(--text-muted)" }}>{inv.invoice_date}</td>
                           <td style={{ padding: "10px 8px", textAlign: "right", fontWeight: 600 }}>₹{inv.invoice_value.toFixed(2)}</td>
@@ -1092,7 +1092,7 @@ export default function ReportsPage() {
                   <tbody>
                     {gstr1Data?.b2cs?.map((row: any, idx: number) => (
                       <tr key={idx} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                        <td style={{ padding: "10px 8px", fontWeight: 600, color: "#f8fafc" }}>State Code {row.pos}</td>
+                        <td style={{ padding: "10px 8px", fontWeight: 600, color: "#0f172a" }}>State Code {row.pos}</td>
                         <td style={{ padding: "10px 8px", textAlign: "right" }}>{row.rate}%</td>
                         <td style={{ padding: "10px 8px", textAlign: "right", fontWeight: 600 }}>₹{row.taxable_value.toFixed(2)}</td>
                         <td style={{ padding: "10px 8px", textAlign: "right" }}>₹{row.igst.toFixed(2)}</td>
@@ -1133,7 +1133,7 @@ export default function ReportsPage() {
                     {gstr1Data?.hsn_summary?.map((h: any, idx: number) => (
                       <tr key={idx} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
                         <td style={{ padding: "10px 8px", fontWeight: 700, color: "#60a5fa" }}>{h.hsn_code}</td>
-                        <td style={{ padding: "10px 8px", color: "#f8fafc" }}>{h.description}</td>
+                        <td style={{ padding: "10px 8px", color: "#0f172a" }}>{h.description}</td>
                         <td style={{ padding: "10px 8px", color: "var(--text-muted)" }}>{h.uqc}</td>
                         <td style={{ padding: "10px 8px", textAlign: "right" }}>{h.total_quantity}</td>
                         <td style={{ padding: "10px 8px", textAlign: "right" }}>₹{h.total_value.toFixed(2)}</td>
@@ -1159,7 +1159,7 @@ export default function ReportsPage() {
             {gstr1SubTab === "docs" && gstr1Data?.doc_summary && (
               <div style={{ maxWidth: "600px", display: "flex", flexDirection: "column", gap: "12px" }}>
                 <div className="glass-panel" style={{ padding: "16px", borderRadius: "8px" }}>
-                  <div style={{ fontWeight: 600, color: "#f8fafc", marginBottom: "8px" }}>
+                  <div style={{ fontWeight: 600, color: "#0f172a", marginBottom: "8px" }}>
                     {gstr1Data.doc_summary.doc_type}
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "0.85rem" }}>
@@ -1189,8 +1189,8 @@ export default function ReportsPage() {
             style={{
               padding: "24px",
               borderRadius: "12px",
-              background: "linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))",
-              border: "1px solid rgba(59, 130, 246, 0.3)",
+              background: "#f8fafc",
+              border: "1px solid #bfdbfe",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
@@ -1209,7 +1209,7 @@ export default function ReportsPage() {
               <div style={{ display: "flex", gap: "16px" }}>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>CGST Cash Payable</div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#f8fafc" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>
                     ₹{gstr3bData.net_tax_payable.cgst_net_payable.toFixed(2)}
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
@@ -1219,7 +1219,7 @@ export default function ReportsPage() {
 
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>SGST Cash Payable</div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#f8fafc" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>
                     ₹{gstr3bData.net_tax_payable.sgst_net_payable.toFixed(2)}
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
@@ -1229,7 +1229,7 @@ export default function ReportsPage() {
 
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>IGST Cash Payable</div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#f8fafc" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>
                     ₹{gstr3bData.net_tax_payable.igst_net_payable.toFixed(2)}
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
@@ -1244,7 +1244,7 @@ export default function ReportsPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
             {/* Table 3.1 Outward Liability */}
             <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "#f8fafc", marginBottom: "12px" }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "#0f172a", marginBottom: "12px" }}>
                 Table 3.1: Outward Supplies & Tax Liability
               </h3>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.825rem" }}>
@@ -1259,7 +1259,7 @@ export default function ReportsPage() {
                 </thead>
                 <tbody>
                   <tr style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                    <td style={{ padding: "8px 4px", color: "#f8fafc" }}>(a) Outward Taxable Supplies</td>
+                    <td style={{ padding: "8px 4px", color: "#0f172a" }}>(a) Outward Taxable Supplies</td>
                     <td style={{ padding: "8px 4px", textAlign: "right" }}>₹{gstr3bData.outward_supplies.taxable_outward.taxable_value.toFixed(2)}</td>
                     <td style={{ padding: "8px 4px", textAlign: "right" }}>₹{gstr3bData.outward_supplies.taxable_outward.igst.toFixed(2)}</td>
                     <td style={{ padding: "8px 4px", textAlign: "right" }}>₹{gstr3bData.outward_supplies.taxable_outward.cgst.toFixed(2)}</td>
@@ -1278,7 +1278,7 @@ export default function ReportsPage() {
 
             {/* Table 4 Eligible ITC */}
             <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "#f8fafc", marginBottom: "12px" }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "#0f172a", marginBottom: "12px" }}>
                 Table 4: Eligible Input Tax Credit (ITC)
               </h3>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.825rem" }}>
@@ -1292,7 +1292,7 @@ export default function ReportsPage() {
                 </thead>
                 <tbody>
                   <tr style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                    <td style={{ padding: "8px 4px", color: "#f8fafc" }}>(A)(5) All Other ITC (Purchase Bills)</td>
+                    <td style={{ padding: "8px 4px", color: "#0f172a" }}>(A)(5) All Other ITC (Purchase Bills)</td>
                     <td style={{ padding: "8px 4px", textAlign: "right", color: "#a78bfa" }}>₹{gstr3bData.eligible_itc.all_other_itc.igst.toFixed(2)}</td>
                     <td style={{ padding: "8px 4px", textAlign: "right", color: "#34d399" }}>₹{gstr3bData.eligible_itc.all_other_itc.cgst.toFixed(2)}</td>
                     <td style={{ padding: "8px 4px", textAlign: "right", color: "#34d399" }}>₹{gstr3bData.eligible_itc.all_other_itc.sgst.toFixed(2)}</td>
@@ -1319,7 +1319,7 @@ export default function ReportsPage() {
           <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px", borderLeft: "4px solid #3b82f6" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
               <div>
-                <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#f8fafc", margin: 0 }}>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#0f172a", margin: 0 }}>
                   GST E-Invoicing (IRN) & Dynamic QR Code Engine
                 </h3>
                 <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: "4px 0 0 0" }}>
@@ -1337,7 +1337,7 @@ export default function ReportsPage() {
 
           {/* Sales Invoices List for E-Invoice Generation */}
           <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
-            <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "#f8fafc", marginBottom: "14px" }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "#0f172a", marginBottom: "14px" }}>
               Recent Sales Invoices
             </h3>
 
@@ -1358,7 +1358,7 @@ export default function ReportsPage() {
                     const hasGSTIN = Boolean(b.party_gst && b.party_gst.length >= 15);
                     return (
                       <tr key={b.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                        <td style={{ padding: "10px 8px", fontWeight: 600, color: "#f8fafc" }}>
+                        <td style={{ padding: "10px 8px", fontWeight: 600, color: "#0f172a" }}>
                           {b.bill_number}
                         </td>
                         <td style={{ padding: "10px 8px" }}>{b.party_name}</td>
@@ -1400,7 +1400,7 @@ export default function ReportsPage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <ShieldCheck size={20} color="#10b981" />
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#f8fafc", margin: 0 }}>
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
                     {einvoiceData.is_b2b ? "Official E-Invoice (IRN) Generated" : "Dynamic UPI Payment QR"}
                   </h3>
                 </div>
@@ -1453,18 +1453,18 @@ export default function ReportsPage() {
                     <div style={{ display: "flex", gap: "16px" }}>
                       <div>
                         <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>Ack No:</div>
-                        <div style={{ fontWeight: 600, color: "#f8fafc" }}>{einvoiceData.ack_no}</div>
+                        <div style={{ fontWeight: 600, color: "#0f172a" }}>{einvoiceData.ack_no}</div>
                       </div>
                       <div>
                         <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>Ack Date:</div>
-                        <div style={{ fontWeight: 600, color: "#f8fafc" }}>{einvoiceData.ack_date}</div>
+                        <div style={{ fontWeight: 600, color: "#0f172a" }}>{einvoiceData.ack_date}</div>
                       </div>
                     </div>
                   )}
 
                   <div>
                     <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>Buyer GSTIN:</div>
-                    <div style={{ fontWeight: 600, color: "#f8fafc" }}>{einvoiceData.buyer_gstin || "Unregistered"}</div>
+                    <div style={{ fontWeight: 600, color: "#0f172a" }}>{einvoiceData.buyer_gstin || "Unregistered"}</div>
                   </div>
 
                   <div>
@@ -1518,7 +1518,7 @@ export default function ReportsPage() {
           <div className="glass-panel" style={{ width: "100%", maxWidth: "650px", borderRadius: "12px", padding: "24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <div>
-                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#f8fafc", margin: 0 }}>
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
                   {selectedDebtor.customer_name}
                 </h3>
                 <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "2px" }}>
@@ -1587,7 +1587,7 @@ export default function ReportsPage() {
           <div className="glass-panel" style={{ width: "100%", maxWidth: "650px", borderRadius: "12px", padding: "24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <div>
-                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#f8fafc", margin: 0 }}>
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
                   {selectedCreditor.supplier_name}
                 </h3>
                 <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "2px" }}>

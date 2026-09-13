@@ -222,7 +222,7 @@ export default function StaffPage() {
               maxWidth: "460px",
               padding: "30px",
               borderRadius: "14px",
-              background: "#0f172a",
+              background: "#ffffff",
             }}
             onClick={(e) => e.stopPropagation()}
           >

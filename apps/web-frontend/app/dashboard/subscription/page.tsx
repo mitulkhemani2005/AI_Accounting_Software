@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 export default function SubscriptionPage() {
-  const { user, tenant, isAdmin } = useAuth();
+  const { user, tenant, isAdmin, refreshProfile } = useAuth();
 
   const [plans, setPlans] = useState<any[]>([]);
   const [usage, setUsage] = useState<any>(null);
@@ -83,6 +83,7 @@ export default function SubscriptionPage() {
 
         setActionSuccess(verifyRes.data.message);
         await loadData();
+        if (refreshProfile) await refreshProfile();
       } else {
         // Live Razorpay Modal
         const options = {
@@ -103,6 +104,7 @@ export default function SubscriptionPage() {
               });
               setActionSuccess(verifyRes.data.message);
               await loadData();
+              if (refreshProfile) await refreshProfile();
             } catch (vErr: any) {
               setActionError(vErr.response?.data?.detail || "Payment verification failed");
             }
@@ -144,9 +146,9 @@ export default function SubscriptionPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-muted)", fontSize: "0.875rem", marginBottom: "4px" }}>
             <span>Dashboard</span>
             <ChevronRight size={14} />
-            <span style={{ color: "#f8fafc", fontWeight: 500 }}>Subscription & Plans</span>
+            <span style={{ color: "#0f172a", fontWeight: 500 }}>Subscription & Plans</span>
           </div>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#f8fafc", margin: 0 }}>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
             Subscription & Entitlements
           </h1>
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: "4px 0 0 0" }}>
@@ -186,8 +188,8 @@ export default function SubscriptionPage() {
           style={{
             padding: "24px",
             borderRadius: "14px",
-            background: "linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))",
-            border: "1px solid rgba(59, 130, 246, 0.3)",
+            background: "#f8fafc",
+            border: "1px solid #bfdbfe",
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap: "24px",
@@ -213,7 +215,7 @@ export default function SubscriptionPage() {
               </span>
             </div>
 
-            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#f8fafc", marginTop: "8px", textTransform: "capitalize" }}>
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0f172a", marginTop: "8px", textTransform: "capitalize" }}>
               {usage.subscription_tier.replace(/_/g, " ")} Plan
             </div>
 
@@ -233,7 +235,7 @@ export default function SubscriptionPage() {
 
             {usage.bills_limit ? (
               <div>
-                <div style={{ width: "100%", height: "8px", background: "rgba(255, 255, 255, 0.1)", borderRadius: "999px", overflow: "hidden" }}>
+                <div style={{ width: "100%", height: "8px", background: "#e2e8f0", borderRadius: "999px", overflow: "hidden" }}>
                   <div
                     style={{
                       width: `${usagePercent}%`,
@@ -264,7 +266,7 @@ export default function SubscriptionPage() {
         <div
           style={{
             display: "inline-flex",
-            background: "rgba(15, 23, 42, 0.8)",
+            background: "#f8fafc",
             padding: "4px",
             borderRadius: "10px",
             border: "1px solid var(--border)",
@@ -335,8 +337,8 @@ export default function SubscriptionPage() {
                   ? "2px solid #10b981"
                   : "1px solid var(--border)",
                 background: plan.is_popular
-                  ? "linear-gradient(180deg, rgba(37, 99, 235, 0.1), rgba(15, 23, 42, 0.8))"
-                  : "rgba(15, 23, 42, 0.6)",
+                  ? "linear-gradient(180deg, #eff6ff, #ffffff)"
+                  : "#ffffff",
               }}
             >
               {plan.is_popular && (
@@ -377,7 +379,7 @@ export default function SubscriptionPage() {
               )}
 
               <div>
-                <h3 style={{ fontSize: "1.35rem", fontWeight: 700, color: "#f8fafc", margin: 0 }}>
+                <h3 style={{ fontSize: "1.35rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
                   {plan.name}
                 </h3>
                 <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: "6px 0 16px 0", minHeight: "36px" }}>
@@ -386,7 +388,7 @@ export default function SubscriptionPage() {
 
                 {/* Price Display */}
                 <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginBottom: "20px" }}>
-                  <span style={{ fontSize: "2rem", fontWeight: 800, color: "#f8fafc" }}>
+                  <span style={{ fontSize: "2rem", fontWeight: 800, color: "#0f172a" }}>
                     ₹{price.toLocaleString("en-IN")}
                   </span>
                   <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
@@ -403,10 +405,10 @@ export default function SubscriptionPage() {
                       ) : (
                         <X size={16} color="#64748b" style={{ flexShrink: 0, marginTop: "2px" }} />
                       )}
-                      <span style={{ color: f.included ? "#f8fafc" : "#64748b" }}>
+                      <span style={{ color: f.included ? "#1e293b" : "#94a3b8" }}>
                         {f.name}
                         {f.highlight && (
-                          <span style={{ marginLeft: "6px", fontSize: "0.7rem", color: "#60a5fa", fontWeight: 600 }}>
+                          <span style={{ marginLeft: "6px", fontSize: "0.7rem", color: "#2563eb", fontWeight: 600 }}>
                             ({f.highlight})
                           </span>
                         )}

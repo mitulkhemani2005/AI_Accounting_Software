@@ -304,7 +304,7 @@ export default function AIDashboardPage() {
             >
               <Sparkles size={22} color="#ffffff" />
             </div>
-            <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#f8fafc", margin: 0 }}>
+            <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
               AI Intelligence Hub
             </h1>
             <span
@@ -338,9 +338,9 @@ export default function AIDashboardPage() {
               gap: "8px",
               padding: "9px 16px",
               fontSize: "0.85rem",
-              background: "rgba(139, 92, 246, 0.15)",
-              borderColor: "rgba(139, 92, 246, 0.4)",
-              color: "#c084fc",
+              background: "#f5f3ff",
+              borderColor: "#a78bfa",
+              color: "#7c3aed",
             }}
           >
             <RefreshCw size={15} className={isRecomputing ? "spin" : ""} />
@@ -358,9 +358,9 @@ export default function AIDashboardPage() {
             borderRadius: "10px",
             marginBottom: "20px",
             borderLeft: "4px solid #8b5cf6",
-            background: "rgba(139, 92, 246, 0.1)",
+            background: "#f5f3ff",
             fontSize: "0.875rem",
-            color: "#e2e8f0",
+            color: "#334155",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -369,7 +369,7 @@ export default function AIDashboardPage() {
           <span>{recomputeNotice}</span>
           <button
             onClick={() => setRecomputeNotice(null)}
-            style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer" }}
+            style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer" }}
           >
             ✕
           </button>
@@ -397,17 +397,14 @@ export default function AIDashboardPage() {
             borderRadius: "8px",
             fontSize: "0.9rem",
             fontWeight: activeTab === "assistant" ? 700 : 500,
-            background:
-              activeTab === "assistant"
-                ? "linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(236, 72, 153, 0.2))"
-                : "transparent",
-            color: activeTab === "assistant" ? "#ffffff" : "var(--text-muted)",
-            border: activeTab === "assistant" ? "1px solid rgba(139, 92, 246, 0.5)" : "1px solid transparent",
+            background: activeTab === "assistant" ? "#f5f3ff" : "transparent",
+            color: activeTab === "assistant" ? "#0f172a" : "#64748b",
+            border: activeTab === "assistant" ? "1px solid #7c3aed" : "1px solid transparent",
             cursor: "pointer",
             transition: "all 0.15s ease",
           }}
         >
-          <Bot size={18} color={activeTab === "assistant" ? "#c084fc" : "#94a3b8"} />
+          <Bot size={18} color={activeTab === "assistant" ? "#7c3aed" : "#64748b"} />
           <span>AI Financial Assistant</span>
         </button>
 
@@ -421,17 +418,14 @@ export default function AIDashboardPage() {
             borderRadius: "8px",
             fontSize: "0.9rem",
             fontWeight: activeTab === "restock" ? 700 : 500,
-            background:
-              activeTab === "restock"
-                ? "linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(217, 119, 6, 0.2))"
-                : "transparent",
-            color: activeTab === "restock" ? "#ffffff" : "var(--text-muted)",
-            border: activeTab === "restock" ? "1px solid rgba(245, 158, 11, 0.5)" : "1px solid transparent",
+            background: activeTab === "restock" ? "#fffbeb" : "transparent",
+            color: activeTab === "restock" ? "#0f172a" : "#64748b",
+            border: activeTab === "restock" ? "1px solid #d97706" : "1px solid transparent",
             cursor: "pointer",
             transition: "all 0.15s ease",
           }}
         >
-          <TrendingUp size={18} color={activeTab === "restock" ? "#fbbf24" : "#94a3b8"} />
+          <TrendingUp size={18} color={activeTab === "restock" ? "#d97706" : "#64748b"} />
           <span>Predictive Restock Forecast</span>
           {restockData?.critical_count ? (
             <span
@@ -459,17 +453,14 @@ export default function AIDashboardPage() {
             borderRadius: "8px",
             fontSize: "0.9rem",
             fontWeight: activeTab === "basket" ? 700 : 500,
-            background:
-              activeTab === "basket"
-                ? "linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))"
-                : "transparent",
-            color: activeTab === "basket" ? "#ffffff" : "var(--text-muted)",
-            border: activeTab === "basket" ? "1px solid rgba(59, 130, 246, 0.5)" : "1px solid transparent",
+            background: activeTab === "basket" ? "#eff6ff" : "transparent",
+            color: activeTab === "basket" ? "#0f172a" : "#64748b",
+            border: activeTab === "basket" ? "1px solid #2563eb" : "1px solid transparent",
             cursor: "pointer",
             transition: "all 0.15s ease",
           }}
         >
-          <ShoppingBag size={18} color={activeTab === "basket" ? "#60a5fa" : "#94a3b8"} />
+          <ShoppingBag size={18} color={activeTab === "basket" ? "#2563eb" : "#64748b"} />
           <span>Market Basket & Co-Purchases</span>
           {rulesData?.total_rules ? (
             <span
@@ -531,17 +522,15 @@ export default function AIDashboardPage() {
                       padding: "14px 18px",
                       borderRadius: m.sender === "user" ? "14px 14px 2px 14px" : "14px 14px 14px 2px",
                       background:
-                        m.sender === "user"
-                          ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
-                          : "linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9))",
+                        m.sender === "user" ? "linear-gradient(135deg, #2563eb, #1d4ed8)" : "#f5f3ff",
                       border:
                         m.sender === "user"
                           ? "1px solid rgba(59, 130, 246, 0.5)"
                           : "1px solid rgba(139, 92, 246, 0.3)",
-                      color: "#f8fafc",
+                      color: m.sender === "user" ? "#ffffff" : "#0f172a",
                       fontSize: "0.925rem",
                       lineHeight: 1.6,
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                     }}
                   >
                     {/* Header with intent and confidence if AI */}
@@ -553,15 +542,15 @@ export default function AIDashboardPage() {
                           justifyContent: "space-between",
                           marginBottom: "8px",
                           paddingBottom: "6px",
-                          borderBottom: "1px solid rgba(255,255,255,0.08)",
+                          borderBottom: "1px solid #e2e8f0",
                           fontSize: "0.75rem",
                         }}
                       >
-                        <span style={{ color: "#c084fc", fontWeight: 700, textTransform: "uppercase" }}>
+                        <span style={{ color: "#7c3aed", fontWeight: 700, textTransform: "uppercase" }}>
                           🧠 Intent: {m.intent.replace(/_/g, " ")}
                         </span>
                         {m.confidence && (
-                          <span style={{ color: "#34d399", fontWeight: 600 }}>
+                          <span style={{ color: "#059669", fontWeight: 600 }}>
                             {Math.round(m.confidence * 100)}% confidence
                           </span>
                         )}
@@ -573,7 +562,7 @@ export default function AIDashboardPage() {
                       {m.text.split("\n").map((line, i) => {
                         if (line.startsWith("### ")) {
                           return (
-                            <h3 key={i} style={{ fontSize: "1.1rem", fontWeight: 700, margin: "8px 0 6px 0", color: "#60a5fa" }}>
+                            <h3 key={i} style={{ fontSize: "1.1rem", fontWeight: 700, margin: "8px 0 6px 0", color: "#2563eb" }}>
                               {line.replace("### ", "")}
                             </h3>
                           );
@@ -590,12 +579,12 @@ export default function AIDashboardPage() {
                             <blockquote
                               key={i}
                               style={{
-                                borderLeft: "3px solid #8b5cf6",
+                                borderLeft: "3px solid #7c3aed",
                                 paddingLeft: "10px",
                                 margin: "8px 0",
-                                color: "#cbd5e1",
+                                color: "#475569",
                                 fontStyle: "italic",
-                                background: "rgba(139, 92, 246, 0.08)",
+                                background: "#f5f3ff",
                                 padding: "6px 10px",
                                 borderRadius: "4px",
                               }}
@@ -614,7 +603,7 @@ export default function AIDashboardPage() {
                         style={{
                           marginTop: "12px",
                           paddingTop: "10px",
-                          borderTop: "1px solid rgba(255,255,255,0.08)",
+                          borderTop: "1px solid #e2e8f0",
                           display: "flex",
                           flexWrap: "wrap",
                           gap: "6px",
@@ -625,9 +614,9 @@ export default function AIDashboardPage() {
                             key={actIdx}
                             onClick={() => handleSendQuery(action)}
                             style={{
-                              background: "rgba(139, 92, 246, 0.15)",
+                              background: "#f5f3ff",
                               border: "1px solid rgba(139, 92, 246, 0.4)",
-                              color: "#e2e8f0",
+                              color: "#334155",
                               fontSize: "0.75rem",
                               padding: "4px 10px",
                               borderRadius: "14px",
@@ -638,14 +627,14 @@ export default function AIDashboardPage() {
                               transition: "all 0.15s ease",
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "rgba(139, 92, 246, 0.35)";
+                              e.currentTarget.style.background = "#ede9fe";
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.background = "rgba(139, 92, 246, 0.15)";
+                              e.currentTarget.style.background = "#f5f3ff";
                             }}
                           >
                             <span>{action}</span>
-                            <ChevronRight size={12} color="#c084fc" />
+                            <ChevronRight size={12} color="#7c3aed" />
                           </button>
                         ))}
                       </div>
@@ -667,7 +656,7 @@ export default function AIDashboardPage() {
               ))}
 
               {isAsking && (
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", color: "#c084fc" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", color: "#7c3aed" }}>
                   <Loader2 size={18} className="spin" />
                   <span style={{ fontSize: "0.85rem" }}>Querying financial database & computing aggregates...</span>
                 </div>
@@ -679,8 +668,8 @@ export default function AIDashboardPage() {
             <div
               style={{
                 padding: "16px 20px",
-                background: "rgba(15, 23, 42, 0.95)",
-                borderTop: "1px solid rgba(255,255,255,0.08)",
+                background: "#f8fafc",
+                borderTop: "1px solid #e2e8f0",
                 display: "flex",
                 gap: "12px",
                 alignItems: "center",
@@ -697,8 +686,8 @@ export default function AIDashboardPage() {
                 disabled={isAsking}
                 style={{
                   flex: 1,
-                  background: "rgba(30, 41, 59, 0.7)",
-                  border: "1px solid rgba(139, 92, 246, 0.3)",
+                  background: "#f8fafc",
+                  border: "1px solid #ddd6fe",
                   borderRadius: "10px",
                   padding: "12px 16px",
                   color: "#ffffff",
@@ -739,7 +728,7 @@ export default function AIDashboardPage() {
                   fontSize: "0.8rem",
                   fontWeight: 700,
                   textTransform: "uppercase",
-                  color: "#c084fc",
+                  color: "#7c3aed",
                   letterSpacing: "0.05em",
                   marginBottom: "12px",
                   display: "flex",
@@ -764,9 +753,9 @@ export default function AIDashboardPage() {
                       textAlign: "left",
                       padding: "10px 12px",
                       borderRadius: "8px",
-                      background: "rgba(30, 41, 59, 0.4)",
-                      border: "1px solid rgba(255, 255, 255, 0.05)",
-                      color: "#e2e8f0",
+                      background: "#f1f5f9",
+                      border: "1px solid #e2e8f0",
+                      color: "#334155",
                       fontSize: "0.825rem",
                       cursor: "pointer",
                       transition: "all 0.15s ease",
@@ -777,7 +766,7 @@ export default function AIDashboardPage() {
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.05)";
-                      e.currentTarget.style.background = "rgba(30, 41, 59, 0.4)";
+                      e.currentTarget.style.background = "#f1f5f9";
                     }}
                   >
                     <div style={{ fontWeight: 600, color: "#93c5fd", marginBottom: "2px" }}>{item.label}</div>
@@ -792,11 +781,11 @@ export default function AIDashboardPage() {
               style={{
                 padding: "16px",
                 borderRadius: "14px",
-                background: "linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 27, 75, 0.4))",
-                borderLeft: "3px solid #8b5cf6",
+                background: "#faf5ff",
+                borderLeft: "3px solid #7c3aed",
               }}
             >
-              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#f8fafc", marginBottom: "4px" }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0f172a", marginBottom: "4px" }}>
                 🔒 Zero Data Hallucination Guarantee
               </div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", lineHeight: 1.4 }}>
@@ -827,7 +816,7 @@ export default function AIDashboardPage() {
                 padding: "20px",
                 borderRadius: "14px",
                 borderLeft: "4px solid #ef4444",
-                background: "linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(15, 23, 42, 0.6))",
+                background: "#fff1f2",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
@@ -850,7 +839,7 @@ export default function AIDashboardPage() {
                 padding: "20px",
                 borderRadius: "14px",
                 borderLeft: "4px solid #f59e0b",
-                background: "linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(15, 23, 42, 0.6))",
+                background: "#fffbeb",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
@@ -873,11 +862,11 @@ export default function AIDashboardPage() {
                 padding: "20px",
                 borderRadius: "14px",
                 borderLeft: "4px solid #10b981",
-                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(15, 23, 42, 0.6))",
+                background: "#f0fdf4",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", color: "#34d399" }}>
+                <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", color: "#059669" }}>
                   ✅ Healthy Stock
                 </span>
                 <CheckCircle2 size={18} color="#10b981" />
@@ -896,11 +885,11 @@ export default function AIDashboardPage() {
                 padding: "20px",
                 borderRadius: "14px",
                 borderLeft: "4px solid #8b5cf6",
-                background: "linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(15, 23, 42, 0.6))",
+                background: "#faf5ff",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", color: "#c084fc" }}>
+                <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", color: "#7c3aed" }}>
                   💰 Est. Reorder Investment
                 </span>
                 <DollarSign size={18} color="#8b5cf6" />
@@ -944,7 +933,7 @@ export default function AIDashboardPage() {
                           : filterOpt === "HEALTHY"
                           ? "rgba(16, 185, 129, 0.25)"
                           : "rgba(139, 92, 246, 0.25)"
-                        : "rgba(30, 41, 59, 0.4)",
+                        : "#f1f5f9",
                     color:
                       restockFilter === filterOpt
                         ? filterOpt === "CRITICAL"
@@ -983,7 +972,7 @@ export default function AIDashboardPage() {
                 <thead>
                   <tr
                     style={{
-                      background: "rgba(15, 23, 42, 0.8)",
+                      background: "#f8fafc",
                       borderBottom: "1px solid var(--border)",
                       color: "var(--text-muted)",
                       fontSize: "0.75rem",
@@ -1024,10 +1013,10 @@ export default function AIDashboardPage() {
                           borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
                           transition: "background 0.15s ease",
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(30, 41, 59, 0.3)")}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                       >
-                        <td style={{ padding: "14px 18px", fontWeight: 600, color: "#f8fafc" }}>
+                        <td style={{ padding: "14px 18px", fontWeight: 600, color: "#0f172a" }}>
                           {item.item_name}
                         </td>
                         <td style={{ padding: "14px 18px", color: "var(--text-muted)" }}>
@@ -1048,7 +1037,7 @@ export default function AIDashboardPage() {
                         </td>
                         <td style={{ padding: "14px 18px", textAlign: "right", fontWeight: 600 }}>
                           {item.days_left >= 999 ? (
-                            <span style={{ color: "#34d399" }}>&gt; 90 days</span>
+                            <span style={{ color: "#059669" }}>&gt; 90 days</span>
                           ) : (
                             <span
                               style={{
@@ -1137,7 +1126,7 @@ export default function AIDashboardPage() {
             }}
           >
             <div>
-              <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f8fafc", marginBottom: "4px" }}>
+              <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginBottom: "4px" }}>
                 🛒 Apriori Cross-Sell Engine
               </div>
               <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
@@ -1157,7 +1146,7 @@ export default function AIDashboardPage() {
                   onChange={(e) => setMinConfidence(parseFloat(e.target.value))}
                   style={{ width: "100px", accentColor: "#8b5cf6" }}
                 />
-                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#c084fc", minWidth: "36px" }}>
+                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#7c3aed", minWidth: "36px" }}>
                   {Math.round(minConfidence * 100)}%
                 </span>
               </div>
@@ -1181,7 +1170,7 @@ export default function AIDashboardPage() {
           ) : !rulesData || rulesData.rules.length === 0 ? (
             <div className="glass-panel" style={{ padding: "50px", textAlign: "center", borderRadius: "14px" }}>
               <ShoppingBag size={40} color="#64748b" style={{ margin: "0 auto 12px auto" }} />
-              <div style={{ fontSize: "1.1rem", fontWeight: 600, color: "#f8fafc", marginBottom: "6px" }}>
+              <div style={{ fontSize: "1.1rem", fontWeight: 600, color: "#0f172a", marginBottom: "6px" }}>
                 No Frequent Item Associations Found
               </div>
               <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", maxWidth: "450px", margin: "0 auto 16px auto" }}>
@@ -1207,7 +1196,7 @@ export default function AIDashboardPage() {
                     padding: "18px",
                     borderRadius: "14px",
                     border: "1px solid rgba(139, 92, 246, 0.2)",
-                    background: "linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8))",
+                    background: "#ffffff",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
@@ -1232,7 +1221,7 @@ export default function AIDashboardPage() {
                         alignItems: "center",
                         gap: "10px",
                         marginBottom: "16px",
-                        background: "rgba(15, 23, 42, 0.5)",
+                        background: "#f1f5f9",
                         padding: "12px",
                         borderRadius: "10px",
                       }}
@@ -1246,13 +1235,13 @@ export default function AIDashboardPage() {
                         </div>
                       </div>
 
-                      <ArrowRight size={18} color="#c084fc" style={{ flexShrink: 0 }} />
+                      <ArrowRight size={18} color="#7c3aed" style={{ flexShrink: 0 }} />
 
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
                           Recommend
                         </div>
-                        <div style={{ fontWeight: 700, color: "#60a5fa", fontSize: "0.9rem" }}>
+                        <div style={{ fontWeight: 700, color: "#2563eb", fontSize: "0.9rem" }}>
                           {rule.consequent_name}
                         </div>
                       </div>
@@ -1272,19 +1261,19 @@ export default function AIDashboardPage() {
                   >
                     <div>
                       <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Confidence</div>
-                      <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#34d399" }}>
+                      <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#059669" }}>
                         {Math.round(rule.confidence * 100)}%
                       </div>
                     </div>
                     <div>
                       <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Lift Factor</div>
-                      <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#60a5fa" }}>
+                      <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#2563eb" }}>
                         {rule.lift.toFixed(2)}x
                       </div>
                     </div>
                     <div>
                       <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Support</div>
-                      <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#e2e8f0" }}>
+                      <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#334155" }}>
                         {Math.round(rule.support * 100)}%
                       </div>
                     </div>
@@ -1320,8 +1309,8 @@ export default function AIDashboardPage() {
               width: "100%",
               borderRadius: "16px",
               padding: "28px",
-              border: "1px solid rgba(16, 185, 129, 0.4)",
-              background: "linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))",
+              border: "1px solid #6ee7b7",
+              background: "#ffffff",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
@@ -1333,24 +1322,24 @@ export default function AIDashboardPage() {
               </div>
               <button
                 onClick={() => setQuickStockItem(null)}
-                style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.2rem" }}
+                style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer", fontSize: "1.2rem" }}
               >
                 ✕
               </button>
             </div>
 
             {stockInSuccess ? (
-              <div style={{ padding: "20px", textAlign: "center", color: "#34d399", fontSize: "0.95rem" }}>
+              <div style={{ padding: "20px", textAlign: "center", color: "#059669", fontSize: "0.95rem" }}>
                 {stockInSuccess}
               </div>
             ) : (
               <form onSubmit={handleQuickStockInSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "12px", borderRadius: "8px" }}>
+                <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px" }}>
                   <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Selected Product:</div>
                   <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#ffffff", marginTop: "2px" }}>
                     {quickStockItem.item_name}
                   </div>
-                  <div style={{ display: "flex", gap: "14px", marginTop: "8px", fontSize: "0.775rem", color: "#94a3b8" }}>
+                  <div style={{ display: "flex", gap: "14px", marginTop: "8px", fontSize: "0.775rem", color: "#64748b" }}>
                     <span>Current Stock: <strong>{quickStockItem.current_stock}</strong></span>
                     <span>Daily Velocity: <strong>{quickStockItem.avg_daily_sales}</strong></span>
                     <span>Reorder Point: <strong>{quickStockItem.reorder_point}</strong></span>
@@ -1358,7 +1347,7 @@ export default function AIDashboardPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.85rem", color: "#cbd5e1", marginBottom: "6px" }}>
+                  <label style={{ display: "block", fontSize: "0.85rem", color: "#475569", marginBottom: "6px" }}>
                     Restock Quantity to Add:
                   </label>
                   <input
@@ -1371,14 +1360,14 @@ export default function AIDashboardPage() {
                       width: "100%",
                       padding: "10px 14px",
                       borderRadius: "8px",
-                      background: "rgba(30, 41, 59, 0.8)",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      background: "#f1f5f9",
+                      border: "1px solid #cbd5e1",
                       color: "#ffffff",
                       fontSize: "1rem",
                       fontWeight: 700,
                     }}
                   />
-                  <div style={{ fontSize: "0.75rem", color: "#34d399", marginTop: "4px" }}>
+                  <div style={{ fontSize: "0.75rem", color: "#059669", marginTop: "4px" }}>
                     AI Recommended Quantity: +{quickStockItem.suggested_quantity} units
                   </div>
                 </div>

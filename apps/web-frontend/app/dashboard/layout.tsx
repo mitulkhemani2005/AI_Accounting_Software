@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Navbar } from "@/components/Navbar";
-import { Sidebar } from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+
+import { FundSafeTopMenu } from "@/components/FundSafeTopMenu";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -32,12 +32,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           alignItems: "center",
           justifyContent: "center",
           gap: "16px",
-          backgroundColor: "#0b132b",
+          backgroundColor: "#ffffff",
         }}
       >
-        <Loader2 className="animate-spin" size={36} color="#3b82f6" />
-        <div style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>
-          Loading workspace...
+        <Loader2 className="animate-spin" size={36} color="#2563eb" />
+        <div style={{ color: "#64748b", fontSize: "0.95rem" }}>
+          Loading FundSafe workspace...
         </div>
       </div>
     );
@@ -48,14 +48,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#0b132b" }}>
-      <Navbar />
-      <div style={{ display: "flex", flex: 1 }}>
-        <Sidebar />
-        <main style={{ flex: 1, padding: "32px", overflowY: "auto", maxWidth: "1200px" }}>
-          {children}
-        </main>
-      </div>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#ffffff", color: "#0f172a" }}>
+      <FundSafeTopMenu />
+      <main style={{ flex: 1, padding: "0", overflowY: "auto", maxWidth: "100%", width: "100%", backgroundColor: "#ffffff" }}>
+        {children}
+      </main>
     </div>
   );
 }

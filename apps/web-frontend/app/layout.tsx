@@ -3,8 +3,8 @@ import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AI Accounting Software | Multi-tenant POS, Inventory & Full Accounting",
-  description: "GST-compliant multi-tenant cloud accounting and billing platform with AI suggestions for SMBs in India",
+  title: "FundSafe ERP & POS | Multi-tenant Accounting, POS & Inventory",
+  description: "FundSafe - GST-compliant enterprise accounting, billing, inventory & point of sale platform for Indian businesses",
 };
 
 export default function RootLayout({

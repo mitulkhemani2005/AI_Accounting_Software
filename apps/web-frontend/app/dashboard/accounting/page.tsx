@@ -388,11 +388,11 @@ export default function AccountingPage() {
       <div className="glass-panel" style={{ padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ background: "rgba(56, 189, 248, 0.15)", padding: "8px", borderRadius: "10px", color: "#38bdf8" }}>
+            <div style={{ background: "rgba(56, 189, 248, 0.15)", padding: "8px", borderRadius: "10px", color: "#0891b2" }}>
               <BookOpen size={24} />
             </div>
             <div>
-              <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#f8fafc", margin: 0 }}>
+              <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
                 Accounting Engine & Financial Books
               </h1>
               <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
@@ -405,20 +405,20 @@ export default function AccountingPage() {
         {/* Global Action Buttons & Date Controls */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           {/* Date Filter Bar */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(15, 23, 42, 0.7)", padding: "4px 10px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "#f1f5f9", padding: "4px 10px", borderRadius: "8px", border: "1px solid var(--border)" }}>
             <Calendar size={14} color="#94a3b8" />
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              style={{ background: "transparent", border: "none", color: "#f8fafc", fontSize: "0.75rem", outline: "none" }}
+              style={{ background: "transparent", border: "none", color: "#0f172a", fontSize: "0.75rem", outline: "none" }}
             />
             <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>to</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              style={{ background: "transparent", border: "none", color: "#f8fafc", fontSize: "0.75rem", outline: "none" }}
+              style={{ background: "transparent", border: "none", color: "#0f172a", fontSize: "0.75rem", outline: "none" }}
             />
           </div>
 
@@ -489,7 +489,7 @@ export default function AccountingPage() {
                 <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>Total Revenue</span>
                 <TrendingUp size={18} color="#34d399" />
               </div>
-              <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#34d399" }}>
+              <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#059669" }}>
                 ₹{plData?.sales_revenue?.toFixed(2) || "0.00"}
               </div>
               <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Sales Account (Taxable)</div>
@@ -549,7 +549,7 @@ export default function AccountingPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <Scale size={24} color={trialBalanceData.is_balanced ? "#10b981" : "#ef4444"} />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#f8fafc" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#0f172a" }}>
                     Double-Entry Balancing Integrity: {trialBalanceData.is_balanced ? "100% Balanced ✅" : "Out of Balance ❌"}
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
@@ -606,7 +606,7 @@ export default function AccountingPage() {
             </div>
 
             {dayBookData && (
-              <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#38bdf8" }}>
+              <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#0891b2" }}>
                 {dayBookData.total_entries} Entries | Turnover: ₹{dayBookData.total_debit.toFixed(2)}
               </div>
             )}
@@ -657,7 +657,7 @@ export default function AccountingPage() {
                           <td style={{ padding: "10px 8px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                             {new Date(e.entry_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                           </td>
-                          <td style={{ padding: "10px 8px", fontWeight: 700, color: "#f8fafc" }}>
+                          <td style={{ padding: "10px 8px", fontWeight: 700, color: "#0f172a" }}>
                             {e.entry_number}
                           </td>
                           <td style={{ padding: "10px 8px" }}>
@@ -668,19 +668,19 @@ export default function AccountingPage() {
                           <td style={{ padding: "10px 8px", color: "#f1f5f9" }}>
                             {e.narration || "No narration"}
                           </td>
-                          <td style={{ padding: "10px 8px", textAlign: "right", fontWeight: 700, color: "#34d399" }}>
+                          <td style={{ padding: "10px 8px", textAlign: "right", fontWeight: 700, color: "#059669" }}>
                             ₹{e.total_amount.toFixed(2)}
                           </td>
-                          <td style={{ padding: "10px 8px", textAlign: "center", color: "#38bdf8" }}>
+                          <td style={{ padding: "10px 8px", textAlign: "center", color: "#0891b2" }}>
                             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                           </td>
                         </tr>
 
                         {/* Expanded Double-Entry Breakdown */}
                         {isExpanded && (
-                          <tr style={{ background: "rgba(15, 23, 42, 0.95)" }}>
+                          <tr style={{ background: "#f8fafc" }}>
                             <td colSpan={6} style={{ padding: "12px 16px" }}>
-                              <div style={{ fontSize: "0.775rem", fontWeight: 700, color: "#38bdf8", marginBottom: "6px" }}>
+                              <div style={{ fontSize: "0.775rem", fontWeight: 700, color: "#0891b2", marginBottom: "6px" }}>
                                 Double-Entry Ledger Breakdown ({e.items.length} lines):
                               </div>
                               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
@@ -695,8 +695,8 @@ export default function AccountingPage() {
                                 <tbody>
                                   {e.items.map((it: any) => (
                                     <tr key={it.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                                      <td style={{ padding: "4px 6px", color: "#f8fafc", fontWeight: 600 }}>
-                                        <span style={{ color: "#38bdf8", fontFamily: "monospace" }}>[{it.account_code}]</span> {it.account_name}
+                                      <td style={{ padding: "4px 6px", color: "#0f172a", fontWeight: 600 }}>
+                                        <span style={{ color: "#0891b2", fontFamily: "monospace" }}>[{it.account_code}]</span> {it.account_name}
                                       </td>
                                       <td style={{ padding: "4px 6px", color: "var(--text-muted)" }}>{it.narration || "-"}</td>
                                       <td style={{ padding: "4px 6px", textAlign: "right", color: it.debit > 0 ? "#34d399" : "var(--text-muted)", fontWeight: it.debit > 0 ? 700 : 400 }}>
@@ -771,10 +771,10 @@ export default function AccountingPage() {
 
             {cashBankData && (
               <div style={{ display: "flex", gap: "16px", alignItems: "center", fontSize: "0.85rem" }}>
-                <div>Opening: <strong style={{ color: "#f8fafc" }}>₹{cashBankData.opening_balance.toFixed(2)}</strong></div>
-                <div>Receipts: <strong style={{ color: "#34d399" }}>+₹{cashBankData.total_received.toFixed(2)}</strong></div>
+                <div>Opening: <strong style={{ color: "#0f172a" }}>₹{cashBankData.opening_balance.toFixed(2)}</strong></div>
+                <div>Receipts: <strong style={{ color: "#059669" }}>+₹{cashBankData.total_received.toFixed(2)}</strong></div>
                 <div>Payments: <strong style={{ color: "#f87171" }}>-₹{cashBankData.total_paid.toFixed(2)}</strong></div>
-                <div>Closing Balance: <strong style={{ color: "#38bdf8", fontSize: "1rem" }}>₹{cashBankData.closing_balance.toFixed(2)}</strong></div>
+                <div>Closing Balance: <strong style={{ color: "#0891b2", fontSize: "1rem" }}>₹{cashBankData.closing_balance.toFixed(2)}</strong></div>
               </div>
             )}
           </div>
@@ -806,7 +806,7 @@ export default function AccountingPage() {
                       <td style={{ padding: "10px 8px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                         {new Date(tx.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
-                      <td style={{ padding: "10px 8px", fontWeight: 700, color: "#f8fafc" }}>{tx.entry_number}</td>
+                      <td style={{ padding: "10px 8px", fontWeight: 700, color: "#0f172a" }}>{tx.entry_number}</td>
                       <td style={{ padding: "10px 8px", textTransform: "uppercase", fontSize: "0.75rem", color: "var(--text-muted)" }}>{tx.voucher_type}</td>
                       <td style={{ padding: "10px 8px", color: "#f1f5f9" }}>{tx.particulars}</td>
                       <td style={{ padding: "10px 8px", textAlign: "right", color: tx.debit > 0 ? "#34d399" : "var(--text-muted)", fontWeight: tx.debit > 0 ? 700 : 400 }}>
@@ -852,9 +852,9 @@ export default function AccountingPage() {
 
             {ledgerData && (
               <div style={{ display: "flex", gap: "16px", alignItems: "center", fontSize: "0.85rem" }}>
-                <div>Opening: <strong style={{ color: "#f8fafc" }}>₹{ledgerData.opening_balance.toFixed(2)}</strong></div>
-                <div>Debits: <strong style={{ color: "#34d399" }}>₹{ledgerData.total_debit.toFixed(2)}</strong></div>
-                <div>Credits: <strong style={{ color: "#38bdf8" }}>₹{ledgerData.total_credit.toFixed(2)}</strong></div>
+                <div>Opening: <strong style={{ color: "#0f172a" }}>₹{ledgerData.opening_balance.toFixed(2)}</strong></div>
+                <div>Debits: <strong style={{ color: "#059669" }}>₹{ledgerData.total_debit.toFixed(2)}</strong></div>
+                <div>Credits: <strong style={{ color: "#0891b2" }}>₹{ledgerData.total_credit.toFixed(2)}</strong></div>
                 <div>Closing: <strong style={{ color: "#f59e0b", fontSize: "1rem" }}>₹{ledgerData.closing_balance.toFixed(2)}</strong></div>
               </div>
             )}
@@ -887,7 +887,7 @@ export default function AccountingPage() {
                       <td style={{ padding: "10px 8px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                         {new Date(ent.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
-                      <td style={{ padding: "10px 8px", fontWeight: 700, color: "#f8fafc" }}>{ent.entry_number}</td>
+                      <td style={{ padding: "10px 8px", fontWeight: 700, color: "#0f172a" }}>{ent.entry_number}</td>
                       <td style={{ padding: "10px 8px", textTransform: "uppercase", fontSize: "0.75rem", color: "var(--text-muted)" }}>{ent.voucher_type}</td>
                       <td style={{ padding: "10px 8px", color: "#f1f5f9" }}>{ent.particulars}</td>
                       <td style={{ padding: "10px 8px", textAlign: "right", color: ent.debit > 0 ? "#34d399" : "var(--text-muted)", fontWeight: ent.debit > 0 ? 700 : 400 }}>
@@ -915,7 +915,7 @@ export default function AccountingPage() {
         <div className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
             <div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#f8fafc", margin: 0 }}>Trial Balance Statement</h3>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>Trial Balance Statement</h3>
               <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>As of {new Date(endDate).toLocaleDateString("en-IN")}</p>
             </div>
 
@@ -960,8 +960,8 @@ export default function AccountingPage() {
                 <tbody>
                   {trialBalanceData.rows.map((r: any) => (
                     <tr key={r.account_id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                      <td style={{ padding: "8px", fontFamily: "monospace", color: "#38bdf8", fontWeight: 700 }}>{r.account_code}</td>
-                      <td style={{ padding: "8px", fontWeight: 600, color: "#f8fafc" }}>{r.account_name}</td>
+                      <td style={{ padding: "8px", fontFamily: "monospace", color: "#0891b2", fontWeight: 700 }}>{r.account_code}</td>
+                      <td style={{ padding: "8px", fontWeight: 600, color: "#0f172a" }}>{r.account_name}</td>
                       <td style={{ padding: "8px", color: "var(--text-muted)", fontSize: "0.75rem" }}>{r.group_name || "-"}</td>
                       <td style={{ padding: "8px", textAlign: "right", color: "var(--text-muted)" }}>₹{r.debit_total.toFixed(2)}</td>
                       <td style={{ padding: "8px", textAlign: "right", color: "var(--text-muted)" }}>₹{r.credit_total.toFixed(2)}</td>
@@ -975,13 +975,13 @@ export default function AccountingPage() {
                   ))}
                   {/* Grand Totals */}
                   <tr style={{ borderTop: "2px solid #38bdf8", background: "rgba(56, 189, 248, 0.1)", fontWeight: 800 }}>
-                    <td colSpan={5} style={{ padding: "12px 8px", color: "#f8fafc", fontSize: "0.95rem" }}>
+                    <td colSpan={5} style={{ padding: "12px 8px", color: "#0f172a", fontSize: "0.95rem" }}>
                       GRAND TOTAL
                     </td>
-                    <td style={{ padding: "12px 8px", textAlign: "right", color: "#34d399", fontSize: "0.95rem" }}>
+                    <td style={{ padding: "12px 8px", textAlign: "right", color: "#059669", fontSize: "0.95rem" }}>
                       ₹{trialBalanceData.total_debit.toFixed(2)}
                     </td>
-                    <td style={{ padding: "12px 8px", textAlign: "right", color: "#38bdf8", fontSize: "0.95rem" }}>
+                    <td style={{ padding: "12px 8px", textAlign: "right", color: "#0891b2", fontSize: "0.95rem" }}>
                       ₹{trialBalanceData.total_credit.toFixed(2)}
                     </td>
                   </tr>
@@ -998,7 +998,7 @@ export default function AccountingPage() {
       {activeTab === "pl" && (
         <div className="glass-panel" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
           <div>
-            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#f8fafc", margin: 0 }}>Statement of Profit & Loss</h3>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>Statement of Profit & Loss</h3>
             <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
               Period: {new Date(startDate).toLocaleDateString("en-IN")} to {new Date(endDate).toLocaleDateString("en-IN")}
             </p>
@@ -1061,13 +1061,13 @@ export default function AccountingPage() {
 
               {/* Incomes & Revenue */}
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#34d399", borderBottom: "1px solid var(--border)", paddingBottom: "6px" }}>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#059669", borderBottom: "1px solid var(--border)", paddingBottom: "6px" }}>
                   Income & Revenue (Credit)
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", padding: "6px 0" }}>
                   <span>Sales Revenue (Taxable):</span>
-                  <strong style={{ color: "#34d399" }}>₹{plData.sales_revenue.toFixed(2)}</strong>
+                  <strong style={{ color: "#059669" }}>₹{plData.sales_revenue.toFixed(2)}</strong>
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontWeight: 700, color: plData.gross_profit >= 0 ? "#34d399" : "#f87171" }}>
@@ -1076,7 +1076,7 @@ export default function AccountingPage() {
                 </div>
 
                 {/* Other Incomes */}
-                <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#38bdf8", marginTop: "12px", borderBottom: "1px solid var(--border)", paddingBottom: "4px" }}>
+                <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0891b2", marginTop: "12px", borderBottom: "1px solid var(--border)", paddingBottom: "4px" }}>
                   Other Operating Incomes
                 </div>
 
@@ -1107,7 +1107,7 @@ export default function AccountingPage() {
                     alignItems: "center",
                   }}
                 >
-                  <span style={{ fontSize: "1.05rem", fontWeight: 800, color: "#f8fafc" }}>
+                  <span style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
                     NET PROFIT / (LOSS):
                   </span>
                   <span style={{ fontSize: "1.3rem", fontWeight: 800, color: plData.net_profit >= 0 ? "#34d399" : "#f87171" }}>
@@ -1127,7 +1127,7 @@ export default function AccountingPage() {
         <div className="glass-panel" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#f8fafc", margin: 0 }}>Balance Sheet</h3>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>Balance Sheet</h3>
               <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
                 As of {new Date(endDate).toLocaleDateString("en-IN")}
               </p>
@@ -1158,12 +1158,12 @@ export default function AccountingPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
               {/* LIABILITIES & EQUITY */}
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ fontSize: "1rem", fontWeight: 800, color: "#38bdf8", borderBottom: "2px solid #38bdf8", paddingBottom: "6px" }}>
+                <div style={{ fontSize: "1rem", fontWeight: 800, color: "#0891b2", borderBottom: "2px solid #38bdf8", paddingBottom: "6px" }}>
                   Liabilities & Owner Equity
                 </div>
 
                 {/* Capital & Reserves */}
-                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#f8fafc" }}>Capital & Reserves:</div>
+                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#0f172a" }}>Capital & Reserves:</div>
                 {balanceSheetData.capital_and_equity.items.map((it: any) => (
                   <div key={it.code} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.825rem", padding: "2px 0", color: "var(--text-muted)" }}>
                     <span>{it.name}:</span>
@@ -1176,7 +1176,7 @@ export default function AccountingPage() {
                 </div>
 
                 {/* Current Liabilities */}
-                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#f8fafc", marginTop: "12px" }}>Current Liabilities & Taxes:</div>
+                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#0f172a", marginTop: "12px" }}>Current Liabilities & Taxes:</div>
                 {balanceSheetData.current_liabilities.items.map((it: any) => (
                   <div key={it.code} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.825rem", padding: "2px 0", color: "var(--text-muted)" }}>
                     <span>{it.name}:</span>
@@ -1185,7 +1185,7 @@ export default function AccountingPage() {
                 ))}
 
                 {/* Total Liabilities */}
-                <div style={{ marginTop: "auto", borderTop: "2px solid #38bdf8", paddingTop: "10px", display: "flex", justifyContent: "space-between", fontSize: "1rem", fontWeight: 800, color: "#38bdf8" }}>
+                <div style={{ marginTop: "auto", borderTop: "2px solid #38bdf8", paddingTop: "10px", display: "flex", justifyContent: "space-between", fontSize: "1rem", fontWeight: 800, color: "#0891b2" }}>
                   <span>TOTAL LIABILITIES & EQUITY:</span>
                   <span>₹{balanceSheetData.total_liabilities_and_equity.toFixed(2)}</span>
                 </div>
@@ -1193,12 +1193,12 @@ export default function AccountingPage() {
 
               {/* ASSETS */}
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ fontSize: "1rem", fontWeight: 800, color: "#34d399", borderBottom: "2px solid #34d399", paddingBottom: "6px" }}>
+                <div style={{ fontSize: "1rem", fontWeight: 800, color: "#059669", borderBottom: "2px solid #34d399", paddingBottom: "6px" }}>
                   Assets & Properties
                 </div>
 
                 {/* Fixed Assets */}
-                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#f8fafc" }}>Fixed Assets:</div>
+                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#0f172a" }}>Fixed Assets:</div>
                 {balanceSheetData.fixed_assets.items.length === 0 ? (
                   <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontStyle: "italic" }}>None recorded</div>
                 ) : (
@@ -1211,7 +1211,7 @@ export default function AccountingPage() {
                 )}
 
                 {/* Current Assets */}
-                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#f8fafc", marginTop: "12px" }}>Current Assets & Receivables:</div>
+                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#0f172a", marginTop: "12px" }}>Current Assets & Receivables:</div>
                 {balanceSheetData.current_assets.items.map((it: any) => (
                   <div key={it.code} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.825rem", padding: "2px 0", color: "var(--text-muted)" }}>
                     <span>{it.name}:</span>
@@ -1220,7 +1220,7 @@ export default function AccountingPage() {
                 ))}
 
                 {/* Total Assets */}
-                <div style={{ marginTop: "auto", borderTop: "2px solid #34d399", paddingTop: "10px", display: "flex", justifyContent: "space-between", fontSize: "1rem", fontWeight: 800, color: "#34d399" }}>
+                <div style={{ marginTop: "auto", borderTop: "2px solid #34d399", paddingTop: "10px", display: "flex", justifyContent: "space-between", fontSize: "1rem", fontWeight: 800, color: "#059669" }}>
                   <span>TOTAL ASSETS:</span>
                   <span>₹{balanceSheetData.total_assets.toFixed(2)}</span>
                 </div>
@@ -1302,10 +1302,10 @@ export default function AccountingPage() {
 
                   return (
                     <tr key={a.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                      <td style={{ padding: "10px 8px", fontFamily: "monospace", color: "#38bdf8", fontWeight: 700 }}>
+                      <td style={{ padding: "10px 8px", fontFamily: "monospace", color: "#0891b2", fontWeight: 700 }}>
                         {a.code}
                       </td>
-                      <td style={{ padding: "10px 8px", fontWeight: 600, color: "#f8fafc" }}>
+                      <td style={{ padding: "10px 8px", fontWeight: 600, color: "#0f172a" }}>
                         {a.name} {a.is_system && <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginLeft: "4px" }}>(System)</span>}
                       </td>
                       <td style={{ padding: "10px 8px" }}>
@@ -1328,7 +1328,7 @@ export default function AccountingPage() {
                             setSelectedAccountId(a.id);
                             setActiveTab("ledger");
                           }}
-                          style={{ background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", border: "none", padding: "2px 8px", borderRadius: "4px", fontSize: "0.725rem", cursor: "pointer", fontWeight: 600 }}
+                          style={{ background: "rgba(56, 189, 248, 0.15)", color: "#0891b2", border: "none", padding: "2px 8px", borderRadius: "4px", fontSize: "0.725rem", cursor: "pointer", fontWeight: 600 }}
                         >
                           View &rarr;
                         </button>
@@ -1347,7 +1347,7 @@ export default function AccountingPage() {
       {/* ========================================================================= */}
       {showAddAccountModal && (
         <div className="modal-overlay" onClick={() => setShowAddAccountModal(false)}>
-          <div className="glass-panel" style={{ width: "100%", maxWidth: "460px", padding: "24px", borderRadius: "12px", background: "#0f172a" }} onClick={(e) => e.stopPropagation()}>
+          <div className="glass-panel" style={{ width: "100%", maxWidth: "460px", padding: "24px", borderRadius: "12px", background: "#ffffff" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>Create Custom Ledger Account</h3>
               <button onClick={() => setShowAddAccountModal(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -1451,7 +1451,7 @@ export default function AccountingPage() {
       {/* ========================================================================= */}
       {showNewVoucherModal && (
         <div className="modal-overlay" onClick={() => setShowNewVoucherModal(false)}>
-          <div className="glass-panel" style={{ width: "100%", maxWidth: "680px", padding: "24px", borderRadius: "12px", background: "#0f172a" }} onClick={(e) => e.stopPropagation()}>
+          <div className="glass-panel" style={{ width: "100%", maxWidth: "680px", padding: "24px", borderRadius: "12px", background: "#ffffff" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>Post Manual Journal Entry Voucher</h3>
               <button onClick={() => setShowNewVoucherModal(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -1490,7 +1490,7 @@ export default function AccountingPage() {
               {/* Line Items Grid */}
               <div style={{ border: "1px solid var(--border)", borderRadius: "8px", padding: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#38bdf8" }}>Double-Entry Line Items</span>
+                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0891b2" }}>Double-Entry Line Items</span>
                   <button type="button" onClick={handleAddVoucherItem} className="btn-secondary" style={{ padding: "3px 8px", fontSize: "0.75rem" }}>
                     + Add Row
                   </button>
@@ -1551,7 +1551,7 @@ export default function AccountingPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "4px", fontSize: "0.85rem" }}>
                   <div>
                     {isVoucherBalanced ? (
-                      <span style={{ color: "#34d399", fontWeight: 700 }}>✅ Perfectly Balanced</span>
+                      <span style={{ color: "#059669", fontWeight: 700 }}>✅ Perfectly Balanced</span>
                     ) : (
                       <span style={{ color: "#f87171", fontWeight: 700 }}>
                         ❌ Out of balance by ₹{Math.abs(voucherTotalDebit - voucherTotalCredit).toFixed(2)}
@@ -1559,8 +1559,8 @@ export default function AccountingPage() {
                     )}
                   </div>
                   <div style={{ display: "flex", gap: "16px", fontWeight: 700 }}>
-                    <span>Total Dr: <strong style={{ color: "#34d399" }}>₹{voucherTotalDebit.toFixed(2)}</strong></span>
-                    <span>Total Cr: <strong style={{ color: "#38bdf8" }}>₹{voucherTotalCredit.toFixed(2)}</strong></span>
+                    <span>Total Dr: <strong style={{ color: "#059669" }}>₹{voucherTotalDebit.toFixed(2)}</strong></span>
+                    <span>Total Cr: <strong style={{ color: "#0891b2" }}>₹{voucherTotalCredit.toFixed(2)}</strong></span>
                   </div>
                 </div>
               </div>

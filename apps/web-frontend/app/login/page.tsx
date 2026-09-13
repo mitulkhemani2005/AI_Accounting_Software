@@ -97,7 +97,7 @@ export default function LoginPage() {
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
             gap: "8px",
-            background: "rgba(15, 23, 42, 0.6)",
+            background: "#f1f5f9",
             padding: "4px",
             borderRadius: "10px",
             marginBottom: "24px",
@@ -274,7 +274,7 @@ export default function LoginPage() {
           }}
         >
           New store owner?{" "}
-          <Link href="/signup" style={{ color: "#38bdf8", fontWeight: 600 }}>
+           <Link href="/signup" style={{ color: "#2563eb", fontWeight: 600 }}>
             Register your business
           </Link>
         </div>

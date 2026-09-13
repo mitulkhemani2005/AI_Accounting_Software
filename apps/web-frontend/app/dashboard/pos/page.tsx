@@ -981,10 +981,10 @@ export default function POSPage() {
                   borderRadius: "16px",
                   fontSize: "0.75rem",
                   fontWeight: 600,
-                  border: "1px solid var(--border)",
+                  border: "1px solid #cbd5e1",
                   cursor: "pointer",
-                  background: selectedCategory === c ? "#2563eb" : "rgba(30, 41, 59, 0.4)",
-                  color: selectedCategory === c ? "#ffffff" : "var(--text-muted)",
+                  background: selectedCategory === c ? "#2563eb" : "#f1f5f9",
+                  color: selectedCategory === c ? "#ffffff" : "#475569",
                   whiteSpace: "nowrap",
                 }}
               >
@@ -1000,19 +1000,19 @@ export default function POSPage() {
               style={{
                 padding: "8px 12px",
                 borderRadius: "10px",
-                background: "linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(30, 41, 59, 0.6))",
-                border: "1px solid rgba(139, 92, 246, 0.3)",
+                background: "linear-gradient(135deg, #f5f3ff, #ede9fe)",
+                border: "1px solid #c4b5fd",
                 display: "flex",
                 flexDirection: "column",
                 gap: "6px",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.75rem", fontWeight: 700, color: "#c084fc", textTransform: "uppercase" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.75rem", fontWeight: 700, color: "#6d28d9", textTransform: "uppercase" }}>
                   <Sparkles size={13} />
                   <span>AI Smart Up-Sells & Frequent Pairs</span>
                 </div>
-                {isLoadingSuggestions && <Loader2 size={12} className="spin" color="#c084fc" />}
+                {isLoadingSuggestions && <Loader2 size={12} className="spin" color="#6d28d9" />}
               </div>
 
               <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "2px" }}>
@@ -1022,8 +1022,8 @@ export default function POSPage() {
                     <div
                       key={sugg.item_id}
                       style={{
-                        background: "rgba(15, 23, 42, 0.7)",
-                        border: "1px solid rgba(139, 92, 246, 0.25)",
+                        background: "#ffffff",
+                        border: "1px solid #cbd5e1",
                         borderRadius: "8px",
                         padding: "6px 10px",
                         display: "flex",
@@ -1034,12 +1034,12 @@ export default function POSPage() {
                       }}
                     >
                       <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#ffffff" }}>
+                        <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#0f172a" }}>
                           {sugg.item_name}
                         </span>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.7rem" }}>
-                          <span style={{ color: "#34d399", fontWeight: 700 }}>₹{sugg.sale_price}</span>
-                          <span style={{ color: "var(--text-muted)", fontSize: "0.65rem" }}>({sugg.reason})</span>
+                          <span style={{ color: "#059669", fontWeight: 700 }}>₹{sugg.sale_price}</span>
+                          <span style={{ color: "#64748b", fontSize: "0.65rem" }}>({sugg.reason})</span>
                         </div>
                       </div>
 
@@ -1063,7 +1063,7 @@ export default function POSPage() {
                           padding: "3px 8px",
                           fontSize: "0.75rem",
                           borderRadius: "6px",
-                          background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                          background: "linear-gradient(135deg, #7c3aed, #6d28d9)",
                           display: "flex",
                           alignItems: "center",
                           gap: "3px",
@@ -1090,10 +1090,12 @@ export default function POSPage() {
               gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
               gridAutoRows: "max-content",
               gap: "10px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
             }}
           >
             {filteredCatalog.length === 0 ? (
-              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "30px", color: "var(--text-muted)", fontSize: "0.875rem" }}>
+              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "30px", color: "#64748b", fontSize: "0.875rem" }}>
                 No matching items. Add items in <strong>Product Master</strong>.
               </div>
             ) : (
@@ -1114,40 +1116,41 @@ export default function POSPage() {
                       }
                     }}
                     style={{
-                      background: isOutOfStock ? "rgba(15, 23, 42, 0.4)" : "rgba(15, 23, 42, 0.6)",
-                      border: isOutOfStock ? "1px solid rgba(239, 68, 68, 0.35)" : "1px solid var(--border)",
+                      background: isOutOfStock ? "#f8fafc" : "#ffffff",
+                      border: isOutOfStock ? "1px solid #fca5a5" : "1px solid #cbd5e1",
                       borderRadius: "8px",
                       padding: "10px",
                       cursor: isOutOfStock ? "not-allowed" : "pointer",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
-                      opacity: isOutOfStock ? 0.6 : 1,
+                      opacity: isOutOfStock ? 0.65 : 1,
                       transition: "transform 0.1s ease, border-color 0.1s ease",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
                     }}
                     className={isOutOfStock ? "" : "hover-card"}
                   >
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: "0.85rem", color: isOutOfStock ? "#94a3b8" : "#f8fafc", lineHeight: 1.2, marginBottom: "4px" }}>
+                      <div style={{ fontWeight: 600, fontSize: "0.85rem", color: isOutOfStock ? "#64748b" : "#0f172a", lineHeight: 1.2, marginBottom: "4px" }}>
                         {p.name}
                       </div>
-                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
                         {p.category} &bull; {p.unit}
                       </div>
                       <div style={{ marginTop: "4px" }}>
                         {stockQty <= 0 ? (
-                          <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#f87171", background: "rgba(239, 68, 68, 0.2)", border: "1px solid rgba(239, 68, 68, 0.4)", padding: "1px 6px", borderRadius: "4px" }}>
+                          <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#b91c1c", background: "#fee2e2", border: "1px solid #fca5a5", padding: "1px 6px", borderRadius: "4px" }}>
                             ❌ Out of stock (0)
                           </span>
                         ) : stockQty <= (p.min_stock_level || 5) ? (
-                          <span style={{ fontSize: "0.65rem", fontWeight: 600, color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)", padding: "1px 5px", borderRadius: "4px" }}>
+                          <span style={{ fontSize: "0.65rem", fontWeight: 600, color: "#92400e", background: "#fef3c7", border: "1px solid #fde68a", padding: "1px 5px", borderRadius: "4px" }}>
                             ⚠️ Low: {stockQty} {p.unit || "EA"}
                             {p.units_per_case && p.units_per_case > 1
                               ? ` (${Math.floor(stockQty / p.units_per_case)} CS${stockQty % p.units_per_case > 0 ? ` + ${(stockQty % p.units_per_case).toFixed(0)} EA` : ""})`
                               : ""}
                           </span>
                         ) : (
-                          <span style={{ fontSize: "0.65rem", fontWeight: 500, color: "#34d399", background: "rgba(16, 185, 129, 0.15)", padding: "1px 5px", borderRadius: "4px" }}>
+                          <span style={{ fontSize: "0.65rem", fontWeight: 500, color: "#065f46", background: "#d1fae5", border: "1px solid #a7f3d0", padding: "1px 5px", borderRadius: "4px" }}>
                             Stock: {stockQty} {p.unit || "EA"}
                             {p.units_per_case && p.units_per_case > 1
                               ? ` (${Math.floor(stockQty / p.units_per_case)} CS${stockQty % p.units_per_case > 0 ? ` + ${(stockQty % p.units_per_case).toFixed(0)} EA` : ""})`
@@ -1159,15 +1162,15 @@ export default function POSPage() {
 
                     <div style={{ marginTop: "8px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: "0.95rem", color: isOutOfStock ? "#64748b" : "#34d399" }}>
-                          ₹{p.sale_price.toFixed(2)} <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 500 }}>/{p.unit || "EA"}</span>
+                        <div style={{ fontWeight: 700, fontSize: "0.95rem", color: isOutOfStock ? "#64748b" : "#059669" }}>
+                          ₹{p.sale_price.toFixed(2)} <span style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 500 }}>/{p.unit || "EA"}</span>
                         </div>
                         {p.units_per_case && p.units_per_case > 1 && (
-                          <div style={{ fontSize: "0.72rem", color: isOutOfStock ? "#64748b" : "#38bdf8", fontWeight: 600 }}>
+                          <div style={{ fontSize: "0.72rem", color: isOutOfStock ? "#64748b" : "#0284c7", fontWeight: 600 }}>
                             ₹{(p.sale_price * p.units_per_case).toFixed(2)} /{p.secondary_unit || "CS"} ({p.units_per_case} EA)
                           </div>
                         )}
-                        <div style={{ fontSize: "0.65rem", color: p.is_tax_inclusive ? "#60a5fa" : "var(--text-muted)" }}>
+                        <div style={{ fontSize: "0.65rem", color: p.is_tax_inclusive ? "#2563eb" : "#64748b" }}>
                           {p.is_tax_inclusive ? "Tax Incl." : `+${p.gst_rate}% GST`}
                         </div>
                       </div>
@@ -1180,7 +1183,7 @@ export default function POSPage() {
                             if (!isOutOfStock) addItemToCart(p, "EA");
                           }}
                           style={{
-                            background: isOutOfStock ? "rgba(100, 116, 139, 0.3)" : "#2563eb",
+                            background: isOutOfStock ? "#e2e8f0" : "#2563eb",
                             borderRadius: "4px",
                             padding: "3px 7px",
                             fontSize: "0.7rem",
@@ -1202,12 +1205,12 @@ export default function POSPage() {
                               if (canAddCase) addItemToCart(p, "CS");
                             }}
                             style={{
-                              background: !canAddCase ? "rgba(100, 116, 139, 0.2)" : "rgba(16, 185, 129, 0.25)",
-                              border: !canAddCase ? "1px solid rgba(100, 116, 139, 0.3)" : "1px solid #10b981",
+                              background: !canAddCase ? "#e2e8f0" : "#d1fae5",
+                              border: !canAddCase ? "1px solid #cbd5e1" : "1px solid #059669",
                               borderRadius: "4px",
                               padding: "3px 7px",
                               fontSize: "0.7rem",
-                              color: !canAddCase ? "#64748b" : "#34d399",
+                              color: !canAddCase ? "#94a3b8" : "#065f46",
                               cursor: !canAddCase ? "not-allowed" : "pointer",
                               fontWeight: 700,
                             }}
@@ -1226,20 +1229,20 @@ export default function POSPage() {
         </div>
 
         {/* RIGHT COLUMN: POS Checkout & Cart */}
-        <div className="glass-panel" style={{ display: "flex", flexDirection: "column", padding: "16px", height: "100%", overflow: "hidden" }}>
+        <div className="glass-panel" style={{ display: "flex", flexDirection: "column", padding: "16px", height: "100%", overflow: "hidden", background: "#ffffff", border: "1px solid #cbd5e1" }}>
           {/* Header & Customer Bar */}
-          <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "12px", marginBottom: "10px" }}>
+          <div style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: "12px", marginBottom: "10px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <Receipt size={18} color="#38bdf8" />
-                <span style={{ fontWeight: 700, fontSize: "1rem" }}>Counter Checkout</span>
+                <Receipt size={18} color="#0284c7" />
+                <span style={{ fontWeight: 700, fontSize: "1rem", color: "#0f172a" }}>Counter Checkout</span>
               </div>
 
               {/* Godown & Status & Draft Buttons */}
               <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                 {godowns.length > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px", background: "rgba(30, 41, 59, 0.6)", padding: "2px 6px", borderRadius: "6px", border: "1px solid var(--border)" }}>
-                    <Warehouse size={13} color="#38bdf8" />
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", background: "#f8fafc", padding: "2px 6px", borderRadius: "6px", border: "1px solid #cbd5e1" }}>
+                    <Warehouse size={13} color="#0284c7" />
                     <select
                       value={selectedGodownId}
                       onChange={(e) => {
@@ -1247,10 +1250,10 @@ export default function POSPage() {
                         setSelectedGodownId(newGId);
                         fetchInventory(newGId);
                       }}
-                      style={{ background: "transparent", border: "none", color: "#f8fafc", fontSize: "0.75rem", outline: "none", cursor: "pointer" }}
+                      style={{ background: "transparent", border: "none", color: "#0f172a", fontSize: "0.75rem", outline: "none", cursor: "pointer", fontWeight: 600 }}
                     >
                       {godowns.map((g) => (
-                        <option key={g.id} value={g.id} style={{ background: "#0f172a", color: "#f8fafc" }}>
+                        <option key={g.id} value={g.id}>
                           {g.name} {g.is_default ? "★" : ""}
                         </option>
                       ))}
@@ -1261,14 +1264,14 @@ export default function POSPage() {
                 {isOnline ? (
                   <span className="badge badge-success" style={{ fontSize: "0.7rem" }}><Wifi size={12} /> Live</span>
                 ) : (
-                  <span className="badge" style={{ background: "#f59e0b", color: "#000", fontSize: "0.7rem" }}><WifiOff size={12} /> Offline ({offlineQueueCount})</span>
+                  <span className="badge" style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", fontSize: "0.7rem" }}><WifiOff size={12} /> Offline ({offlineQueueCount})</span>
                 )}
 
                 {heldBills.length > 0 && (
                   <button
                     onClick={() => setShowHeldModal(true)}
                     className="btn-secondary"
-                    style={{ padding: "2px 6px", fontSize: "0.7rem", background: "#d97706", borderColor: "#b45309", color: "white" }}
+                    style={{ padding: "2px 6px", fontSize: "0.7rem", background: "#fef3c7", borderColor: "#fde68a", color: "#92400e" }}
                   >
                     <PlayCircle size={12} /> Held ({heldBills.length})
                   </button>
@@ -1284,23 +1287,25 @@ export default function POSPage() {
                   <PauseCircle size={12} /> Hold
                 </button>
               </div>
-            </div>            {/* Customer Selector Dropdown + Area Route Filter + Quick Add (Admin Only) */}
+            </div>
+
+            {/* Customer Selector Dropdown + Area Route Filter + Quick Add (Admin Only) */}
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               {/* Area Route Filter Dropdown (Optional Fast Filter) */}
               {areas.length > 0 && (
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "4px", background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(56, 189, 248, 0.4)", borderRadius: "6px", padding: "2px 8px" }}>
-                    <MapPin size={13} color="#38bdf8" />
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "4px", background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: "6px", padding: "2px 8px" }}>
+                    <MapPin size={13} color="#0284c7" />
                     <select
                       value={selectedAreaFilter}
                       onChange={(e) => setSelectedAreaFilter(e.target.value)}
-                      style={{ background: "transparent", border: "none", color: "#38bdf8", fontSize: "0.75rem", outline: "none", width: "100%", cursor: "pointer", fontWeight: 600 }}
+                      style={{ background: "transparent", border: "none", color: "#0369a1", fontSize: "0.75rem", outline: "none", width: "100%", cursor: "pointer", fontWeight: 600 }}
                     >
-                      <option value="" style={{ background: "#0f172a", color: "#f8fafc" }}>
+                      <option value="">
                         All Areas ({customers.length} Parties)
                       </option>
                       {areas.map((a) => (
-                        <option key={a.id} value={a.id} style={{ background: "#0f172a", color: "#f8fafc" }}>
+                        <option key={a.id} value={a.id}>
                           📍 {a.name} ({a.customers_count || 0} customers)
                         </option>
                       ))}
@@ -1310,7 +1315,7 @@ export default function POSPage() {
                     <button
                       type="button"
                       onClick={() => setSelectedAreaFilter("")}
-                      style={{ fontSize: "0.68rem", background: "rgba(239, 68, 68, 0.15)", color: "#f87171", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "4px", padding: "2px 6px", cursor: "pointer", whiteSpace: "nowrap" }}
+                      style={{ fontSize: "0.68rem", background: "#fee2e2", color: "#b91c1c", border: "1px solid #fca5a5", borderRadius: "4px", padding: "2px 6px", cursor: "pointer", whiteSpace: "nowrap" }}
                     >
                       ✕ Reset Area
                     </button>
@@ -1362,8 +1367,8 @@ export default function POSPage() {
                   marginTop: "8px",
                   padding: "8px 12px",
                   borderRadius: "8px",
-                  background: "rgba(59, 130, 246, 0.15)",
-                  border: "1px solid rgba(59, 130, 246, 0.3)",
+                  background: "#eff6ff",
+                  border: "1px solid #bfdbfe",
                   display: "flex",
                   flexDirection: "column",
                   gap: "4px",
@@ -1372,21 +1377,21 @@ export default function POSPage() {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "4px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                    <strong style={{ fontSize: "0.85rem", color: "#f8fafc" }}>👤 {customerName}</strong>
+                    <strong style={{ fontSize: "0.85rem", color: "#0f172a" }}>👤 {customerName}</strong>
                     {customerArea && (
-                      <span style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid rgba(56, 189, 248, 0.4)", padding: "1px 6px", borderRadius: "4px", fontSize: "0.68rem", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                      <span style={{ background: "#dbeafe", color: "#1e40af", border: "1px solid #bfdbfe", padding: "1px 6px", borderRadius: "4px", fontSize: "0.68rem", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "2px" }}>
                         <MapPin size={10} /> {customerArea}
                       </span>
                     )}
-                    {customerMobile && <span style={{ color: "var(--text-muted)", marginLeft: "4px" }}>📱 {customerMobile}</span>}
+                    {customerMobile && <span style={{ color: "#64748b", marginLeft: "4px" }}>📱 {customerMobile}</span>}
                   </div>
-                  <div style={{ color: customerBalance > 0 ? "#f87171" : "#34d399", fontWeight: 700 }}>
+                  <div style={{ color: customerBalance > 0 ? "#b91c1c" : "#047857", fontWeight: 700 }}>
                     Credit Due: ₹{customerBalance.toFixed(2)}
                   </div>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "var(--text-muted)", fontSize: "0.725rem", flexWrap: "wrap", gap: "6px" }}>
-                  <div>📍 Address: <span style={{ color: "#f1f5f9" }}>{customerAddress ? `${customerAddress}${customerState ? `, ${customerState}` : ""}` : "No address registered"}</span></div>
-                  <div>🆔 GSTIN: <span style={{ fontFamily: "monospace", color: "#60a5fa" }}>{customerGst || "Unregistered"}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "#64748b", fontSize: "0.725rem", flexWrap: "wrap", gap: "6px" }}>
+                  <div>📍 Address: <span style={{ color: "#334155" }}>{customerAddress ? `${customerAddress}${customerState ? `, ${customerState}` : ""}` : "No address registered"}</span></div>
+                  <div>🆔 GSTIN: <span style={{ fontFamily: "monospace", color: "#1d4ed8" }}>{customerGst || "Unregistered"}</span></div>
                 </div>
               </div>
             )}
@@ -1395,7 +1400,7 @@ export default function POSPage() {
           {/* Cart Items List */}
           <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px", paddingRight: "4px" }}>
             {billItems.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "30px 10px", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+              <div style={{ textAlign: "center", padding: "30px 10px", color: "#64748b", fontSize: "0.85rem" }}>
                 Cart is empty. Click items on the left or scan barcode.
               </div>
             ) : (
@@ -1403,8 +1408,8 @@ export default function POSPage() {
                 <div
                   key={idx}
                   style={{
-                    background: "rgba(15, 23, 42, 0.5)",
-                    border: "1px solid var(--border)",
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
                     borderRadius: "8px",
                     padding: "8px 10px",
                     display: "flex",
@@ -1415,7 +1420,7 @@ export default function POSPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
-                        <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#f8fafc" }}>{item.item_name}</div>
+                        <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#0f172a" }}>{item.item_name}</div>
                         {item.units_per_case && item.units_per_case > 1 ? (
                           <button
                             type="button"
@@ -1425,9 +1430,9 @@ export default function POSPage() {
                               borderRadius: "4px",
                               fontSize: "0.68rem",
                               fontWeight: 700,
-                              border: "1px solid rgba(56, 189, 248, 0.4)",
-                              background: item.unit === (item.secondary_unit || "CS") ? "rgba(16, 185, 129, 0.2)" : "rgba(56, 189, 248, 0.15)",
-                              color: item.unit === (item.secondary_unit || "CS") ? "#34d399" : "#38bdf8",
+                              border: "1px solid #bae6fd",
+                              background: item.unit === (item.secondary_unit || "CS") ? "#d1fae5" : "#e0f2fe",
+                              color: item.unit === (item.secondary_unit || "CS") ? "#065f46" : "#0369a1",
                               cursor: "pointer",
                             }}
                             title={`Switch unit between EA and CS (1 CS = ${item.units_per_case} EA)`}
@@ -1435,11 +1440,11 @@ export default function POSPage() {
                             {item.unit} ⇄
                           </button>
                         ) : (
-                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>{item.unit}</span>
+                          <span style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>{item.unit}</span>
                         )}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", flexWrap: "wrap" }}>
-                        <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "3px" }}>
+                        <label style={{ fontSize: "0.7rem", color: "#64748b", display: "flex", alignItems: "center", gap: "3px" }}>
                           <span>Sell ₹/{item.unit}:</span>
                           <input
                             type="number"
@@ -1451,17 +1456,17 @@ export default function POSPage() {
                               width: "72px",
                               padding: "2px 6px",
                               fontSize: "0.75rem",
-                              background: "rgba(15, 23, 42, 0.9)",
-                              border: "1px solid rgba(56, 189, 248, 0.5)",
+                              background: "#ffffff",
+                              border: "1px solid #cbd5e1",
                               borderRadius: "4px",
-                              color: "#38bdf8",
+                              color: "#0284c7",
                               fontWeight: 600,
                             }}
                             title="Edit Selling Price / Unit Rate"
                           />
                         </label>
                         {isAdmin && (
-                          <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "3px" }}>
+                          <label style={{ fontSize: "0.7rem", color: "#64748b", display: "flex", alignItems: "center", gap: "3px" }}>
                             <span>Cost ₹:</span>
                             <input
                               type="number"
@@ -1473,27 +1478,27 @@ export default function POSPage() {
                                 width: "72px",
                                 padding: "2px 6px",
                                 fontSize: "0.75rem",
-                                background: "rgba(15, 23, 42, 0.9)",
-                                border: "1px solid rgba(245, 158, 11, 0.5)",
+                                background: "#ffffff",
+                                border: "1px solid #cbd5e1",
                                 borderRadius: "4px",
-                                color: "#f59e0b",
+                                color: "#b45309",
                                 fontWeight: 600,
                               }}
                               title="Admin: Edit Purchase / Cost Price"
                             />
                           </label>
                         )}
-                        <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                        <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
                           &bull; {item.gst_rate}% GST
                         </span>
                       </div>
                     </div>
 
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#34d399" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#059669" }}>
                         ₹{item.total_amount.toFixed(2)}
                       </div>
-                      <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                      <div style={{ fontSize: "0.65rem", color: "#64748b" }}>
                         Tax: ₹{(item.cgst_amount + item.sgst_amount + item.igst_amount).toFixed(2)}
                       </div>
                     </div>
@@ -1509,10 +1514,10 @@ export default function POSPage() {
                         borderRadius: "4px",
                         fontSize: "0.65rem",
                         fontWeight: 600,
-                        border: "1px solid var(--border)",
+                        border: "1px solid #cbd5e1",
                         cursor: "pointer",
-                        background: item.is_tax_inclusive ? "rgba(59, 130, 246, 0.2)" : "rgba(100, 116, 139, 0.2)",
-                        color: item.is_tax_inclusive ? "#60a5fa" : "#94a3b8",
+                        background: item.is_tax_inclusive ? "#dbeafe" : "#f1f5f9",
+                        color: item.is_tax_inclusive ? "#1d4ed8" : "#64748b",
                       }}
                       title="Toggle Tax Inclusive / Exclusive"
                     >
@@ -1521,13 +1526,13 @@ export default function POSPage() {
 
                     {/* Qty Stepper */}
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <button onClick={() => updateItemQty(idx, -1)} style={{ background: "rgba(30,41,59,0.8)", border: "1px solid var(--border)", borderRadius: "4px", width: "22px", height: "22px", color: "#fff", cursor: "pointer" }}>
+                      <button onClick={() => updateItemQty(idx, -1)} style={{ background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "4px", width: "24px", height: "24px", color: "#0f172a", cursor: "pointer", fontWeight: 700 }}>
                         -
                       </button>
-                      <span style={{ fontSize: "0.85rem", fontWeight: 700, minWidth: "20px", textAlign: "center" }}>
+                      <span style={{ fontSize: "0.85rem", fontWeight: 700, minWidth: "20px", textAlign: "center", color: "#0f172a" }}>
                         {item.quantity}
                       </span>
-                      <button onClick={() => updateItemQty(idx, 1)} style={{ background: "rgba(30,41,59,0.8)", border: "1px solid var(--border)", borderRadius: "4px", width: "22px", height: "22px", color: "#fff", cursor: "pointer" }}>
+                      <button onClick={() => updateItemQty(idx, 1)} style={{ background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "4px", width: "24px", height: "24px", color: "#0f172a", cursor: "pointer", fontWeight: 700 }}>
                         +
                       </button>
                       <button onClick={() => removeItem(idx)} style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", marginLeft: "4px" }}>
@@ -1541,24 +1546,24 @@ export default function POSPage() {
           </div>
 
           {/* Totals & Payment Section */}
-          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "10px", marginTop: "8px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+          <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "10px", marginTop: "8px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#64748b", marginBottom: "4px" }}>
               <span>Taxable Subtotal:</span>
-              <span>₹{taxableVal.toFixed(2)}</span>
+              <span style={{ color: "#0f172a", fontWeight: 600 }}>₹{taxableVal.toFixed(2)}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#64748b", marginBottom: "4px" }}>
               <span>Total GST ({isInterstate ? "IGST" : "CGST+SGST"}):</span>
-              <span>₹{totalGst.toFixed(2)}</span>
+              <span style={{ color: "#b45309", fontWeight: 600 }}>₹{totalGst.toFixed(2)}</span>
             </div>
             {roundOff !== 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#64748b", marginBottom: "4px" }}>
                 <span>Round Off:</span>
-                <span>₹{roundOff.toFixed(2)}</span>
+                <span style={{ color: "#0f172a" }}>₹{roundOff.toFixed(2)}</span>
               </div>
             )}
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.15rem", fontWeight: 700, color: "#f8fafc", margin: "6px 0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.15rem", fontWeight: 700, color: "#0f172a", margin: "6px 0" }}>
               <span>Grand Total:</span>
-              <span style={{ color: "#34d399" }}>₹{grandTotal.toFixed(2)}</span>
+              <span style={{ color: "#059669" }}>₹{grandTotal.toFixed(2)}</span>
             </div>
 
             {/* Payment Mode Selector - ONLY CASH & CREDIT */}
@@ -1575,9 +1580,9 @@ export default function POSPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "6px",
-                  border: paymentMode === "cash" ? "2px solid #10b981" : "1px solid var(--border)",
-                  background: paymentMode === "cash" ? "rgba(16, 185, 129, 0.25)" : "rgba(30, 41, 59, 0.4)",
-                  color: paymentMode === "cash" ? "#34d399" : "var(--text-muted)",
+                  border: paymentMode === "cash" ? "2px solid #059669" : "1px solid #cbd5e1",
+                  background: paymentMode === "cash" ? "#d1fae5" : "#f1f5f9",
+                  color: paymentMode === "cash" ? "#065f46" : "#64748b",
                   cursor: "pointer",
                   transition: "all 0.15s ease",
                 }}
@@ -1604,9 +1609,9 @@ export default function POSPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "6px",
-                  border: paymentMode === "credit" ? "2px solid #f59e0b" : "1px solid var(--border)",
-                  background: paymentMode === "credit" ? "rgba(245, 158, 11, 0.25)" : "rgba(30, 41, 59, 0.4)",
-                  color: paymentMode === "credit" ? "#fbbf24" : "var(--text-muted)",
+                  border: paymentMode === "credit" ? "2px solid #d97706" : "1px solid #cbd5e1",
+                  background: paymentMode === "credit" ? "#fef3c7" : "#f1f5f9",
+                  color: paymentMode === "credit" ? "#92400e" : "#64748b",
                   cursor: "pointer",
                   transition: "all 0.15s ease",
                 }}
@@ -1620,7 +1625,7 @@ export default function POSPage() {
               onClick={handleCheckout}
               disabled={isSubmitting || billItems.length === 0}
               className="btn-primary"
-              style={{ width: "100%", padding: "12px", background: "#10b981", borderColor: "#059669", fontSize: "1rem" }}
+              style={{ width: "100%", padding: "12px", background: "#059669", borderColor: "#047857", fontSize: "1rem" }}
             >
               {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : `Complete Sale & Print (₹${grandTotal})`}
             </button>
@@ -1631,17 +1636,30 @@ export default function POSPage() {
       {/* Quick Add Customer Modal */}
       {showAddCustomerModal && (
         <div className="modal-overlay" onClick={() => setShowAddCustomerModal(false)}>
-          <div className="glass-panel" style={{ width: "100%", maxWidth: "420px", padding: "24px", borderRadius: "12px", background: "#0f172a" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 700 }}>Add New Customer</h3>
-              <button onClick={() => setShowAddCustomerModal(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+          <div
+            className="glass-panel"
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              padding: "24px",
+              borderRadius: "12px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              color: "#0f172a",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>Add New Customer</h3>
+              <button onClick={() => setShowAddCustomerModal(false)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleCreateCustomer} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div>
-                <label className="input-label">Customer Name *</label>
+                <label className="input-label" style={{ color: "#475569" }}>Customer Name *</label>
                 <input
                   type="text"
                   required
@@ -1653,7 +1671,7 @@ export default function POSPage() {
               </div>
 
               <div>
-                <label className="input-label">Mobile Number (10 Digits)</label>
+                <label className="input-label" style={{ color: "#475569" }}>Mobile Number (10 Digits)</label>
                 <input
                   type="tel"
                   className="input-field"
@@ -1664,7 +1682,7 @@ export default function POSPage() {
               </div>
 
               <div>
-                <label className="input-label">GSTIN (Optional)</label>
+                <label className="input-label" style={{ color: "#475569" }}>GSTIN (Optional)</label>
                 <input
                   type="text"
                   className="input-field"
@@ -1675,7 +1693,7 @@ export default function POSPage() {
               </div>
 
               <div>
-                <label className="input-label">Billing Address (Optional)</label>
+                <label className="input-label" style={{ color: "#475569" }}>Billing Address (Optional)</label>
                 <input
                   type="text"
                   className="input-field"
@@ -1686,7 +1704,7 @@ export default function POSPage() {
               </div>
 
               <div>
-                <label className="input-label">Trade Area / Delivery Route (Optional)</label>
+                <label className="input-label" style={{ color: "#475569" }}>Trade Area / Delivery Route (Optional)</label>
                 <select
                   className="input-field"
                   value={newCustomerForm.area_id}
@@ -1717,20 +1735,33 @@ export default function POSPage() {
       {/* Held Bills Modal */}
       {showHeldModal && (
         <div className="modal-overlay" onClick={() => setShowHeldModal(false)}>
-          <div className="glass-panel" style={{ width: "100%", maxWidth: "460px", padding: "24px", borderRadius: "12px", background: "#0f172a" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 700 }}>Held Bills Queue ({heldBills.length})</h3>
-              <button onClick={() => setShowHeldModal(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+          <div
+            className="glass-panel"
+            style={{
+              width: "100%",
+              maxWidth: "460px",
+              padding: "24px",
+              borderRadius: "12px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              color: "#0f172a",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>Held Bills Queue ({heldBills.length})</h3>
+              <button onClick={() => setShowHeldModal(false)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "300px", overflowY: "auto" }}>
               {heldBills.map((draft) => (
-                <div key={draft.id} style={{ background: "rgba(30, 41, 59, 0.4)", border: "1px solid var(--border)", borderRadius: "8px", padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div key={draft.id} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: "0.85rem" }}>{draft.customerName}</div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{draft.billItems.length} items &bull; Time: {draft.date}</div>
+                    <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#0f172a" }}>{draft.customerName}</div>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{draft.billItems.length} items &bull; Time: {draft.date}</div>
                   </div>
                   <button onClick={() => resumeDraft(draft)} className="btn-primary" style={{ padding: "4px 10px", fontSize: "0.75rem" }}>
                     Resume
@@ -1745,30 +1776,43 @@ export default function POSPage() {
       {/* Completed Bill Success Modal */}
       {completedBill && (
         <div className="modal-overlay no-print">
-          <div className="glass-panel" style={{ width: "100%", maxWidth: "460px", padding: "28px", borderRadius: "14px", background: "#0f172a", textAlign: "center" }}>
+          <div
+            className="glass-panel"
+            style={{
+              width: "100%",
+              maxWidth: "460px",
+              padding: "28px",
+              borderRadius: "14px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              color: "#0f172a",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+              textAlign: "center",
+            }}
+          >
             {completedBill.status === "under_review" || (!completedBill.is_reviewed_by_admin && !isAdmin) ? (
               <>
-                <div style={{ display: "inline-flex", padding: "12px", borderRadius: "50%", background: "rgba(245, 158, 11, 0.15)", marginBottom: "10px" }}>
-                  <Clock size={44} color="#f59e0b" />
+                <div style={{ display: "inline-flex", padding: "12px", borderRadius: "50%", background: "#fef3c7", marginBottom: "10px" }}>
+                  <Clock size={44} color="#d97706" />
                 </div>
-                <h2 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: "4px", color: "#f59e0b" }}>
+                <h2 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: "4px", color: "#92400e" }}>
                   Order Submitted for Review
                 </h2>
-                <div style={{ fontSize: "0.875rem", color: "var(--text-muted)", marginBottom: "14px", lineHeight: "1.4" }}>
-                  Order No: <strong style={{ color: "#38bdf8" }}>{completedBill.bill_number}</strong> &bull; Total: <strong style={{ color: "#34d399" }}>₹{completedBill.total_amount?.toFixed(2)}</strong>
-                  <div style={{ marginTop: "6px", padding: "8px 12px", background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "8px", color: "#fcd34d", fontSize: "0.8rem" }}>
+                <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "14px", lineHeight: "1.4" }}>
+                  Order No: <strong style={{ color: "#0284c7" }}>{completedBill.bill_number}</strong> &bull; Total: <strong style={{ color: "#059669" }}>₹{completedBill.total_amount?.toFixed(2)}</strong>
+                  <div style={{ marginTop: "6px", padding: "8px 12px", background: "#fef3c7", border: "1px solid #fde68a", borderRadius: "8px", color: "#92400e", fontSize: "0.8rem" }}>
                     ⏳ This order is under review. The final invoice & stock deduction will be activated upon Admin confirmation.
                   </div>
                 </div>
               </>
             ) : (
               <>
-                <CheckCircle2 size={50} color="#34d399" style={{ margin: "0 auto 10px" }} />
-                <h2 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: "4px" }}>
+                <CheckCircle2 size={50} color="#059669" style={{ margin: "0 auto 10px" }} />
+                <h2 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: "4px", color: "#0f172a" }}>
                   Sale Completed Successfully!
                 </h2>
-                <div style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-                  Invoice No: <strong style={{ color: "#38bdf8" }}>{completedBill.bill_number}</strong> &bull; Total: <strong style={{ color: "#34d399" }}>₹{completedBill.total_amount?.toFixed(2)}</strong>
+                <div style={{ fontSize: "0.9rem", color: "#64748b", marginBottom: "16px" }}>
+                  Invoice No: <strong style={{ color: "#0284c7" }}>{completedBill.bill_number}</strong> &bull; Total: <strong style={{ color: "#059669" }}>₹{completedBill.total_amount?.toFixed(2)}</strong>
                 </div>
               </>
             )}

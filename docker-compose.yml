@@ -66,6 +66,20 @@ services:
     volumes:
       - ./apps/ai-service:/app
 
+  web-frontend:
+    build:
+      context: ./apps/web-frontend
+      dockerfile: Dockerfile
+    container_name: ai_accounting_frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - BACKEND_INTERNAL_URL=http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
   redis_data:

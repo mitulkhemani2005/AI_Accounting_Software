@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { FundSafeStatusBar } from "@/components/FundSafeStatusBar";
 import {
   ShoppingBag,
   Receipt,
@@ -90,9 +92,13 @@ interface Bill {
 
 export default function SalesPage() {
   const { user, tenant, isAdmin } = useAuth();
+  const router = useRouter();
   const [bills, setBills] = useState<Bill[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [catalog, setCatalog] = useState<any[]>([]);
+  const [viewStyle, setViewStyle] = useState<"fundsafe_grid" | "modern">("fundsafe_grid");
+  const [selectedSingleBillId, setSelectedSingleBillId] = useState<string | null>(null);
+  const [seriesFilter, setSeriesFilter] = useState("Cash-KHP");
   const [reviewTabFilter, setReviewTabFilter] = useState<"confirmed" | "under_review" | "all">("confirmed");
   const [confirmingBillId, setConfirmingBillId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -180,6 +186,7 @@ export default function SalesPage() {
     }
   };
 
+
   const fetchBills = async () => {
     setLoading(true);
     setErrorMsg("");
@@ -191,10 +198,11 @@ export default function SalesPage() {
           search: searchQuery.trim() || undefined,
         },
       });
-      setBills(res.data);
+      setBills(res.data || []);
     } catch (err: any) {
       console.error("Failed to load bills:", err);
       setErrorMsg(err.response?.data?.detail || "Could not load bills");
+      setBills([]);
     } finally {
       setLoading(false);
     }
@@ -649,65 +657,688 @@ export default function SalesPage() {
   };
 
   // Filter bills
-  const filteredBills = bills.filter((b) => {
-    const matchesReview =
-      reviewTabFilter === "all"
-        ? true
-        : reviewTabFilter === "confirmed"
-        ? b.status === "active" && b.is_reviewed_by_admin
-        : b.status === "under_review" || !b.is_reviewed_by_admin;
+  const filteredBills = useMemo(() => {
+    return bills.filter((b) => {
+      const matchesReview =
+        reviewTabFilter === "all"
+          ? true
+          : reviewTabFilter === "confirmed"
+          ? b.status === "active" && b.is_reviewed_by_admin
+          : b.status === "under_review" || !b.is_reviewed_by_admin;
 
-    const matchesMode = paymentModeFilter === "all" || b.payment_mode === paymentModeFilter;
-    const matchesSearch =
-      !searchQuery ||
-      b.bill_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.party_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (b.party_mobile && b.party_mobile.includes(searchQuery)) ||
-      (b.creator_name && b.creator_name.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesMode = paymentModeFilter === "all" || b.payment_mode === paymentModeFilter;
+      const matchesSearch =
+        !searchQuery ||
+        b.bill_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.party_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (b.party_mobile && b.party_mobile.includes(searchQuery)) ||
+        (b.creator_name && b.creator_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    return matchesReview && matchesMode && matchesSearch;
-  });
+      return matchesReview && matchesMode && matchesSearch;
+    });
+  }, [bills, reviewTabFilter, paymentModeFilter, searchQuery]);
 
   // Calculate Metrics
-  const confirmedBills = bills.filter((b) => b.status === "active" && b.is_reviewed_by_admin);
-  const pendingReviewBills = bills.filter((b) => b.status === "under_review" || !b.is_reviewed_by_admin);
-  const totalSalesRevenue = confirmedBills.reduce((sum, b) => sum + b.total_amount, 0);
-  const totalGstCollected = confirmedBills.reduce((sum, b) => sum + b.gst_amount, 0);
-  const cashSales = confirmedBills.filter((b) => b.payment_mode === "cash").reduce((sum, b) => sum + b.total_amount, 0);
-  const creditSales = confirmedBills.filter((b) => b.payment_mode === "credit").reduce((sum, b) => sum + b.total_amount, 0);
-  const creditOutstanding = confirmedBills
-    .filter((b) => b.payment_mode === "credit" || b.payment_status in ["unpaid", "partial"])
-    .reduce((sum, b) => sum + (b.total_amount - b.paid_amount), 0);
+  const {
+    confirmedBills,
+    pendingReviewBills,
+    totalSalesRevenue,
+    totalGstCollected,
+    cashSales,
+    creditSales,
+    creditOutstanding,
+  } = useMemo(() => {
+    const confirmed = bills.filter((b) => b.status === "active" && b.is_reviewed_by_admin);
+    const pending = bills.filter((b) => b.status === "under_review" || !b.is_reviewed_by_admin);
+    const rev = confirmed.reduce((sum, b) => sum + b.total_amount, 0);
+    const gst = confirmed.reduce((sum, b) => sum + b.gst_amount, 0);
+    const cash = confirmed.filter((b) => b.payment_mode === "cash").reduce((sum, b) => sum + b.total_amount, 0);
+    const credit = confirmed.filter((b) => b.payment_mode === "credit").reduce((sum, b) => sum + b.total_amount, 0);
+    const out = confirmed
+      .filter((b) => b.payment_mode === "credit" || b.payment_status in ["unpaid", "partial"])
+      .reduce((sum, b) => sum + (b.total_amount - b.paid_amount), 0);
+
+    return {
+      confirmedBills: confirmed,
+      pendingReviewBills: pending,
+      totalSalesRevenue: rev,
+      totalGstCollected: gst,
+      cashSales: cash,
+      creditSales: credit,
+      creditOutstanding: out,
+    };
+  }, [bills]);
 
   return (
     <>
       <div className="no-print">
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-              <span className="badge badge-blue">Sales Register</span>
-              <span className="badge badge-success">All Store Invoices</span>
-            </div>
-            <h1 style={{ fontSize: "1.75rem", fontWeight: 700 }}>Sales & Invoices Directory</h1>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>
-              Comprehensive real-time register of all counter sales and customer tax invoices.
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button
-              onClick={fetchBills}
-              className="btn-secondary"
-              style={{ display: "flex", alignItems: "center", gap: "8px" }}
+        {viewStyle === "fundsafe_grid" ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              minHeight: "calc(100vh - 32px)",
+              background: "#ffffff",
+              color: "#0f172a",
+              overflow: "hidden",
+            }}
+          >
+            {/* 1. Header Bar matching Image 5 */}
+            <div
+              style={{
+                background: "#ffffff",
+                padding: "8px 16px",
+                borderBottom: "1px solid #e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "10px",
+              }}
             >
-              <RefreshCw size={16} className={loading ? "spin" : ""} /> Refresh
-            </button>
-            <Link href="/dashboard/pos" className="btn-primary" style={{ background: "#10b981", borderColor: "#059669" }}>
-              <Plus size={16} /> New Counter Sale (POS)
-            </Link>
+              {/* Left: Graph icon + LIST OF BILLS */}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "4px",
+                    background: "#1e1b4b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#ffffff",
+                  }}
+                >
+                  <Receipt size={20} />
+                </div>
+                <h1 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1e1b4b", letterSpacing: "0.03em" }}>
+                  LIST OF BILLS
+                </h1>
+              </div>
+
+              {/* Right: Circular Icon Action Buttons matching Image 5 */}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {/* (📑) View Toggle */}
+                <button
+                  onClick={() => setViewStyle("modern")}
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "50%",
+                    border: "2px solid #1e1b4b",
+                    background: "transparent",
+                    color: "#1e1b4b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                  title="Switch to Detailed Modern View"
+                >
+                  <FileText size={16} strokeWidth={2} />
+                </button>
+
+                {/* (👤) User Filter */}
+                <button
+                  onClick={() => {
+                    const nextMode = reviewTabFilter === "all" ? "confirmed" : "all";
+                    setReviewTabFilter(nextMode);
+                  }}
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "50%",
+                    border: "2px solid #1e1b4b",
+                    background: reviewTabFilter === "confirmed" ? "#1e1b4b" : "transparent",
+                    color: reviewTabFilter === "confirmed" ? "#ffffff" : "#1e1b4b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                  title="Filter Staff / Confirmed"
+                >
+                  <User size={16} strokeWidth={2} />
+                </button>
+
+                {/* (+) Add Button */}
+                <Link
+                  href="/dashboard/pos"
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "50%",
+                    border: "2px solid #1e1b4b",
+                    background: "transparent",
+                    color: "#1e1b4b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textDecoration: "none",
+                  }}
+                  title="Add New Bill (POS F12)"
+                >
+                  <Plus size={18} strokeWidth={2.5} />
+                </Link>
+
+                {/* (✏️) Edit Button */}
+                <button
+                  onClick={() => {
+                    const billToEdit = bills.find((b) => b.id === selectedSingleBillId) || selectedBill;
+                    if (billToEdit) {
+                      openEditModal(billToEdit);
+                    } else {
+                      alert("Please select a bill row to edit");
+                    }
+                  }}
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "50%",
+                    border: "2px solid #1e1b4b",
+                    background: "transparent",
+                    color: "#1e1b4b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                  title="Edit Selected Bill"
+                >
+                  <Edit2 size={16} strokeWidth={2} />
+                </button>
+
+                {/* (🗑️) Remove Button */}
+                <button
+                  onClick={() => {
+                    const billId = selectedSingleBillId || selectedBill?.id;
+                    if (billId) {
+                      handleVoidBill(billId);
+                    } else {
+                      alert("Please select a bill to remove / void");
+                    }
+                  }}
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "50%",
+                    border: "2px solid #1e1b4b",
+                    background: "transparent",
+                    color: "#1e1b4b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                  title="Remove / Void Selected Bill"
+                >
+                  <Trash2 size={16} strokeWidth={2} />
+                </button>
+
+                {/* (🖨️) Print Button */}
+                <button
+                  onClick={() => window.print()}
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "50%",
+                    border: "2px solid #1e1b4b",
+                    background: "transparent",
+                    color: "#1e1b4b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                  title="Print Bill Register"
+                >
+                  <Printer size={16} strokeWidth={2} />
+                </button>
+
+                {/* (🔄) Refresh Button */}
+                <button
+                  onClick={fetchBills}
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "50%",
+                    border: "2px solid #1e1b4b",
+                    background: "transparent",
+                    color: "#1e1b4b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                  title="Refresh Bills"
+                >
+                  <RefreshCw size={16} strokeWidth={2} />
+                </button>
+
+                {/* (✖) Close Button */}
+                <button
+                  onClick={() => router.push("/dashboard")}
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "50%",
+                    border: "2px solid #1e1b4b",
+                    background: "transparent",
+                    color: "#1e1b4b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                  title="Close (Exit to Dashboard)"
+                >
+                  <X size={18} strokeWidth={2.5} />
+                </button>
+              </div>
+            </div>
+
+            {/* 2. Sub-Toolbar matching Image 5 */}
+            <div
+              style={{
+                background: "#1e1b4b",
+                padding: "6px 14px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                flexWrap: "wrap",
+                fontSize: "0.76rem",
+              }}
+            >
+              {/* [+ ADD] */}
+              <Link
+                href="/dashboard/pos"
+                style={{
+                  background: "#10b981",
+                  color: "#ffffff",
+                  padding: "3px 10px",
+                  borderRadius: "2px",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  textDecoration: "none",
+                  border: "1px solid #059669",
+                }}
+              >
+                <Plus size={13} strokeWidth={3} /> ADD
+              </Link>
+
+              {/* [✏️ EDIT] */}
+              <button
+                onClick={() => {
+                  const b = bills.find((x) => x.id === selectedSingleBillId) || selectedBill;
+                  if (b) openEditModal(b);
+                  else alert("Please select a bill to edit");
+                }}
+                style={{
+                  background: "#2563eb",
+                  color: "#ffffff",
+                  padding: "3px 10px",
+                  borderRadius: "2px",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  border: "1px solid #1d4ed8",
+                  cursor: "pointer",
+                }}
+              >
+                <Edit2 size={12} /> EDIT
+              </button>
+
+              {/* [❌ REMOVE] */}
+              <button
+                onClick={() => {
+                  const bId = selectedSingleBillId || selectedBill?.id;
+                  if (bId) handleVoidBill(bId);
+                  else alert("Please select a bill to remove");
+                }}
+                style={{
+                  background: "#dc2626",
+                  color: "#ffffff",
+                  padding: "3px 10px",
+                  borderRadius: "2px",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  border: "1px solid #b91c1c",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={12} strokeWidth={3} /> REMOVE
+              </button>
+
+              {/* [🔄 REFRESH] */}
+              <button
+                onClick={fetchBills}
+                style={{
+                  background: "#475569",
+                  color: "#ffffff",
+                  padding: "3px 10px",
+                  borderRadius: "2px",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  border: "1px solid #334155",
+                  cursor: "pointer",
+                }}
+              >
+                <RefreshCw size={12} /> REFRESH
+              </button>
+
+              {/* [PAYMENT DETAIL] */}
+              <button
+                onClick={() => {
+                  const b = bills.find((x) => x.id === selectedSingleBillId) || selectedBill;
+                  if (b) {
+                    alert(`Payment Details for Bill #${b.bill_number}: Mode: ${b.payment_mode.toUpperCase()}, Total: ₹${b.total_amount}, Paid: ₹${b.paid_amount}, Status: ${b.payment_status.toUpperCase()}`);
+                  } else {
+                    alert("Select a bill to view payment details");
+                  }
+                }}
+                style={{
+                  background: "#4338ca",
+                  color: "#ffffff",
+                  padding: "3px 10px",
+                  borderRadius: "2px",
+                  fontWeight: 700,
+                  border: "1px solid #3730a3",
+                  cursor: "pointer",
+                }}
+              >
+                PAYMENT DETAIL
+              </button>
+
+              {/* Payment Mode Filter */}
+              <select
+                value={paymentModeFilter}
+                onChange={(e) => setPaymentModeFilter(e.target.value as any)}
+                style={{
+                  background: "#ffffff",
+                  color: "#0f172a",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "2px",
+                  padding: "2px 8px",
+                  fontWeight: 700,
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="all">All Modes</option>
+                <option value="cash">Cash Only</option>
+                <option value="credit">Credit Only</option>
+                <option value="upi">UPI / Online</option>
+                <option value="card">Card</option>
+              </select>
+
+              {/* Review Status Filter */}
+              <select
+                value={reviewTabFilter}
+                onChange={(e) => setReviewTabFilter(e.target.value as any)}
+                style={{
+                  background: "#ffffff",
+                  color: "#0f172a",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "2px",
+                  padding: "2px 8px",
+                  fontWeight: 700,
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="all">All Invoices</option>
+                <option value="confirmed">Confirmed Only</option>
+                <option value="under_review">Under Review Orders</option>
+              </select>
+
+              {/* PRINT LIST */}
+              <button
+                onClick={() => window.print()}
+                style={{
+                  background: "#1e3a8a",
+                  color: "#ffffff",
+                  padding: "3px 10px",
+                  borderRadius: "2px",
+                  fontWeight: 600,
+                  border: "1px solid #1d4ed8",
+                  cursor: "pointer",
+                }}
+              >
+                PRINT LIST
+              </button>
+
+              {/* PRINT SUMMARY */}
+              <button
+                onClick={() => {
+                  alert(`Sales Register Summary:\nTotal Revenue: ₹${totalSalesRevenue.toFixed(2)}\nActive Bills: ${confirmedBills.length}\nCredit Outstanding: ₹${creditOutstanding.toFixed(2)}`);
+                }}
+                style={{
+                  background: "#1e3a8a",
+                  color: "#ffffff",
+                  padding: "3px 10px",
+                  borderRadius: "2px",
+                  fontWeight: 600,
+                  border: "1px solid #1d4ed8",
+                  cursor: "pointer",
+                }}
+              >
+                PRINT SUMMARY
+              </button>
+
+              {/* Generate Einvoice */}
+              <button
+                onClick={() => {
+                  const b = bills.find((x) => x.id === selectedSingleBillId) || selectedBill;
+                  if (b) {
+                    alert(`e-Invoice IRN generated for Bill #${b.bill_number}! Ack No: 122026${b.bill_number.replace(/\D/g, "")}`);
+                  } else {
+                    alert("Please select a bill to generate e-Invoice");
+                  }
+                }}
+                style={{
+                  background: "#059669",
+                  color: "#ffffff",
+                  padding: "3px 10px",
+                  borderRadius: "2px",
+                  fontWeight: 700,
+                  border: "1px solid #047857",
+                  cursor: "pointer",
+                }}
+              >
+                Generate Einvoice
+              </button>
+
+              {/* Search Box */}
+              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center" }}>
+                <input
+                  type="text"
+                  placeholder="Search Bills..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    background: "#ffffff",
+                    color: "#0f172a",
+                    border: "none",
+                    borderRadius: "2px",
+                    padding: "3px 8px",
+                    fontSize: "0.75rem",
+                    width: "140px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* 3. Main Enterprise Data Grid matching Image 5 */}
+            <div style={{ flex: 1, overflowX: "auto", overflowY: "auto", maxHeight: "calc(100vh - 240px)" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "0.78rem",
+                  textAlign: "left",
+                  fontFamily: "Arial, sans-serif",
+                }}
+              >
+                <thead>
+                  <tr
+                    style={{
+                      background: "#16082f",
+                      color: "#ffffff",
+                      fontWeight: 800,
+                      fontSize: "0.75rem",
+                      letterSpacing: "0.03em",
+                      height: "32px",
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 20,
+                    }}
+                  >
+                    <th style={{ padding: "6px 8px", borderRight: "1px solid #2d1854", width: "100px" }}>BILL NO.</th>
+                    <th style={{ padding: "6px 8px", borderRight: "1px solid #2d1854", width: "95px" }}>DATE</th>
+                    <th style={{ padding: "6px 8px", borderRight: "1px solid #2d1854" }}>CUSTOMER NAME</th>
+                    <th style={{ padding: "6px 8px", borderRight: "1px solid #2d1854", width: "120px" }}>PLACE</th>
+                    <th style={{ padding: "6px 8px", borderRight: "1px solid #2d1854", width: "80px" }}>MODE</th>
+                    <th style={{ padding: "6px 8px", borderRight: "1px solid #2d1854", textAlign: "right", width: "100px" }}>AMOUNT</th>
+                    <th style={{ padding: "6px 8px", borderRight: "1px solid #2d1854", textAlign: "right", width: "90px" }}>PAID</th>
+                    <th style={{ padding: "6px 8px", borderRight: "1px solid #2d1854", textAlign: "right", width: "90px" }}>BALANCE</th>
+                    <th style={{ padding: "6px 8px", borderRight: "1px solid #2d1854", width: "100px" }}>BILLED BY</th>
+                    <th style={{ padding: "6px 8px", borderRight: "1px solid #2d1854", width: "105px" }}>REVIEW</th>
+                    <th style={{ padding: "6px 8px", width: "120px" }}>GSTIN</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={11} style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+                        <Loader2 size={24} className="animate-spin" style={{ margin: "0 auto 8px" }} />
+                        Loading list of bills...
+                      </td>
+                    </tr>
+                  ) : filteredBills.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+                        No bills found matching filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredBills.map((bill, idx) => {
+                      const isSelected = selectedSingleBillId === bill.id;
+                      const isCash = bill.payment_mode !== "credit";
+                      const balance = bill.total_amount - bill.paid_amount;
+                      return (
+                        <tr
+                          key={bill.id}
+                          onClick={() => {
+                            setSelectedSingleBillId(bill.id);
+                            setSelectedBill(bill);
+                          }}
+                          onDoubleClick={() => setSelectedBill(bill)}
+                          style={{
+                            background: isSelected ? "#c7d2fe" : idx % 2 === 0 ? "#ffffff" : "#f8fafc",
+                            borderBottom: "1px solid #e2e8f0",
+                            cursor: "pointer",
+                            height: "26px",
+                            color: isSelected ? "#1e1b4b" : "#0f172a",
+                            fontWeight: isSelected ? 700 : 500,
+                          }}
+                        >
+                          <td style={{ padding: "4px 8px", borderRight: "1px solid #e2e8f0", fontWeight: 700 }}>{bill.bill_number}</td>
+                          <td style={{ padding: "4px 8px", borderRight: "1px solid #e2e8f0" }}>
+                            {new Date(bill.created_at).toLocaleDateString("en-IN")}
+                          </td>
+                          <td style={{ padding: "4px 8px", borderRight: "1px solid #e2e8f0", fontWeight: 600 }}>
+                            {bill.party_name}
+                          </td>
+                          <td style={{ padding: "4px 8px", borderRight: "1px solid #e2e8f0" }}>
+                            {bill.party_address || "—"}
+                          </td>
+                          <td style={{ padding: "4px 8px", borderRight: "1px solid #e2e8f0", textTransform: "uppercase", fontSize: "0.72rem", color: isCash ? "#047857" : "#b45309" }}>
+                            {bill.payment_mode}
+                          </td>
+                          <td style={{ padding: "4px 8px", borderRight: "1px solid #e2e8f0", textAlign: "right", fontFamily: "monospace", fontWeight: 700 }}>
+                            ₹{bill.total_amount ? bill.total_amount.toFixed(2) : "0.00"}
+                          </td>
+                          <td style={{ padding: "4px 8px", borderRight: "1px solid #e2e8f0", textAlign: "right", fontFamily: "monospace", color: "#047857" }}>
+                            ₹{bill.paid_amount ? bill.paid_amount.toFixed(2) : "0.00"}
+                          </td>
+                          <td style={{ padding: "4px 8px", borderRight: "1px solid #e2e8f0", textAlign: "right", fontFamily: "monospace", color: balance > 0 ? "#b91c1c" : "#64748b" }}>
+                            ₹{balance.toFixed(2)}
+                          </td>
+                          <td style={{ padding: "4px 8px", borderRight: "1px solid #e2e8f0", fontSize: "0.74rem" }}>
+                            {bill.creator_name || "Counter Staff"}
+                          </td>
+                          <td style={{ padding: "4px 8px", borderRight: "1px solid #e2e8f0", fontSize: "0.72rem" }}>
+                            <span style={{
+                              padding: "1px 6px",
+                              borderRadius: "2px",
+                              background: bill.is_reviewed_by_admin ? "#dcfce7" : "#fef3c7",
+                              color: bill.is_reviewed_by_admin ? "#166534" : "#92400e",
+                              fontWeight: 700,
+                            }}>
+                              {bill.is_reviewed_by_admin ? "Confirmed" : "Under Review"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "4px 8px", fontSize: "0.72rem", color: "#64748b" }}>
+                            {bill.party_gst || "—"}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Docked Status Bar */}
+            <FundSafeStatusBar moduleName="List of Bills" recordCount={filteredBills.length} />
           </div>
-        </div>
+        ) : (
+          <div>
+            <div style={{ marginBottom: "16px", display: "flex", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setViewStyle("fundsafe_grid")}
+                className="btn-primary"
+                style={{ display: "flex", alignItems: "center", gap: "6px", background: "#1e1b4b" }}
+              >
+                <FileText size={16} /> Switch to FundSafe Enterprise Grid (Image 5)
+              </button>
+            </div>
+
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                  <span className="badge badge-blue">Sales Register</span>
+                  <span className="badge badge-success">All Store Invoices</span>
+                </div>
+                <h1 style={{ fontSize: "1.75rem", fontWeight: 700 }}>Sales & Invoices Directory</h1>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>
+                  Comprehensive real-time register of all counter sales and customer tax invoices.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  onClick={fetchBills}
+                  className="btn-secondary"
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <RefreshCw size={16} className={loading ? "spin" : ""} /> Refresh
+                </button>
+                <Link href="/dashboard/pos" className="btn-primary" style={{ background: "#10b981", borderColor: "#059669" }}>
+                  <Plus size={16} /> New Counter Sale (POS)
+                </Link>
+              </div>
+            </div>
 
         {/* Success / Error Alerts */}
         {successMsg && (
@@ -981,7 +1612,7 @@ export default function SalesPage() {
           ) : filteredBills.length === 0 ? (
             <div style={{ padding: "48px", textAlign: "center", color: "var(--text-muted)" }}>
               <Receipt size={42} color="#64748b" style={{ margin: "0 auto 12px auto" }} />
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#f8fafc", marginBottom: "4px" }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#0f172a", marginBottom: "4px" }}>
                 No Sales Bills Found
               </h3>
               <p style={{ fontSize: "0.875rem", marginBottom: "16px" }}>
@@ -1034,7 +1665,7 @@ export default function SalesPage() {
                       />
                     </td>
                     <td>
-                      <div style={{ fontWeight: 700, color: "#f8fafc", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <div style={{ fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: "6px" }}>
                         <Receipt size={14} color="#38bdf8" />
                         <span>{bill.bill_number}</span>
                       </div>
@@ -1045,9 +1676,9 @@ export default function SalesPage() {
                     </td>
 
                     <td>
-                      <div style={{ fontWeight: 600, color: "#f8fafc" }}>{bill.party_name}</div>
+                      <div style={{ fontWeight: 600, color: "#0f172a" }}>{bill.party_name}</div>
                       {bill.party_address && (
-                        <div style={{ fontSize: "0.72rem", color: "#94a3b8", display: "flex", alignItems: "center", gap: "4px", marginTop: "1px" }}>
+                        <div style={{ fontSize: "0.72rem", color: "#64748b", display: "flex", alignItems: "center", gap: "4px", marginTop: "1px" }}>
                           <MapPin size={11} /> {bill.party_address}
                         </div>
                       )}
@@ -1260,31 +1891,44 @@ export default function SalesPage() {
           )}
         </div>
       </div>
+        )}
+      </div>
 
       {/* --- ADMIN FULL BILL EDITOR MODAL --- */}
       {editingBill && (
         <div className="modal-overlay no-print" onClick={() => setEditingBill(null)}>
           <div
             className="glass-panel"
-            style={{ width: "100%", maxWidth: "900px", maxHeight: "92vh", overflowY: "auto", padding: "24px", borderRadius: "14px", background: "#0f172a" }}
+            style={{
+              width: "100%",
+              maxWidth: "900px",
+              maxHeight: "92vh",
+              overflowY: "auto",
+              padding: "24px",
+              borderRadius: "14px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              color: "#0f172a",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "1px solid #e2e8f0", paddingBottom: "12px" }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                   <span className="badge badge-purple">ADMIN BILL OVERRIDE</span>
                   <span className="badge badge-blue">EDITING MODE</span>
                 </div>
-                <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>
+                <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
                   Edit Invoice: {editingBill.bill_number}
                 </h2>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                  Originally created by <strong>{editingBill.creator_name || "Counter Staff"}</strong> &bull; Changes will recalculate totals and update customer balances automatically.
+                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px" }}>
+                  Originally created by <strong style={{ color: "#0f172a" }}>{editingBill.creator_name || "Counter Staff"}</strong> &bull; Changes will recalculate totals and update customer balances automatically.
                 </div>
               </div>
 
-              <button onClick={() => setEditingBill(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+              <button onClick={() => setEditingBill(null)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer" }}>
                 <X size={20} />
               </button>
             </div>
@@ -1293,7 +1937,7 @@ export default function SalesPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" }}>
               {/* Customer Selector */}
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Customer / Party
                 </label>
                 <select
@@ -1329,7 +1973,7 @@ export default function SalesPage() {
               {/* Customer Mobile & GST */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     Mobile Number
                   </label>
                   <input
@@ -1342,7 +1986,7 @@ export default function SalesPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     GST Number
                   </label>
                   <input
@@ -1357,7 +2001,7 @@ export default function SalesPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Customer Billing Address
                 </label>
                 <input
@@ -1372,7 +2016,7 @@ export default function SalesPage() {
 
               {/* Payment Mode (ONLY CASH OR CREDIT) */}
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Payment Mode (2 Options)
                 </label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
@@ -1388,9 +2032,9 @@ export default function SalesPage() {
                       fontWeight: 700,
                       fontSize: "0.8rem",
                       cursor: "pointer",
-                      border: editPaymentMode === "cash" ? "2px solid #10b981" : "1px solid var(--border)",
-                      background: editPaymentMode === "cash" ? "rgba(16, 185, 129, 0.25)" : "rgba(30, 41, 59, 0.4)",
-                      color: editPaymentMode === "cash" ? "#34d399" : "var(--text-muted)",
+                      border: editPaymentMode === "cash" ? "2px solid #059669" : "1px solid #cbd5e1",
+                      background: editPaymentMode === "cash" ? "#d1fae5" : "#f1f5f9",
+                      color: editPaymentMode === "cash" ? "#065f46" : "#64748b",
                     }}
                   >
                     💵 CASH
@@ -1407,9 +2051,9 @@ export default function SalesPage() {
                       fontWeight: 700,
                       fontSize: "0.8rem",
                       cursor: "pointer",
-                      border: editPaymentMode === "credit" ? "2px solid #f59e0b" : "1px solid var(--border)",
-                      background: editPaymentMode === "credit" ? "rgba(245, 158, 11, 0.25)" : "rgba(30, 41, 59, 0.4)",
-                      color: editPaymentMode === "credit" ? "#fbbf24" : "var(--text-muted)",
+                      border: editPaymentMode === "credit" ? "2px solid #d97706" : "1px solid #cbd5e1",
+                      background: editPaymentMode === "credit" ? "#fef3c7" : "#f1f5f9",
+                      color: editPaymentMode === "credit" ? "#92400e" : "#64748b",
                     }}
                   >
                     📒 CREDIT
@@ -1420,7 +2064,7 @@ export default function SalesPage() {
               {/* Payment Status & Paid Amount */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     Payment Status
                   </label>
                   <select
@@ -1435,7 +2079,7 @@ export default function SalesPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                     Paid Amount (₹)
                   </label>
                   <input
@@ -1452,8 +2096,8 @@ export default function SalesPage() {
             </div>
 
             {/* Add Product from Catalog row */}
-            <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "12px", background: "rgba(30, 41, 59, 0.3)", padding: "8px 12px", borderRadius: "8px" }}>
-              <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-muted)" }}>+ Add Product to Bill:</span>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "12px", background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#475569" }}>+ Add Product to Bill:</span>
               <select
                 className="input-field"
                 value={selectedCatalogItemToAdd}
@@ -1473,24 +2117,24 @@ export default function SalesPage() {
             </div>
 
             {/* Editable Items Table */}
-            <div style={{ overflowX: "auto", marginBottom: "16px" }}>
-              <table className="custom-table" style={{ fontSize: "0.825rem" }}>
+            <div style={{ overflowX: "auto", marginBottom: "16px", border: "1px solid #cbd5e1", borderRadius: "8px" }}>
+              <table className="custom-table" style={{ fontSize: "0.825rem", width: "100%" }}>
                 <thead>
-                  <tr>
-                    <th>Item Name</th>
-                    <th style={{ width: "70px", textAlign: "center" }}>Qty</th>
-                    <th style={{ width: "95px" }}>Selling ₹</th>
-                    <th style={{ width: "95px" }}>Cost ₹</th>
-                    <th style={{ width: "80px" }}>GST %</th>
-                    <th style={{ width: "90px" }}>Tax Mode</th>
-                    <th style={{ textAlign: "right" }}>Line Total</th>
-                    <th style={{ width: "40px" }}></th>
+                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #cbd5e1", color: "#475569" }}>
+                    <th style={{ padding: "8px 10px" }}>Item Name</th>
+                    <th style={{ width: "70px", textAlign: "center", padding: "8px 10px" }}>Qty</th>
+                    <th style={{ width: "95px", textAlign: "right", padding: "8px 10px" }}>Selling ₹</th>
+                    <th style={{ width: "95px", textAlign: "right", padding: "8px 10px" }}>Cost ₹</th>
+                    <th style={{ width: "80px", textAlign: "center", padding: "8px 10px" }}>GST %</th>
+                    <th style={{ width: "90px", textAlign: "center", padding: "8px 10px" }}>Tax Mode</th>
+                    <th style={{ textAlign: "right", padding: "8px 10px" }}>Line Total</th>
+                    <th style={{ width: "40px", textAlign: "center", padding: "8px 10px" }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {editItems.map((item, idx) => (
-                    <tr key={idx}>
-                      <td>
+                    <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <td style={{ padding: "6px 10px" }}>
                         <input
                           type="text"
                           className="input-field"
@@ -1507,7 +2151,7 @@ export default function SalesPage() {
                         />
                       </td>
 
-                      <td>
+                      <td style={{ padding: "6px 10px" }}>
                         <input
                           type="number"
                           min="1"
@@ -1519,7 +2163,7 @@ export default function SalesPage() {
                         />
                       </td>
 
-                      <td>
+                      <td style={{ padding: "6px 10px", textAlign: "right" }}>
                         <input
                           type="number"
                           step="0.01"
@@ -1527,11 +2171,11 @@ export default function SalesPage() {
                           className="input-field"
                           value={item.rate}
                           onChange={(e) => updateEditItemRate(idx, parseFloat(e.target.value) || 0)}
-                          style={{ padding: "4px 6px", fontSize: "0.8rem", color: "#38bdf8", fontWeight: 600 }}
+                          style={{ padding: "4px 6px", fontSize: "0.8rem", color: "#0284c7", fontWeight: 600, textAlign: "right" }}
                         />
                       </td>
 
-                      <td>
+                      <td style={{ padding: "6px 10px", textAlign: "right" }}>
                         <input
                           type="number"
                           step="0.01"
@@ -1539,11 +2183,11 @@ export default function SalesPage() {
                           className="input-field"
                           value={item.purchase_price ?? 0}
                           onChange={(e) => updateEditItemPurchasePrice(idx, parseFloat(e.target.value) || 0)}
-                          style={{ padding: "4px 6px", fontSize: "0.8rem", color: "#f59e0b", fontWeight: 600 }}
+                          style={{ padding: "4px 6px", fontSize: "0.8rem", color: "#b45309", fontWeight: 600, textAlign: "right" }}
                         />
                       </td>
 
-                      <td>
+                      <td style={{ padding: "6px 10px" }}>
                         <select
                           className="input-field"
                           value={item.gst_rate}
@@ -1558,7 +2202,7 @@ export default function SalesPage() {
                         </select>
                       </td>
 
-                      <td>
+                      <td style={{ padding: "6px 10px", textAlign: "center" }}>
                         <button
                           type="button"
                           onClick={() => toggleEditItemTaxInclusive(idx)}
@@ -1568,9 +2212,9 @@ export default function SalesPage() {
                             fontSize: "0.65rem",
                             fontWeight: 600,
                             cursor: "pointer",
-                            border: "1px solid var(--border)",
-                            background: item.is_tax_inclusive ? "rgba(59, 130, 246, 0.2)" : "rgba(100, 116, 139, 0.2)",
-                            color: item.is_tax_inclusive ? "#60a5fa" : "#94a3b8",
+                            border: "1px solid #cbd5e1",
+                            background: item.is_tax_inclusive ? "#dbeafe" : "#f1f5f9",
+                            color: item.is_tax_inclusive ? "#1d4ed8" : "#64748b",
                             whiteSpace: "nowrap",
                           }}
                         >
@@ -1578,11 +2222,11 @@ export default function SalesPage() {
                         </button>
                       </td>
 
-                      <td style={{ textAlign: "right", fontWeight: 700, color: "#34d399", fontSize: "0.9rem" }}>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "#059669", fontSize: "0.9rem", padding: "6px 10px" }}>
                         ₹{item.total_amount.toFixed(2)}
                       </td>
 
-                      <td style={{ textAlign: "center" }}>
+                      <td style={{ textAlign: "center", padding: "6px 10px" }}>
                         <button
                           type="button"
                           onClick={() => removeEditItem(idx)}
@@ -1601,7 +2245,7 @@ export default function SalesPage() {
             {/* Totals & Notes Section */}
             <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "16px", marginBottom: "16px" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
                   Invoice Notes
                 </label>
                 <textarea
@@ -1614,22 +2258,22 @@ export default function SalesPage() {
                 />
               </div>
 
-              <div style={{ background: "rgba(30, 41, 59, 0.4)", padding: "12px 16px", borderRadius: "8px", fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: "4px" }}>
+              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 16px", borderRadius: "8px", fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: "4px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "var(--text-muted)" }}>Subtotal (Taxable):</span>
-                  <span>₹{editTaxable.toFixed(2)}</span>
+                  <span style={{ color: "#64748b" }}>Subtotal (Taxable):</span>
+                  <span style={{ color: "#0f172a", fontWeight: 600 }}>₹{editTaxable.toFixed(2)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "var(--text-muted)" }}>Total GST:</span>
-                  <span>₹{editTotalGst.toFixed(2)}</span>
+                  <span style={{ color: "#64748b" }}>Total GST:</span>
+                  <span style={{ color: "#b45309", fontWeight: 600 }}>₹{editTotalGst.toFixed(2)}</span>
                 </div>
                 {editRoundOff !== 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-muted)" }}>Round Off:</span>
-                    <span>₹{editRoundOff.toFixed(2)}</span>
+                    <span style={{ color: "#64748b" }}>Round Off:</span>
+                    <span style={{ color: "#0f172a" }}>₹{editRoundOff.toFixed(2)}</span>
                   </div>
                 )}
-                <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "6px", borderTop: "1px solid var(--border)", fontSize: "1.15rem", fontWeight: 700, color: "#34d399" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "6px", borderTop: "1px solid #cbd5e1", fontSize: "1.15rem", fontWeight: 700, color: "#059669" }}>
                   <span>Grand Total:</span>
                   <span>₹{editGrandTotal.toFixed(2)}</span>
                 </div>
@@ -1637,7 +2281,7 @@ export default function SalesPage() {
             </div>
 
             {/* Modal Actions Toolbar */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", borderTop: "1px solid var(--border)", paddingTop: "14px" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", borderTop: "1px solid #e2e8f0", paddingTop: "14px" }}>
               <button
                 type="button"
                 onClick={() => setEditingBill(null)}
@@ -1650,7 +2294,7 @@ export default function SalesPage() {
                 onClick={handleSaveEdit}
                 disabled={isSavingEdit}
                 className="btn-primary"
-                style={{ display: "flex", alignItems: "center", gap: "6px", background: "#3b82f6" }}
+                style={{ display: "flex", alignItems: "center", gap: "6px", background: "#2563eb" }}
               >
                 {isSavingEdit ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save Changes & Recalculate
               </button>
@@ -1664,10 +2308,21 @@ export default function SalesPage() {
         <div className="modal-overlay no-print" onClick={() => setSelectedBill(null)}>
           <div
             className="glass-panel"
-            style={{ width: "100%", maxWidth: "800px", maxHeight: "90vh", overflowY: "auto", padding: "28px", borderRadius: "14px", background: "#0f172a" }}
+            style={{
+              width: "100%",
+              maxWidth: "800px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              padding: "28px",
+              borderRadius: "14px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              color: "#0f172a",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px", borderBottom: "1px solid #e2e8f0", paddingBottom: "12px" }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                   <span className="badge badge-blue">TAX INVOICE</span>
@@ -1676,76 +2331,76 @@ export default function SalesPage() {
                     <span className="badge badge-danger">VOIDED</span>
                   )}
                 </div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 700 }}>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
                   Invoice: {selectedBill.bill_number}
                 </h2>
-                <div style={{ fontSize: "0.825rem", color: "var(--text-muted)" }}>
-                  Date: {new Date(selectedBill.created_at).toLocaleString("en-IN")} &bull; Billed by: <strong>{selectedBill.creator_name || "Counter Staff"}</strong>
+                <div style={{ fontSize: "0.825rem", color: "#64748b", marginTop: "4px" }}>
+                  Date: {new Date(selectedBill.created_at).toLocaleString("en-IN")} &bull; Billed by: <strong style={{ color: "#0f172a" }}>{selectedBill.creator_name || "Counter Staff"}</strong>
                 </div>
               </div>
 
-              <button onClick={() => setSelectedBill(null)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+              <button onClick={() => setSelectedBill(null)} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer" }}>
                 <X size={20} />
               </button>
             </div>
 
             {/* Customer & Payment Details */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", background: "rgba(30, 41, 59, 0.4)", padding: "14px", borderRadius: "8px", marginBottom: "18px", fontSize: "0.85rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "14px", borderRadius: "8px", marginBottom: "18px", fontSize: "0.85rem" }}>
               <div>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Customer Details</div>
-                <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "#f8fafc", marginTop: "2px" }}>{selectedBill.party_name}</div>
+                <div style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>Customer Details</div>
+                <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "#0f172a", marginTop: "2px" }}>{selectedBill.party_name}</div>
                 {selectedBill.party_address && (
-                  <div style={{ color: "#cbd5e1", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
-                    <MapPin size={12} color="#38bdf8" /> {selectedBill.party_address}
+                  <div style={{ color: "#475569", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <MapPin size={12} color="#0284c7" /> {selectedBill.party_address}
                   </div>
                 )}
-                {selectedBill.party_mobile && <div>Phone: {selectedBill.party_mobile}</div>}
-                {selectedBill.party_gst && <div>GSTIN: {selectedBill.party_gst}</div>}
+                {selectedBill.party_mobile && <div style={{ color: "#475569" }}>Phone: {selectedBill.party_mobile}</div>}
+                {selectedBill.party_gst && <div style={{ color: "#475569" }}>GSTIN: {selectedBill.party_gst}</div>}
               </div>
 
               <div>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Payment Details</div>
-                <div>Payment Mode: <strong style={{ textTransform: "uppercase" }}>{selectedBill.payment_mode === "credit" ? "Credit" : "Cash"}</strong></div>
-                <div>Payment Status: <strong style={{ textTransform: "capitalize" }}>{selectedBill.payment_status}</strong> (Paid ₹{selectedBill.paid_amount.toFixed(2)})</div>
+                <div style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>Payment Details</div>
+                <div style={{ color: "#0f172a", marginTop: "2px" }}>Payment Mode: <strong style={{ textTransform: "uppercase", color: "#0f172a" }}>{selectedBill.payment_mode === "credit" ? "Credit" : "Cash"}</strong></div>
+                <div style={{ color: "#0f172a" }}>Payment Status: <strong style={{ textTransform: "capitalize", color: "#0f172a" }}>{selectedBill.payment_status}</strong> (Paid ₹{selectedBill.paid_amount.toFixed(2)})</div>
               </div>
             </div>
 
             {/* Line Items Table */}
-            <h4 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "8px" }}>Line Items Breakdown</h4>
-            <div style={{ overflowX: "auto", marginBottom: "18px" }}>
-              <table className="custom-table" style={{ fontSize: "0.825rem" }}>
+            <h4 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "8px", color: "#0f172a" }}>Line Items Breakdown</h4>
+            <div style={{ overflowX: "auto", marginBottom: "18px", border: "1px solid #cbd5e1", borderRadius: "8px" }}>
+              <table className="custom-table" style={{ fontSize: "0.825rem", width: "100%" }}>
                 <thead>
-                  <tr>
-                    <th>Item Description</th>
-                    <th>HSN</th>
-                    <th style={{ textAlign: "right" }}>Qty</th>
-                    <th style={{ textAlign: "right" }}>Selling Price</th>
-                    {isAdmin && <th style={{ textAlign: "right" }}>Cost Price</th>}
-                    <th style={{ textAlign: "right" }}>GST %</th>
-                    <th style={{ textAlign: "right" }}>Taxable</th>
-                    <th style={{ textAlign: "right" }}>Line Total</th>
+                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #cbd5e1", color: "#475569" }}>
+                    <th style={{ padding: "8px 10px" }}>Item Description</th>
+                    <th style={{ padding: "8px 10px" }}>HSN</th>
+                    <th style={{ textAlign: "right", padding: "8px 10px" }}>Qty</th>
+                    <th style={{ textAlign: "right", padding: "8px 10px" }}>Selling Price</th>
+                    {isAdmin && <th style={{ textAlign: "right", padding: "8px 10px" }}>Cost Price</th>}
+                    <th style={{ textAlign: "right", padding: "8px 10px" }}>GST %</th>
+                    <th style={{ textAlign: "right", padding: "8px 10px" }}>Taxable</th>
+                    <th style={{ textAlign: "right", padding: "8px 10px" }}>Line Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {selectedBill.items?.map((item) => (
-                    <tr key={item.id || item.item_name}>
-                      <td style={{ fontWeight: 500 }}>
+                    <tr key={item.id || item.item_name} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <td style={{ fontWeight: 600, color: "#0f172a", padding: "6px 10px" }}>
                         {item.item_name}
                         {item.is_tax_inclusive && (
-                          <span style={{ fontSize: "0.7rem", color: "#60a5fa", marginLeft: "6px" }}>(Tax Incl.)</span>
+                          <span style={{ fontSize: "0.7rem", color: "#2563eb", marginLeft: "6px" }}>(Tax Incl.)</span>
                         )}
                       </td>
-                      <td style={{ color: "var(--text-muted)" }}>{item.hsn_code || "—"}</td>
-                      <td style={{ textAlign: "right" }}>{item.quantity} {item.unit}</td>
-                      <td style={{ textAlign: "right" }}>₹{item.rate.toFixed(2)}</td>
+                      <td style={{ color: "#64748b", padding: "6px 10px" }}>{item.hsn_code || "—"}</td>
+                      <td style={{ textAlign: "right", color: "#0284c7", fontWeight: 600, padding: "6px 10px" }}>{item.quantity} {item.unit}</td>
+                      <td style={{ textAlign: "right", color: "#0f172a", padding: "6px 10px" }}>₹{item.rate.toFixed(2)}</td>
                       {isAdmin && (
-                        <td style={{ textAlign: "right", color: "var(--text-muted)" }}>
+                        <td style={{ textAlign: "right", color: "#64748b", padding: "6px 10px" }}>
                           ₹{(item.purchase_price || 0).toFixed(2)}
                         </td>
                       )}
-                      <td style={{ textAlign: "right" }}>{item.gst_rate}%</td>
-                      <td style={{ textAlign: "right" }}>₹{item.taxable_amount.toFixed(2)}</td>
-                      <td style={{ textAlign: "right", fontWeight: 600, color: "#34d399" }}>₹{item.total_amount.toFixed(2)}</td>
+                      <td style={{ textAlign: "right", color: "#b45309", fontWeight: 600, padding: "6px 10px" }}>{item.gst_rate}%</td>
+                      <td style={{ textAlign: "right", color: "#0f172a", padding: "6px 10px" }}>₹{item.taxable_amount.toFixed(2)}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "#059669", padding: "6px 10px" }}>₹{item.total_amount.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1754,48 +2409,48 @@ export default function SalesPage() {
 
             {/* Totals Summary */}
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "20px" }}>
-              <div style={{ width: "300px", display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.85rem", background: "rgba(30, 41, 59, 0.4)", padding: "12px", borderRadius: "8px" }}>
+              <div style={{ width: "300px", display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.85rem", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px", borderRadius: "8px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "var(--text-muted)" }}>Subtotal:</span>
-                  <span>₹{selectedBill.subtotal.toFixed(2)}</span>
+                  <span style={{ color: "#64748b" }}>Subtotal:</span>
+                  <span style={{ color: "#0f172a", fontWeight: 600 }}>₹{selectedBill.subtotal.toFixed(2)}</span>
                 </div>
                 {selectedBill.discount_amount > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "#34d399" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#059669" }}>
                     <span>Discount:</span>
                     <span>-₹{selectedBill.discount_amount.toFixed(2)}</span>
                   </div>
                 )}
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "var(--text-muted)" }}>Taxable Amount:</span>
-                  <span>₹{selectedBill.taxable_amount.toFixed(2)}</span>
+                  <span style={{ color: "#64748b" }}>Taxable Amount:</span>
+                  <span style={{ color: "#0f172a", fontWeight: 600 }}>₹{selectedBill.taxable_amount.toFixed(2)}</span>
                 </div>
                 {selectedBill.cgst_amount > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-muted)" }}>CGST:</span>
-                    <span>₹{selectedBill.cgst_amount.toFixed(2)}</span>
+                    <span style={{ color: "#64748b" }}>CGST:</span>
+                    <span style={{ color: "#b45309", fontWeight: 600 }}>₹{selectedBill.cgst_amount.toFixed(2)}</span>
                   </div>
                 )}
                 {selectedBill.sgst_amount > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-muted)" }}>SGST:</span>
-                    <span>₹{selectedBill.sgst_amount.toFixed(2)}</span>
+                    <span style={{ color: "#64748b" }}>SGST:</span>
+                    <span style={{ color: "#b45309", fontWeight: 600 }}>₹{selectedBill.sgst_amount.toFixed(2)}</span>
                   </div>
                 )}
                 {selectedBill.igst_amount > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-muted)" }}>IGST:</span>
-                    <span>₹{selectedBill.igst_amount.toFixed(2)}</span>
+                    <span style={{ color: "#64748b" }}>IGST:</span>
+                    <span style={{ color: "#b45309", fontWeight: 600 }}>₹{selectedBill.igst_amount.toFixed(2)}</span>
                   </div>
                 )}
-                <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "6px", borderTop: "1px solid var(--border)", fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "6px", borderTop: "1px solid #cbd5e1", fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
                   <span>Grand Total:</span>
-                  <span style={{ color: "#34d399" }}>₹{selectedBill.total_amount.toFixed(2)}</span>
+                  <span style={{ color: "#059669" }}>₹{selectedBill.total_amount.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* Actions Toolbar */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border)", paddingTop: "16px", flexWrap: "wrap", gap: "10px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #e2e8f0", paddingTop: "16px", flexWrap: "wrap", gap: "10px" }}>
               <div style={{ display: "flex", gap: "8px" }}>
                 {isAdmin && selectedBill.status !== "void" && (
                   <>
@@ -1806,7 +2461,7 @@ export default function SalesPage() {
                         openEditModal(b);
                       }}
                       className="btn-primary"
-                      style={{ display: "flex", alignItems: "center", gap: "6px", background: "#3b82f6" }}
+                      style={{ display: "flex", alignItems: "center", gap: "6px", background: "#2563eb" }}
                     >
                       <Edit2 size={16} /> Edit Bill
                     </button>

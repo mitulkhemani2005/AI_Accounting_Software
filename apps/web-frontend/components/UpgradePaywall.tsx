@@ -8,11 +8,8 @@ import {
   Sparkles,
   CheckCircle2,
   ArrowRight,
-  ShieldAlert,
   Zap,
   CreditCard,
-  Building,
-  TrendingUp,
 } from "lucide-react";
 
 interface UpgradePaywallProps {
@@ -49,6 +46,7 @@ export function UpgradePaywall({
         justifyContent: "center",
         padding: "48px 24px",
         minHeight: "70vh",
+        background: "#ffffff",
       }}
     >
       <div
@@ -58,24 +56,23 @@ export function UpgradePaywall({
           width: "100%",
           padding: "40px",
           borderRadius: "16px",
-          border: "1px solid rgba(245, 158, 11, 0.3)",
-          background: "linear-gradient(145deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 27, 75, 0.8) 100%)",
-          boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(245, 158, 11, 0.15)",
+          border: "2px solid #fcd34d",
+          background: "#ffffff",
+          boxShadow: "0 4px 24px rgba(245, 158, 11, 0.12), 0 1px 4px rgba(0,0,0,0.06)",
           textAlign: "center",
           position: "relative",
           overflow: "hidden",
         }}
       >
-        {/* Glow Top Accent */}
+        {/* Top Accent Strip */}
         <div
           style={{
             position: "absolute",
             top: 0,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "300px",
+            left: 0,
+            right: 0,
             height: "4px",
-            background: "linear-gradient(90deg, transparent, #f59e0b, #ec4899, transparent)",
+            background: "linear-gradient(90deg, #f59e0b, #d97706)",
           }}
         />
 
@@ -88,13 +85,12 @@ export function UpgradePaywall({
             width: "64px",
             height: "64px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1))",
-            border: "1px solid rgba(245, 158, 11, 0.4)",
+            background: "#fef3c7",
+            border: "2px solid #fcd34d",
             marginBottom: "20px",
-            boxShadow: "0 0 20px rgba(245, 158, 11, 0.3)",
           }}
         >
-          <Lock size={30} color="#fbbf24" />
+          <Lock size={30} color="#d97706" />
         </div>
 
         {/* Plan Level Badge */}
@@ -118,7 +114,7 @@ export function UpgradePaywall({
           style={{
             fontSize: "1.85rem",
             fontWeight: 800,
-            color: "#f8fafc",
+            color: "#0f172a",
             marginBottom: "10px",
             lineHeight: 1.25,
           }}
@@ -128,7 +124,7 @@ export function UpgradePaywall({
 
         <p
           style={{
-            color: "#94a3b8",
+            color: "#64748b",
             fontSize: "0.95rem",
             maxWidth: "520px",
             margin: "0 auto 24px auto",
@@ -142,8 +138,8 @@ export function UpgradePaywall({
         {/* Feature List Card */}
         <div
           style={{
-            background: "rgba(15, 23, 42, 0.6)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
             borderRadius: "12px",
             padding: "20px",
             textAlign: "left",
@@ -155,7 +151,7 @@ export function UpgradePaywall({
               fontSize: "0.8rem",
               fontWeight: 700,
               textTransform: "uppercase",
-              color: "#fbbf24",
+              color: "#d97706",
               letterSpacing: "0.05em",
               marginBottom: "12px",
               display: "flex",
@@ -163,7 +159,7 @@ export function UpgradePaywall({
               gap: "6px",
             }}
           >
-            <Sparkles size={14} color="#fbbf24" /> What you unlock:
+            <Sparkles size={14} color="#d97706" /> What you unlock:
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -175,10 +171,10 @@ export function UpgradePaywall({
                   alignItems: "flex-start",
                   gap: "10px",
                   fontSize: "0.875rem",
-                  color: "#e2e8f0",
+                  color: "#1e293b",
                 }}
               >
-                <CheckCircle2 size={16} color="#34d399" style={{ marginTop: "2px", flexShrink: 0 }} />
+                <CheckCircle2 size={16} color="#059669" style={{ marginTop: "2px", flexShrink: 0 }} />
                 <span>{feat}</span>
               </div>
             ))}
@@ -195,10 +191,10 @@ export function UpgradePaywall({
           }}
         >
           <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
-            <span style={{ fontSize: "2rem", fontWeight: 800, color: "#f8fafc" }}>
+            <span style={{ fontSize: "2rem", fontWeight: 800, color: "#0f172a" }}>
               {priceMonthly}
             </span>
-            <span style={{ fontSize: "0.85rem", color: "#94a3b8" }}>
+            <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
               (Billed Monthly or Annually with ~17% OFF)
             </span>
           </div>
@@ -216,7 +212,7 @@ export function UpgradePaywall({
                 fontWeight: 700,
                 background: "linear-gradient(135deg, #f59e0b, #d97706)",
                 border: "none",
-                boxShadow: "0 4px 15px rgba(245, 158, 11, 0.4)",
+                boxShadow: "0 4px 15px rgba(245, 158, 11, 0.3)",
               }}
             >
               <Zap size={18} fill="#ffffff" />

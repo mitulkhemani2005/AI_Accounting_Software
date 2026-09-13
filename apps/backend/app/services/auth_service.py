@@ -48,29 +48,15 @@ async def get_tenant_entitlements(db: AsyncSession, tenant_id: str) -> List[str]
     )
     entitlements = set(e.module_name for e in result.scalars().all())
 
-    # Tier-based explicit filtering and implicit capabilities
-    if tier in ["enterprise", "enterprise_pro", "all_in_one_trial"]:
+    # Tier-based capabilities & active database entitlements
+    if tier in ["enterprise", "enterprise_pro", "all_in_one_trial", "standard", "standard_business", "pro"]:
         entitlements.update([
             "billing_pos", "inventory", "parties", "accounting",
             "outstanding_reports", "gst_compliance", "transfers",
-            "sub_users", "ai_suggestions"
+            "sub_users", "staff_management", "ai_suggestions", "audit_trail"
         ])
-    elif tier in ["standard", "standard_business"]:
-        entitlements.update([
-            "billing_pos", "inventory", "parties",
-            "outstanding_reports", "transfers", "sub_users"
-        ])
-        entitlements.discard("accounting")
-        entitlements.discard("gst_compliance")
-        entitlements.discard("ai_suggestions")
     else:  # free tier
         entitlements.update(["billing_pos", "inventory", "parties"])
-        entitlements.discard("accounting")
-        entitlements.discard("outstanding_reports")
-        entitlements.discard("gst_compliance")
-        entitlements.discard("transfers")
-        entitlements.discard("sub_users")
-        entitlements.discard("ai_suggestions")
 
     return list(entitlements)
 

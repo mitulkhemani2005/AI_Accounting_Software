@@ -297,8 +297,12 @@ async def verify_and_activate_subscription(
     all_modules = [
         "billing_pos",
         "inventory",
+        "parties",
         "accounting",
         "outstanding_reports",
+        "gst_compliance",
+        "transfers",
+        "sub_users",
         "staff_management",
         "audit_trail",
         "ai_suggestions",
