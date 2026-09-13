@@ -50,6 +50,7 @@ async def signup_admin(
         email=payload.email,
         password=payload.password,
         pin=payload.pin,
+        subscription_tier=payload.subscription_tier or "free",
         client_ip=client_ip
     )
 
@@ -102,6 +103,7 @@ async def get_my_profile(
 ):
     """Get current user profile, role, permissions, and tenant details"""
     permissions = await get_user_permissions(db, current_user)
+    entitlements = await get_tenant_entitlements(db, current_user.tenant_id)
     tenant_res = await db.execute(select(Tenant).where(Tenant.id == current_user.tenant_id))
     tenant = tenant_res.scalar_one()
 
@@ -114,6 +116,14 @@ async def get_my_profile(
         role=current_user.role.name if current_user.role else "unknown",
         permissions=permissions,
         tenant_name=tenant.business_name,
+        tenant={
+            "id": tenant.id,
+            "business_name": tenant.business_name,
+            "gst_number": tenant.gst_number,
+            "subscription_tier": tenant.subscription_tier,
+            "is_active": tenant.is_active,
+        },
+        entitlements=entitlements,
         is_active=current_user.is_active,
         created_at=current_user.created_at
     )

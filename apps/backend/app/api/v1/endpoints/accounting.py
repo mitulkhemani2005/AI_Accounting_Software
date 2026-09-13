@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from app.db.session import get_db
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import get_current_user, require_permission, require_module_entitlement
 from app.models.user import User
 from app.models.accounting import AccountGroup, Account, JournalEntry
 from app.schemas.accounting import (
@@ -34,7 +34,7 @@ from app.services.accounting_service import (
 )
 from app.services.audit_service import log_audit_event
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_module_entitlement("accounting"))])
 
 
 # --- 1. Account Groups & Chart of Accounts ---

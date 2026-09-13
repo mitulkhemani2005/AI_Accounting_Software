@@ -36,9 +36,12 @@ import {
   HelpCircle,
   MapPin,
 } from "lucide-react";
+import { UpgradePaywall } from "@/components/UpgradePaywall";
 
 export default function ReportsPage() {
-  const { user, tenant, isAdmin } = useAuth();
+  const { user, tenant, isAdmin, entitlements } = useAuth();
+  const isFreePlan = (tenant?.subscription_tier || "free").toLowerCase() === "free";
+  const isLocked = isFreePlan && !entitlements.includes("outstanding_reports");
 
   // Active Tab: debtors | creditors | reminders | gstr1 | gstr3b | einvoice
   const [activeTab, setActiveTab] = useState<
@@ -281,6 +284,26 @@ export default function ReportsPage() {
     navigator.clipboard.writeText(text);
     setActionSuccess(`${label} copied to clipboard!`);
   };
+
+  if (isLocked) {
+    return (
+      <UpgradePaywall
+        moduleName="Outstanding & Reports"
+        title="Unlock Outstanding Ageing & GST Compliance Center"
+        subtitle="Access Sundry Debtors/Creditors Ageing Buckets (0-30, 31-60, 61-90, 90+ days), 1-Click WhatsApp Due Payment Reminders, GSTR-1, GSTR-3B, and E-Invoicing."
+        requiredPlan="Standard Business"
+        priceMonthly="₹499 / mo"
+        features={[
+          "Sundry Debtors & Creditors Ageing Analysis (0-30, 31-60, 61-90, 90+ days)",
+          "Automated 1-Click WhatsApp Payment Due Reminders & direct wa.me links",
+          "GSTR-1 Export-Ready Return (Table 4 B2B, Table 5 B2CL, Table 7 B2CS, Table 12 HSN)",
+          "GST Portal Offline Tool JSON & Spreadsheet Return Downloads",
+          "GSTR-3B Outward Liabilities vs Inward Input Tax Credit (ITC) Balance",
+          "Government E-Invoicing (IRN Hash) & Official Signed QR Code Generation",
+        ]}
+      />
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>

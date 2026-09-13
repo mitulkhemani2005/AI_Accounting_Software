@@ -31,9 +31,12 @@ import {
   Building2,
   Layers,
 } from "lucide-react";
+import { UpgradePaywall } from "@/components/UpgradePaywall";
 
 export default function AccountingPage() {
-  const { user, tenant, isAdmin } = useAuth();
+  const { user, tenant, isAdmin, entitlements } = useAuth();
+  const isFreePlan = (tenant?.subscription_tier || "free").toLowerCase() === "free";
+  const isLocked = isFreePlan && !entitlements.includes("accounting");
 
   // Active Tab: overview | daybook | cashbank | ledger | trialbalance | pl | balancesheet | coa
   const [activeTab, setActiveTab] = useState<
@@ -359,6 +362,25 @@ export default function AccountingPage() {
       a.code.toLowerCase().includes(coaSearch.toLowerCase());
     return matchNature && matchSearch;
   });
+
+  if (isLocked) {
+    return (
+      <UpgradePaywall
+        moduleName="Accounting Books"
+        title="Unlock Full Double-Entry Accounting Engine"
+        subtitle="Access automated Trial Balance, Profit & Loss Statements, Balance Sheets, Multi-Period Ledgers, and Custom Chart of Accounts."
+        requiredPlan="Enterprise Pro"
+        priceMonthly="₹999 / mo"
+        features={[
+          "Official Double-Entry Chart of Accounts with Indian Accounting Standards",
+          "Automated Real-Time Trial Balance, Profit & Loss & Balance Sheet",
+          "Multi-Account Journal Vouchers & Double-Entry Verification",
+          "Cash & Bank Book Reconciliation with Inward/Outward Running Balances",
+          "General Ledger Statements with Filterable Date Ranges and PDF/Print Export",
+        ]}
+      />
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>

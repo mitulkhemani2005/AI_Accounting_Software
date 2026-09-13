@@ -159,3 +159,88 @@ async def test_bulk_csv_data_imports(async_client: AsyncClient):
     )
     assert import_supp_res.status_code == 200
     assert import_supp_res.json()["success_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_free_tier_restrictions_and_upgrade_unlock(async_client: AsyncClient):
+    """
+    Verify that Free Tier tenants are blocked from premium modules (Accounting, Reports, Sub-users)
+    and that upgrading via Razorpay instantly unlocks all entitlements without manual admin action.
+    """
+    uid = str(uuid.uuid4())[:8]
+    # 1. Sign up on default Free Tier
+    res = await async_client.post(
+        "/api/v1/auth/signup-admin",
+        json={
+            "business_name": f"Free Tier Store {uid}",
+            "admin_name": "Manish Verma",
+            "mobile_number": f"98{str(uuid.uuid4().int)[:8]}",
+            "password": "Password123!",
+            "subscription_tier": "free",
+        }
+    )
+    assert res.status_code == 201
+    admin_token = res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # 2. Verify Free Tier locks on premium modules
+    # 2a. Accounting is locked (403)
+    acc_res = await async_client.get("/api/v1/accounting/accounts", headers=headers)
+    assert acc_res.status_code == 403
+    assert "Module access restricted" in acc_res.json()["detail"]
+
+    # 2b. Reports is locked (403)
+    rep_res = await async_client.get("/api/v1/reports/debtors-ageing", headers=headers)
+    assert rep_res.status_code == 403
+    assert "Module access restricted" in rep_res.json()["detail"]
+
+    # 2c. Sub-users creation is locked (403)
+    sub_res = await async_client.post(
+        "/api/v1/users/sub-users",
+        json={"name": "Staff 1", "mobile_number": "9123456789", "pin": "1234"},
+        headers=headers
+    )
+    assert sub_res.status_code == 403
+
+    # 3. Upgrade to Enterprise Pro via Razorpay
+    order_res = await async_client.post(
+        "/api/v1/subscriptions/create-order",
+        json={"plan_id": "enterprise", "billing_cycle": "monthly"},
+        headers=headers
+    )
+    assert order_res.status_code == 200
+    order_id = order_res.json()["order_id"]
+
+    verify_res = await async_client.post(
+        "/api/v1/subscriptions/verify-payment",
+        json={
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": f"pay_{uid}",
+            "razorpay_signature": "test_sig",
+            "plan_id": "enterprise",
+            "billing_cycle": "monthly"
+        },
+        headers=headers
+    )
+    assert verify_res.status_code == 200
+    assert verify_res.json()["success"] is True
+    assert verify_res.json()["subscription_tier"] == "enterprise"
+
+    # 4. Verify all premium modules are now instantly UNLOCKED!
+    # 4a. Accounting is unlocked (200)
+    acc_unlocked = await async_client.get("/api/v1/accounting/accounts", headers=headers)
+    assert acc_unlocked.status_code == 200
+    assert len(acc_unlocked.json()) >= 10
+
+    # 4b. Reports is unlocked (200)
+    rep_unlocked = await async_client.get("/api/v1/reports/debtors-ageing", headers=headers)
+    assert rep_unlocked.status_code == 200
+
+    # 4c. Sub-users creation is unlocked (201)
+    sub_unlocked = await async_client.post(
+        "/api/v1/users/sub-users",
+        json={"name": "Staff 1", "mobile_number": f"91{str(uuid.uuid4().int)[:8]}", "pin": "1234"},
+        headers=headers
+    )
+    assert sub_unlocked.status_code == 201
+

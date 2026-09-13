@@ -25,7 +25,9 @@ import {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { isAdmin, isStaff } = useAuth();
+  const { isAdmin, isStaff, tenant, entitlements } = useAuth();
+
+  const isFreePlan = (tenant?.subscription_tier || "free").toLowerCase() === "free";
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, allowed: true },
@@ -34,10 +36,10 @@ export function Sidebar() {
     { label: "Products & Stock", href: "/dashboard/inventory", icon: Boxes, allowed: true },
     { label: "Purchase Book", href: "/dashboard/inventory?tab=purchases", icon: FileSpreadsheet, adminOnly: true },
     { label: "Parties & Ledger", href: "/dashboard/parties", icon: Contact, adminOnly: true },
-    { label: "Accounting Engine", href: "/dashboard/accounting", icon: BookOpen, adminOnly: true },
-    { label: "Outstanding & Reports", href: "/dashboard/reports", icon: FileText, adminOnly: true },
+    { label: "Accounting Engine", href: "/dashboard/accounting", icon: BookOpen, adminOnly: true, requiredModule: "accounting", planBadge: "PRO" },
+    { label: "Outstanding & Reports", href: "/dashboard/reports", icon: FileText, adminOnly: true, requiredModule: "outstanding_reports", planBadge: "PRO" },
     { label: "Staff Bills Review", href: "/dashboard/staff-bills", icon: ClipboardCheck, adminOnly: true },
-    { label: "Staff & Sub-users", href: "/dashboard/staff", icon: Users, adminOnly: true },
+    { label: "Staff & Sub-users", href: "/dashboard/staff", icon: Users, adminOnly: true, requiredModule: "sub_users", planBadge: "PRO" },
     { label: "Subscription & Plans", href: "/dashboard/subscription", icon: CreditCard, adminOnly: true },
     { label: "Audit Trail", href: "/dashboard/audit", icon: History, adminOnly: true },
   ];
@@ -79,6 +81,11 @@ export function Sidebar() {
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             const isRestricted = item.adminOnly && !isAdmin;
+            const isLockedModule = Boolean(
+              item.requiredModule &&
+              !entitlements.includes(item.requiredModule) &&
+              isFreePlan
+            );
 
             return isRestricted ? (
               <div
@@ -108,12 +115,12 @@ export function Sidebar() {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "10px",
+                  justifyContent: "space-between",
                   padding: "10px 12px",
                   borderRadius: "8px",
                   fontSize: "0.9rem",
                   fontWeight: isActive ? 600 : 500,
-                  color: isActive ? "#ffffff" : "var(--text-muted)",
+                  color: isActive ? "#ffffff" : isLockedModule ? "#94a3b8" : "var(--text-muted)",
                   background: isActive
                     ? "linear-gradient(135deg, rgba(37, 99, 235, 0.3), rgba(29, 78, 216, 0.2))"
                     : "transparent",
@@ -121,8 +128,25 @@ export function Sidebar() {
                   transition: "all 0.15s ease",
                 }}
               >
-                <item.icon size={18} color={isActive ? "#60a5fa" : "#94a3b8"} />
-                <span>{item.label}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <item.icon size={18} color={isActive ? "#60a5fa" : isLockedModule ? "#fbbf24" : "#94a3b8"} />
+                  <span>{item.label}</span>
+                </div>
+                {isLockedModule && (
+                  <span
+                    className="badge badge-warning"
+                    style={{
+                      fontSize: "0.65rem",
+                      padding: "1px 6px",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                  >
+                    <Lock size={10} /> {item.planBadge || "PRO"}
+                  </span>
+                )}
               </Link>
             );
           })}

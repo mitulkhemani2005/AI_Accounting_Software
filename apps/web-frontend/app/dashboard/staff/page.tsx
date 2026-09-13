@@ -4,9 +4,13 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { Users, Plus, Shield, User as UserIcon, Lock, Check, X, Loader2, AlertCircle } from "lucide-react";
+import { UpgradePaywall } from "@/components/UpgradePaywall";
 
 export default function StaffPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, tenant, entitlements } = useAuth();
+  const isFreePlan = (tenant?.subscription_tier || "free").toLowerCase() === "free";
+  const isLocked = isFreePlan && !entitlements.includes("sub_users");
+
   const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -79,6 +83,25 @@ export default function StaffPage() {
           enforced at the server API level.
         </p>
       </div>
+    );
+  }
+
+  if (isLocked) {
+    return (
+      <UpgradePaywall
+        moduleName="Staff & Sub-Users"
+        title="Unlock Multi-User Staff & Role Management"
+        subtitle="Free tier is restricted to single store-owner admin access. Upgrade to Standard Plan to create fast 4-digit PIN counter logins for billing staff."
+        requiredPlan="Standard Business"
+        priceMonthly="₹499 / mo"
+        features={[
+          "Up to 5 Store Staff Sub-Users on Standard Plan (Unlimited on Enterprise)",
+          "4-6 Digit Fast Counter POS PIN Authentication",
+          "Add-Only Role Protections (Staff restricted from editing/deleting past bills)",
+          "Two-Stage Staff Bill Review & Store Owner Confirmation Queue",
+          "User-wise Counter Sales Tracking & Daily Closing Registers",
+        ]}
+      />
     );
   }
 

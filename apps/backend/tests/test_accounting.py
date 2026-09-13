@@ -14,7 +14,8 @@ async def get_admin_headers(async_client: AsyncClient) -> dict:
             "gst_number": "27AABCU9603R1ZM",
             "admin_name": f"Admin {rand_id}",
             "mobile_number": f"97{uuid.uuid4().int % 100000000:08d}",
-            "password": "Password123!"
+            "password": "Password123!",
+            "subscription_tier": "enterprise",
         }
     )
     assert signup_res.status_code in [200, 201], f"Signup failed: {signup_res.text}"

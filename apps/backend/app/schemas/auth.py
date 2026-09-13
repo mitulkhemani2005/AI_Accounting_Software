@@ -11,6 +11,7 @@ class SignupAdminRequest(BaseModel):
     email: Optional[EmailStr] = Field(None, description="Admin email address")
     password: str = Field(..., min_length=6, max_length=100, description="Secure account password")
     pin: Optional[str] = Field(None, min_length=4, max_length=6, description="Optional 4-6 digit quick POS PIN")
+    subscription_tier: Optional[str] = Field("free", description="Subscription plan tier: free, standard, enterprise")
 
 
 class LoginAdminRequest(BaseModel):
@@ -43,5 +44,7 @@ class UserProfileResponse(BaseModel):
     role: str
     permissions: List[str]
     tenant_name: str
+    tenant: Optional[Dict[str, Any]] = None
+    entitlements: List[str] = []
     is_active: bool
     created_at: datetime

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import get_current_user, require_permission, require_module_entitlement
 from app.models.user import User
 from app.schemas.inventory import (
     GodownCreate,
@@ -165,6 +165,7 @@ async def transfer_stock(
     payload: StockTransferCreate,
     request: Request,
     current_user: User = Depends(require_permission("item.create")),
+    _entitled: User = Depends(require_module_entitlement("transfers")),
     db: AsyncSession = Depends(get_db)
 ):
     """Transfer stock between two godowns with atomic deduction & addition"""
@@ -182,6 +183,7 @@ async def transfer_stock(
 async def get_transfer_history(
     limit: int = Query(50, ge=1, le=200),
     current_user: User = Depends(get_current_user),
+    _entitled: User = Depends(require_module_entitlement("transfers")),
     db: AsyncSession = Depends(get_db)
 ):
     """List recent stock transfer logs"""

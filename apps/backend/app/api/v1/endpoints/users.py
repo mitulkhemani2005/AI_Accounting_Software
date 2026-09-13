@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.schemas.user import UserCreateSubUserRequest, UserResponse, UserUpdateStatusRequest
 from app.models.user import User
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import get_current_user, require_permission, require_module_entitlement
 from app.services.user_service import create_sub_user, list_tenant_users, update_user_status
 
 router = APIRouter()
@@ -15,6 +15,7 @@ async def add_sub_user(
     payload: UserCreateSubUserRequest,
     request: Request,
     current_user: User = Depends(require_permission("users.manage")),
+    _entitled: User = Depends(require_module_entitlement("sub_users")),
     db: AsyncSession = Depends(get_db)
 ):
     """Admin creates a store sub-user (staff) with PIN for counter sales"""

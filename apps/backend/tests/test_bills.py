@@ -12,7 +12,8 @@ async def test_bill_creation_rbac_and_features(async_client: AsyncClient):
             "gst_number": "27AABCU9603R1ZM",
             "admin_name": "Bharat Patel",
             "mobile_number": "9500000001",
-            "password": "Password123!"
+            "password": "Password123!",
+            "subscription_tier": "enterprise",
         }
     )
     admin_token = signup_res.json()["access_token"]
@@ -159,7 +160,8 @@ async def test_staff_bill_review_and_admin_confirmation_workflow(async_client: A
             "gst_number": "27AABCU9603R1ZN",
             "admin_name": "Kalyan Das",
             "mobile_number": "9600000001",
-            "password": "Password123!"
+            "password": "Password123!",
+            "subscription_tier": "enterprise",
         }
     )
     admin_token = signup_res.json()["access_token"]

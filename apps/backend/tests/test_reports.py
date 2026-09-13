@@ -14,7 +14,8 @@ async def test_debtors_and_creditors_ageing_reports(async_client: AsyncClient):
             "business_name": f"Mega Wholesale Hub {uid}",
             "admin_name": "Suresh Gupta",
             "mobile_number": f"97{str(uuid.uuid4().int)[:8]}",
-            "password": "Password123!"
+            "password": "Password123!",
+            "subscription_tier": "enterprise",
         }
     )
     assert res.status_code == 201
@@ -179,7 +180,8 @@ async def test_automated_payment_reminders_and_whatsapp(async_client: AsyncClien
             "business_name": f"Quick Mart Services {uid}",
             "admin_name": "Vikram Seth",
             "mobile_number": f"97{str(uuid.uuid4().int)[:8]}",
-            "password": "Password123!"
+            "password": "Password123!",
+            "subscription_tier": "enterprise"
         }
     )
     assert res.status_code == 201
@@ -226,7 +228,8 @@ async def test_gstr1_gstr3b_and_einvoice_compliance(async_client: AsyncClient):
             "business_name": f"Apex Electronics Ltd {uid}",
             "admin_name": "Anil Agarwal",
             "mobile_number": f"97{str(uuid.uuid4().int)[:8]}",
-            "password": "Password123!"
+            "password": "Password123!",
+            "subscription_tier": "enterprise"
         }
     )
     assert res.status_code == 201

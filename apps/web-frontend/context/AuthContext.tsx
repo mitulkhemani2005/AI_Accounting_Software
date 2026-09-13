@@ -100,7 +100,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: res.data.email,
           role: res.data.role,
         });
+        if (res.data.tenant) {
+          setTenant(res.data.tenant);
+        }
         setPermissions(res.data.permissions || []);
+        setEntitlements(res.data.entitlements || []);
       }
     } catch (err: any) {
       console.warn("Session validation error:", err?.message || err);

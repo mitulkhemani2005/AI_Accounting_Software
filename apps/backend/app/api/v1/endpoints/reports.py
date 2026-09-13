@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import get_current_user, require_permission, require_module_entitlement
 from app.models.user import User
 from app.schemas.report import (
     DebtorsAgeingResponse,
@@ -31,7 +31,7 @@ from app.services.gst_compliance_service import (
 )
 from app.services.einvoice_service import generate_einvoice_for_bill
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_module_entitlement("outstanding_reports"))])
 
 
 # ==============================================================================

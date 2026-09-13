@@ -66,6 +66,7 @@ async def test_sub_user_creation_and_pin_login(async_client: AsyncClient):
         "mobile_number": "9822001122",
         "email": "sunil@guptamedical.in",
         "password": "Password123!",
+        "subscription_tier": "enterprise",
     }
     signup_res = await async_client.post("/api/v1/auth/signup-admin", json=signup_payload)
     assert signup_res.status_code == 201

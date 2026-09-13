@@ -107,27 +107,38 @@ async def create_tenant_with_admin(
     email: str | None,
     password: str,
     pin: str | None = None,
+    subscription_tier: str = "free",
     client_ip: str | None = None,
 ) -> Tuple[Tenant, User]:
     """Create new tenant, assign default module entitlements, and create admin user"""
     admin_role, _ = await seed_roles_and_permissions(db)
 
+    tier_clean = (subscription_tier or "free").lower()
+
     # 1. Create Tenant
     tenant = Tenant(
         business_name=business_name,
         gst_number=gst_number,
-        subscription_tier="all_in_one_trial",
+        subscription_tier=tier_clean,
         is_active=True
     )
     db.add(tenant)
     await db.flush()
 
-    # 2. Add Default Module Entitlements
+    # 2. Add Default Module Entitlements based on Tier
     for mod_name in DEFAULT_MODULES:
+        is_mod_active = False
+        if tier_clean in ["enterprise", "enterprise_pro", "all_in_one_trial"]:
+            is_mod_active = True
+        elif tier_clean in ["standard", "standard_business"]:
+            is_mod_active = mod_name in ["billing_pos", "inventory", "parties", "outstanding_reports", "transfers", "sub_users"]
+        else:  # free
+            is_mod_active = mod_name in ["billing_pos", "inventory", "parties"]
+
         entitlement = ModuleEntitlement(
             tenant_id=tenant.id,
             module_name=mod_name,
-            active=True
+            active=is_mod_active
         )
         db.add(entitlement)
 

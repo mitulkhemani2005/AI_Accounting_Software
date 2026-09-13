@@ -17,7 +17,8 @@ async def test_sub_user_server_side_rbac_restrictions(async_client: AsyncClient)
             "gst_number": "24AABCU9603R1ZM",
             "admin_name": "Kirit Patel",
             "mobile_number": "9900112233",
-            "password": "Password123!"
+            "password": "Password123!",
+            "subscription_tier": "enterprise",
         }
     )
     assert admin_signup.status_code == 201

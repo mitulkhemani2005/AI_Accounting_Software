@@ -35,15 +35,44 @@ async def get_user_permissions(db: AsyncSession, user: User) -> List[str]:
 
 
 async def get_tenant_entitlements(db: AsyncSession, tenant_id: str) -> List[str]:
-    """Fetch list of active module names for tenant"""
+    """Fetch list of active module names for tenant based on tier and active entitlements"""
+    tenant_res = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = tenant_res.scalar_one_or_none()
+    tier = (tenant.subscription_tier or "free").lower() if tenant else "free"
+
     result = await db.execute(
         select(ModuleEntitlement).where(
             ModuleEntitlement.tenant_id == tenant_id,
             ModuleEntitlement.active == True
         )
     )
-    entitlements = result.scalars().all()
-    return [e.module_name for e in entitlements]
+    entitlements = set(e.module_name for e in result.scalars().all())
+
+    # Tier-based explicit filtering and implicit capabilities
+    if tier in ["enterprise", "enterprise_pro", "all_in_one_trial"]:
+        entitlements.update([
+            "billing_pos", "inventory", "parties", "accounting",
+            "outstanding_reports", "gst_compliance", "transfers",
+            "sub_users", "ai_suggestions"
+        ])
+    elif tier in ["standard", "standard_business"]:
+        entitlements.update([
+            "billing_pos", "inventory", "parties",
+            "outstanding_reports", "transfers", "sub_users"
+        ])
+        entitlements.discard("accounting")
+        entitlements.discard("gst_compliance")
+        entitlements.discard("ai_suggestions")
+    else:  # free tier
+        entitlements.update(["billing_pos", "inventory", "parties"])
+        entitlements.discard("accounting")
+        entitlements.discard("outstanding_reports")
+        entitlements.discard("gst_compliance")
+        entitlements.discard("transfers")
+        entitlements.discard("sub_users")
+        entitlements.discard("ai_suggestions")
+
+    return list(entitlements)
 
 
 async def authenticate_admin(
