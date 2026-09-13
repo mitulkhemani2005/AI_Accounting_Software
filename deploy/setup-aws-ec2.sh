@@ -46,14 +46,16 @@ sudo ufw allow 80/tcp comment 'HTTP'
 sudo ufw allow 443/tcp comment 'HTTPS'
 sudo ufw --force enable
 
-# 6. Setup Swap (2GB) for smooth low-tier instance operations (t3.small/t3.medium)
-echo "[6/6] Configuring 2GB Swap space..."
+# 6. Setup Swap (4GB) for AWS Free Tier instances (t2.micro / t3.micro with 1GB RAM)
+echo "[6/6] Configuring 4GB Swap space (crucial for Free Tier t2.micro/t3.micro)..."
 if [ ! -f /swapfile ]; then
-    sudo fallocate -l 2G /swapfile
+    sudo fallocate -l 4G /swapfile
     sudo chmod 600 /swapfile
     sudo mkswap /swapfile
     sudo swapon /swapfile
     echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+    sudo sysctl vm.swappiness=20
+    echo 'vm.swappiness=20' | sudo tee -a /etc/sysctl.conf
 fi
 
 echo "======================================================================"

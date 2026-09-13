@@ -1,130 +1,151 @@
-# FundSafe ERP — AWS Deployment Guide
+# FundSafe ERP — 100% AWS Free Tier Deployment Guide
 
-This guide provides end-to-end instructions for deploying FundSafe ERP on AWS in the **ap-south-1 (Mumbai, India)** region for Indian data localization and GST compliance.
-
----
-
-## Architecture Overview
-
-```
-[ Internet / Clients ]
-         │
-         ▼
-[ AWS Route 53 / CloudFront / ALB ]
-         │
-         ▼
-[ Nginx Reverse Proxy (Port 80 / 443) ]
-   ├── /api/v1/*   ──► FastAPI Backend (Port 8000)
-   ├── /docs       ──► Swagger UI (Port 8000)
-   ├── /_next/*    ──► Next.js Static Cache
-   └── /*          ──► Next.js Frontend (Port 3000)
-         │
-    ┌────┴────────────────────────┐
-    ▼                             ▼
-[ PostgreSQL 16 ]            [ Redis 7 ]
-(Amazon RDS / Container)     (ElastiCache / Container)
-```
+This guide explains how to deploy FundSafe ERP on Amazon Web Services (AWS) **100% Free Tier Eligible (₹0 / $0 Cost)** in the **ap-south-1 (Mumbai, India)** region for full Indian GST & data compliance.
 
 ---
 
-## Method 1: Fast Deployment on AWS EC2 / Lightsail (Recommended)
+## AWS Free Tier Breakdown (100% Free for 12 Months)
 
-### Step 1: Launch an EC2 Instance
-- **AMI:** Ubuntu 22.04 LTS or 24.04 LTS (64-bit x86)
-- **Instance Type:** `t3.small` (2 vCPU, 2GB RAM) or `t3.medium` (2 vCPU, 4GB RAM)
-- **Storage:** 20 GB gp3 SSD
-- **Region:** `ap-south-1` (Mumbai)
-- **Security Group Inbound Rules:**
-  - `SSH` (Port 22) from your IP
-  - `HTTP` (Port 80) from `0.0.0.0/0`
-  - `HTTPS` (Port 443) from `0.0.0.0/0`
+| AWS Service | Free Tier Allocation | How FundSafe ERP Uses It |
+|---|---|---|
+| **Amazon EC2** | 750 hours / month of `t2.micro` or `t3.micro` | Runs all Docker containers (Frontend, Backend, AI, Postgres, Redis, Nginx) |
+| **Amazon EBS Storage** | Up to 30 GB gp3 / gp2 SSD storage | Storage for OS, Docker images, and database data |
+| **Data Transfer Out** | 100 GB / month free | Web traffic, API requests, and invoice downloads |
+| **Let's Encrypt SSL** | 100% Free SSL Certificates | Free HTTPS via Certbot |
 
-### Step 2: Connect to the Server & Run Setup
+---
+
+## Step 1: Launch your Free Tier EC2 Instance on AWS Console
+
+1. Log in to [AWS Management Console](https://console.aws.amazon.com/).
+2. In the top-right corner, select Region: **Asia Pacific (Mumbai) `ap-south-1`**.
+3. Go to **EC2** > Click **Launch Instance**:
+   - **Name:** `fundsafe-erp-server`
+   - **Application & OS Image (AMI):** `Ubuntu Server 24.04 LTS` (64-bit x86) — *(Free tier eligible)*
+   - **Instance Type:** `t2.micro` (1 vCPU, 1 GB RAM) or `t3.micro` — *(Free tier eligible)*
+   - **Key Pair (Login):** Create or select your `.pem` key pair (e.g. `fundsafe-key.pem`).
+   - **Network Settings (Firewall / Security Group):** Check all 3 boxes:
+     - ✅ **Allow SSH traffic from** -> `My IP`
+     - ✅ **Allow HTTPS traffic from the internet** (Port 443) -> `Anywhere (0.0.0.0/0)`
+     - ✅ **Allow HTTP traffic from the internet** (Port 80) -> `Anywhere (0.0.0.0/0)`
+   - **Configure Storage:** Change `8 GiB` to **`30 GiB`** gp3 root volume — *(30 GB is 100% Free Tier eligible)*
+4. Click **Launch Instance**.
+
+---
+
+## Step 2: Connect to your EC2 Instance via SSH
+
+Open your terminal (PowerShell, Command Prompt, or Mac/Linux terminal):
+
 ```bash
-ssh -i "your-key.pem" ubuntu@<YOUR_AWS_EC2_PUBLIC_IP>
+# Set permissions on your key file (Mac/Linux)
+chmod 400 fundsafe-key.pem
 
-# Clone repository
-git clone <YOUR_GIT_REPO_URL> fundsafe-erp
+# SSH into your EC2 public IP
+ssh -i "fundsafe-key.pem" ubuntu@<YOUR_EC2_PUBLIC_IP>
+```
+
+---
+
+## Step 3: Run the Automated Free Tier Server Setup
+
+Run the following commands on the server. This script automatically installs Docker, Docker Compose, sets up the UFW firewall, and configures **4GB of Swap memory** (critical so 1GB RAM instances never run out of memory during Next.js builds):
+
+```bash
+# Clone the repository
+git clone https://github.com/mitulkhemani2005/AI_Accounting_Software.git fundsafe-erp
 cd fundsafe-erp
 
-# Run the automated server provisioner
+# Make scripts executable and run setup
 chmod +x deploy/setup-aws-ec2.sh deploy/aws-deploy.sh
 ./deploy/setup-aws-ec2.sh
 
-# Apply docker group permissions
+# Apply docker group permissions immediately
 newgrp docker
 ```
 
-### Step 3: Configure Environment Variables
+---
+
+## Step 4: Configure Production Environment Variables
+
 ```bash
+# Copy the production template
 cp .env.production .env
+
+# Edit the environment file
 nano .env
 ```
-Ensure you fill in your production values:
-- `POSTGRES_USER=fundsafe_admin`
-- `POSTGRES_PASSWORD=<STRONG_GENERATED_PASSWORD>`
-- `POSTGRES_DB=fundsafe_erp_prod`
-- `JWT_SECRET_KEY=<SECURE_64_CHAR_RANDOM_KEY>`
-- `RAZORPAY_KEY_ID=<YOUR_RAZORPAY_KEY>`
-- `RAZORPAY_KEY_SECRET=<YOUR_RAZORPAY_SECRET>`
-- `CORS_ORIGINS=https://yourdomain.com,http://<YOUR_EC2_IP>`
 
-### Step 4: Deploy the Application
+Set your production secrets:
+```ini
+ENVIRONMENT=production
+PROJECT_NAME="FundSafe ERP"
+POSTGRES_USER=fundsafe_admin
+POSTGRES_PASSWORD=CreateAStrongPasswordHere123!
+POSTGRES_DB=fundsafe_erp_prod
+JWT_SECRET_KEY=generate_a_random_64_character_secret_string_here
+CORS_ORIGINS=http://<YOUR_EC2_PUBLIC_IP>,http://localhost:3000
+```
+*(Press `Ctrl+O` then `Enter` to save, and `Ctrl+X` to exit nano)*
+
+---
+
+## Step 5: Deploy the Entire Stack (1-Click)
+
 ```bash
 ./deploy/aws-deploy.sh
 ```
 
-### Step 5: Setup Free SSL with Let's Encrypt (Certbot)
-If you have a domain pointing to your EC2 Elastic IP:
-```bash
-sudo apt-get install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
-```
+This will automatically build and start:
+- 🌐 **Nginx Reverse Proxy** on Port 80 & 443
+- 💻 **Next.js 14 Frontend** on Port 3000
+- ⚡ **FastAPI Backend** on Port 8000
+- 🤖 **AI Microservice** on Port 8001
+- 🗄️ **PostgreSQL 16 Database** on Port 5432
+- 🚀 **Redis 7 Cache** on Port 6379
 
 ---
 
-## Method 2: Enterprise Managed AWS Deployment (ECS + RDS + ElastiCache)
+## Step 6: Access Your ERP in the Browser
 
-For high availability and autoscaling:
+Open your browser and navigate to:
+- **Web App:** `http://<YOUR_EC2_PUBLIC_IP>`
+- **API Health Check:** `http://<YOUR_EC2_PUBLIC_IP>/api/v1/health`
+- **Swagger Documentation:** `http://<YOUR_EC2_PUBLIC_IP>/docs`
 
-1. **Database:** Create an **Amazon RDS PostgreSQL 16** instance (`db.t4g.small` or higher) in Multi-AZ mode.
-2. **Cache:** Create an **Amazon ElastiCache for Redis** cluster.
-3. **Container Registry:** Push images to **Amazon ECR**:
+---
+
+## Step 7 (Optional): Setup Free SSL HTTPS with Custom Domain
+
+If you have a domain (e.g. `erp.yourdomain.com`):
+1. In your domain DNS manager (GoDaddy, Namecheap, Route 53, Cloudflare), add an **A record**:
+   - `Host:` `@` or `erp`
+   - `Points to:` `<YOUR_EC2_PUBLIC_IP>`
+2. On your EC2 server, obtain and install a free SSL certificate:
    ```bash
-   aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com
-   
-   docker build -t fundsafe-backend ./apps/backend
-   docker tag fundsafe-backend:latest <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/fundsafe-backend:latest
-   docker push <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/fundsafe-backend:latest
-   
-   docker build -t fundsafe-frontend ./apps/web-frontend
-   docker tag fundsafe-frontend:latest <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/fundsafe-frontend:latest
-   docker push <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/fundsafe-frontend:latest
+   sudo apt-get install -y certbot python3-certbot-nginx
+   sudo certbot --nginx -d erp.yourdomain.com
    ```
-4. **Orchestration:** Deploy using **AWS ECS Fargate** with an Application Load Balancer (ALB) and AWS Certificate Manager (ACM) SSL certificate.
+3. Certbot will automatically configure HTTPS and auto-renew the certificate every 90 days for free.
 
 ---
 
-## Useful Operations Commands
+## Maintenance & Monitoring Commands
 
-### View Live Logs
 ```bash
-# All containers
+# Check status of all containers
+docker compose -f docker-compose.prod.yml ps
+
+# View live real-time logs
 docker compose -f docker-compose.prod.yml logs -f
 
-# Backend only
-docker compose -f docker-compose.prod.yml logs -f backend
-
-# Frontend only
-docker compose -f docker-compose.prod.yml logs -f web-frontend
-```
-
-### Reset Database (Clear all data)
-```bash
+# Reset / Clear Database completely
 docker compose -f docker-compose.prod.yml exec backend python scripts/reset_db.py
-```
 
-### Restart All Services
-```bash
+# Restart all services
 docker compose -f docker-compose.prod.yml restart
+
+# Pull latest code and re-deploy
+git pull origin main
+./deploy/aws-deploy.sh
 ```
