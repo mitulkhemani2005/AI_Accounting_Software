@@ -96,14 +96,34 @@ async def test_bill_creation_rbac_and_features(async_client: AsyncClient):
     queue_data = review_queue.json()
     assert any(b["id"] == bill_id for b in queue_data)
 
-    # Admin edits bill
+    # Admin edits bill notes and full line items (rate, quantity, and party)
     admin_edit = await async_client.put(
         f"/api/v1/bills/{bill_id}",
-        json={"notes": "Reviewed and approved by Admin Bharat"},
+        json={
+            "notes": "Reviewed and approved by Admin Bharat",
+            "party_name": "Premium Verified Customer",
+            "items": [
+                {
+                    "item_name": "Sunflower Oil 1L",
+                    "hsn_code": "1512",
+                    "quantity": 3,
+                    "unit": "LTR",
+                    "rate": 160.0,
+                    "discount_amount": 10.0,
+                    "gst_rate": 5.0,
+                    "is_tax_inclusive": False
+                }
+            ]
+        },
         headers=admin_headers
     )
     assert admin_edit.status_code == 200
-    assert admin_edit.json()["notes"] == "Reviewed and approved by Admin Bharat"
+    edit_data = admin_edit.json()
+    assert edit_data["notes"] == "Reviewed and approved by Admin Bharat"
+    assert edit_data["party_name"] == "Premium Verified Customer"
+    assert len(edit_data["items"]) == 1
+    assert edit_data["items"][0]["quantity"] == 3
+    assert edit_data["items"][0]["rate"] == 160.0
 
     # =========================================================================
     # PDF Generation & WhatsApp Share Link

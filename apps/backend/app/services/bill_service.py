@@ -594,34 +594,14 @@ async def update_bill_by_admin(
         is_interstate = bill.is_interstate
         items_breakdown = []
         for itm in payload.items:
-            calc = calculate_line_item(
-                rate=itm.rate,
-                quantity=itm.quantity,
-                discount_amount=itm.discount_amount,
-                gst_rate=itm.gst_rate,
-                is_interstate=is_interstate,
-                is_tax_inclusive=itm.is_tax_inclusive
+            calc = calculate_line_item_gst(
+                item=itm,
+                is_interstate=is_interstate
             )
-            items_breakdown.append({
-                "item_id": itm.item_id,
-                "item_name": itm.item_name,
-                "hsn_code": itm.hsn_code,
-                "quantity": itm.quantity,
-                "unit": itm.unit,
-                "rate": itm.rate,
-                "purchase_price": itm.purchase_price or 0.0,
-                "discount_amount": itm.discount_amount,
-                "gst_rate": itm.gst_rate,
-                "is_tax_inclusive": itm.is_tax_inclusive,
-                "taxable_amount": calc["taxable_amount"],
-                "cgst_amount": calc["cgst_amount"],
-                "sgst_amount": calc["sgst_amount"],
-                "igst_amount": calc["igst_amount"],
-                "total_amount": calc["total_amount"],
-            })
+            items_breakdown.append(calc)
 
         discount_val = bill.discount_amount if bill.discount_amount is not None else 0.0
-        totals = calculate_bill_totals(items=items_breakdown, overall_discount=discount_val)
+        totals = calculate_bill_totals(items_breakdown=items_breakdown, bill_discount=discount_val, is_interstate=is_interstate)
 
         bill.subtotal = totals["subtotal"]
         bill.taxable_amount = totals["taxable_amount"]
@@ -644,14 +624,14 @@ async def update_bill_by_admin(
         for ib in items_breakdown:
             bill_item = BillItem(
                 bill_id=bill.id,
-                item_id=ib["item_id"],
+                item_id=ib["item_id"] if ib.get("item_id") and ib["item_id"] != "" else None,
                 item_name=ib["item_name"],
-                hsn_code=ib["hsn_code"],
+                hsn_code=ib.get("hsn_code"),
                 quantity=ib["quantity"],
-                unit=ib["unit"],
+                unit=ib.get("unit", "PCS") or "PCS",
                 rate=ib["rate"],
                 purchase_price=ib.get("purchase_price", 0.0) or 0.0,
-                discount_amount=ib["discount_amount"],
+                discount_amount=ib.get("discount_amount", 0.0) or 0.0,
                 gst_rate=ib["gst_rate"],
                 is_tax_inclusive=ib.get("is_tax_inclusive", False),
                 taxable_amount=ib["taxable_amount"],
@@ -668,6 +648,35 @@ async def update_bill_by_admin(
         await recalculate_party_balance(db, tenant_id, old_party_id, p_type)
     if bill.party_id and bill.party_id != old_party_id:
         await recalculate_party_balance(db, tenant_id, bill.party_id, p_type)
+
+    # 4. If bill is already confirmed and active, update linked sales journal voucher
+    if bill.status == "active" and bill.is_reviewed_by_admin and bill.type == "sale":
+        await void_journal_entry_for_reference(
+            db=db,
+            tenant_id=tenant_id,
+            user_id=admin_user.id,
+            reference_type="bill",
+            reference_id=bill.id
+        )
+        is_cash_sale = bill.payment_mode == "cash" or not bill.party_id
+        await record_sale_journal_entry(
+            db=db,
+            tenant_id=tenant_id,
+            user_id=admin_user.id,
+            bill_id=bill.id,
+            bill_number=bill.bill_number,
+            is_cash=is_cash_sale,
+            party_id=bill.party_id,
+            party_name=bill.party_name or "Walk-in Cash Customer",
+            taxable_amount=bill.taxable_amount,
+            cgst_amount=bill.cgst_amount,
+            sgst_amount=bill.sgst_amount,
+            igst_amount=bill.igst_amount,
+            discount_amount=bill.discount_amount,
+            round_off=bill.round_off,
+            total_amount=bill.total_amount,
+            payment_mode=bill.payment_mode or "cash"
+        )
 
     bill.is_reviewed_by_admin = True
     await db.commit()

@@ -587,7 +587,7 @@ export default function SalesPage() {
     setIsSavingEdit(true);
     try {
       const payload = {
-        party_id: editPartyId || undefined,
+        party_id: editPartyId ? editPartyId : "",
         party_name: editPartyName.trim() || "Cash Customer",
         party_mobile: editPartyMobile.trim() || undefined,
         party_gst: editPartyGst.trim() || undefined,
@@ -599,16 +599,16 @@ export default function SalesPage() {
         discount_amount: editDiscount || 0,
         notes: editNotes.trim() || undefined,
         items: editItems.map((i) => ({
-          item_id: i.item_id,
+          item_id: i.item_id ? i.item_id : undefined,
           item_name: i.item_name,
-          hsn_code: i.hsn_code,
-          quantity: i.quantity,
-          unit: i.unit,
-          rate: i.rate,
-          purchase_price: i.purchase_price || 0,
-          discount_amount: i.discount_amount || 0,
-          gst_rate: i.gst_rate,
-          is_tax_inclusive: i.is_tax_inclusive || false,
+          hsn_code: i.hsn_code || undefined,
+          quantity: Number(i.quantity),
+          unit: i.unit || "PCS",
+          rate: Number(i.rate),
+          purchase_price: Number(i.purchase_price || 0),
+          discount_amount: Number(i.discount_amount || 0),
+          gst_rate: Number(i.gst_rate),
+          is_tax_inclusive: Boolean(i.is_tax_inclusive),
         })),
       };
 
