@@ -12,6 +12,9 @@ from app.schemas.party import (
     SupplierCreateRequest,
     SupplierUpdateRequest,
     SupplierResponse,
+    PaymentCreateRequest,
+    PaymentResponse,
+    PartyLedgerResponse,
 )
 from app.models.user import User
 from app.api.deps import get_current_user, require_permission
@@ -26,6 +29,9 @@ from app.services.party_service import (
     create_supplier,
     list_suppliers,
     update_supplier,
+    record_party_payment,
+    get_party_ledger,
+    recalculate_all_parties,
 )
 
 router = APIRouter()
@@ -221,4 +227,55 @@ async def edit_supplier(
         payload=payload,
         client_ip=client_ip
     )
+
+
+# ==============================================================================
+# Payment Receipts & Ledger Statements
+# ==============================================================================
+
+@router.post("/payments", response_model=PaymentResponse, status_code=status.HTTP_201_CREATED)
+async def record_payment(
+    payload: PaymentCreateRequest,
+    request: Request,
+    current_user: User = Depends(require_permission("party.edit")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Record customer payment receipt (Payment In) or supplier payment voucher (Payment Out)"""
+    client_ip = request.client.host if request.client else None
+    return await record_party_payment(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        user=current_user,
+        payload=payload,
+        client_ip=client_ip
+    )
+
+
+@router.get("/{party_type}/{party_id}/ledger", response_model=PartyLedgerResponse)
+async def get_ledger_statement(
+    party_type: str,
+    party_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get complete party ledger statement of account with running balance"""
+    return await get_party_ledger(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        party_id=party_id,
+        party_type=party_type.lower()
+    )
+
+
+@router.post("/recalculate")
+async def recalculate_balances(
+    current_user: User = Depends(require_permission("party.edit")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Synchronize and recalculate all customer and supplier balances with 100% precision"""
+    return await recalculate_all_parties(
+        db=db,
+        tenant_id=current_user.tenant_id
+    )
+
 

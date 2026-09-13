@@ -1,9 +1,12 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func, and_
+from sqlalchemy import select, or_, func, and_, desc
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
-from app.models.party import Area, Customer, Supplier
+from app.models.party import Area, Customer, Supplier, Payment
+from app.models.bill import Bill
+from app.models.user import User
 from app.schemas.party import (
     AreaCreateRequest,
     AreaUpdateRequest,
@@ -14,6 +17,10 @@ from app.schemas.party import (
     SupplierCreateRequest,
     SupplierUpdateRequest,
     SupplierResponse,
+    PaymentCreateRequest,
+    PaymentResponse,
+    PartyLedgerEntry,
+    PartyLedgerResponse,
 )
 from app.services.audit_service import log_audit_event
 
@@ -389,9 +396,14 @@ async def update_customer(
             setattr(customer, key, value.strip())
         elif key == "gst_number" and value:
             setattr(customer, key, value.strip().upper())
+        elif key == "opening_balance" and value is not None:
+            customer.opening_balance = float(value)
         else:
             setattr(customer, key, value)
 
+    await db.flush()
+    # Recalculate customer balance to account for any opening balance change
+    await recalculate_party_balance(db, tenant_id, customer.id, "customer")
     await db.commit()
     
     # Reload with area relationship
@@ -458,7 +470,7 @@ async def create_supplier(
     )
     db.add(supplier)
     await db.commit()
-
+    
     reload_res = await db.execute(
         select(Supplier).options(selectinload(Supplier.area)).where(Supplier.id == supplier.id)
     )
@@ -530,9 +542,13 @@ async def update_supplier(
             setattr(supplier, key, value.strip())
         elif key == "gst_number" and value:
             setattr(supplier, key, value.strip().upper())
+        elif key == "opening_balance" and value is not None:
+            supplier.opening_balance = float(value)
         else:
             setattr(supplier, key, value)
 
+    await db.flush()
+    await recalculate_party_balance(db, tenant_id, supplier.id, "supplier")
     await db.commit()
     
     reload_res = await db.execute(
@@ -552,4 +568,489 @@ async def update_supplier(
     )
 
     return format_supplier_response(supplier)
+
+
+# ==============================================================================
+# Dynamic Balance Recalculation & Ledger
+# ==============================================================================
+
+async def recalculate_party_balance(
+    db: AsyncSession,
+    tenant_id: str,
+    party_id: str,
+    party_type: str = "customer"
+) -> float:
+    """
+    Recalculates current outstanding balance for a customer or supplier with 100% mathematical precision:
+    - Customer Outstanding (Receivable) = Opening Balance + Sum(Unpaid/Credit Sale Invoices) - Sum(Payment In) + Sum(Payment Out)
+    - Supplier Outstanding (Payable) = Opening Balance + Sum(Unpaid/Credit Purchase Inward) - Sum(Payment Out) + Sum(Payment In)
+    """
+    if party_type == "customer":
+        cust_res = await db.execute(
+            select(Customer).where(Customer.tenant_id == tenant_id, Customer.id == party_id)
+        )
+        customer = cust_res.scalar_one_or_none()
+        if not customer:
+            return 0.0
+
+        # 1. Sum active sale bills
+        bills_res = await db.execute(
+            select(Bill).where(
+                Bill.tenant_id == tenant_id,
+                Bill.party_id == party_id,
+                Bill.type == "sale",
+                Bill.status == "active"
+            )
+        )
+        bills = list(bills_res.scalars().all())
+
+        unpaid_sales_debt = 0.0
+        for b in bills:
+            if b.payment_mode == "credit" or b.payment_status in ["unpaid", "partial"]:
+                unpaid_sales_debt += max(0.0, b.total_amount - (b.paid_amount or 0.0))
+
+        # 2. Sum active payment records
+        payments_res = await db.execute(
+            select(Payment).where(
+                Payment.tenant_id == tenant_id,
+                Payment.party_id == party_id,
+                Payment.party_type == "customer",
+                Payment.status == "active"
+            )
+        )
+        payments = list(payments_res.scalars().all())
+
+        total_payments_in = sum(p.amount for p in payments if p.payment_type in ["payment_in", "receipt", "in"])
+        total_payments_out = sum(p.amount for p in payments if p.payment_type in ["payment_out", "voucher", "payment", "out"])
+
+        new_balance = round((customer.opening_balance or 0.0) + unpaid_sales_debt - total_payments_in + total_payments_out, 2)
+        customer.current_balance = new_balance
+        await db.flush()
+        return new_balance
+
+    else:  # supplier
+        supp_res = await db.execute(
+            select(Supplier).where(Supplier.tenant_id == tenant_id, Supplier.id == party_id)
+        )
+        supplier = supp_res.scalar_one_or_none()
+        if not supplier:
+            return 0.0
+
+        # 1. Sum active purchase bills (matched by party_id or supplier name)
+        bills_res = await db.execute(
+            select(Bill).where(
+                Bill.tenant_id == tenant_id,
+                or_(Bill.party_id == party_id, Bill.party_name == supplier.name),
+                Bill.type == "purchase",
+                Bill.status == "active"
+            )
+        )
+        bills = list(bills_res.scalars().all())
+
+        unpaid_purchases_debt = 0.0
+        for b in bills:
+            if b.payment_mode == "credit" or b.payment_status in ["unpaid", "partial"]:
+                unpaid_purchases_debt += max(0.0, b.total_amount - (b.paid_amount or 0.0))
+
+        # 2. Sum active payments
+        payments_res = await db.execute(
+            select(Payment).where(
+                Payment.tenant_id == tenant_id,
+                Payment.party_id == party_id,
+                Payment.party_type == "supplier",
+                Payment.status == "active"
+            )
+        )
+        payments = list(payments_res.scalars().all())
+
+        total_payments_out = sum(p.amount for p in payments if p.payment_type == "payment_out")
+        total_payments_in = sum(p.amount for p in payments if p.payment_type == "payment_in")
+
+        new_balance = round((supplier.opening_balance or 0.0) + unpaid_purchases_debt - total_payments_out + total_payments_in, 2)
+        supplier.current_balance = new_balance
+        await db.flush()
+        return new_balance
+
+
+async def record_party_payment(
+    db: AsyncSession,
+    tenant_id: str,
+    user: User,
+    payload: PaymentCreateRequest,
+    client_ip: Optional[str] = None
+) -> PaymentResponse:
+    party_name = None
+    if payload.party_type == "customer":
+        cust = (await db.execute(
+            select(Customer).where(Customer.tenant_id == tenant_id, Customer.id == payload.party_id)
+        )).scalar_one_or_none()
+        if not cust:
+            raise HTTPException(status_code=404, detail="Customer not found")
+        party_name = cust.name
+    else:
+        supp = (await db.execute(
+            select(Supplier).where(Supplier.tenant_id == tenant_id, Supplier.id == payload.party_id)
+        )).scalar_one_or_none()
+        if not supp:
+            raise HTTPException(status_code=404, detail="Supplier not found")
+        party_name = supp.name
+
+    ptype_raw = (payload.payment_type or "").lower().strip()
+    if ptype_raw in ["receipt", "payment_in", "in", "inward", "receive"]:
+        normalized_ptype = "payment_in"
+    elif ptype_raw in ["voucher", "payment_out", "out", "payment", "outward", "pay"]:
+        normalized_ptype = "payment_out"
+    else:
+        normalized_ptype = "payment_in" if payload.party_type == "customer" else "payment_out"
+
+    payment = Payment(
+        tenant_id=tenant_id,
+        party_type=payload.party_type,
+        party_id=payload.party_id,
+        party_name=party_name,
+        payment_type=normalized_ptype,
+        amount=payload.amount,
+        payment_mode=payload.payment_mode,
+        reference_number=payload.reference_number.strip() if payload.reference_number else None,
+        payment_date=payload.payment_date or datetime.now(timezone.utc),
+        notes=payload.notes.strip() if payload.notes else None,
+        created_by_user_id=user.id,
+        status="active"
+    )
+    db.add(payment)
+    await db.flush()
+
+    # Recalculate balance
+    await recalculate_party_balance(
+        db=db,
+        tenant_id=tenant_id,
+        party_id=payload.party_id,
+        party_type=payload.party_type
+    )
+    await db.commit()
+    await db.refresh(payment)
+
+    await log_audit_event(
+        db=db,
+        tenant_id=tenant_id,
+        user_id=user.id,
+        action="RECORD_PAYMENT",
+        entity_type="Payment",
+        entity_id=payment.id,
+        details={"party_name": party_name, "amount": payment.amount, "mode": payment.payment_mode, "type": payment.payment_type},
+        ip_address=client_ip
+    )
+
+    return PaymentResponse(
+        id=payment.id,
+        tenant_id=payment.tenant_id,
+        party_type=payment.party_type,
+        party_id=payment.party_id,
+        party_name=payment.party_name,
+        payment_type=payment.payment_type,
+        amount=payment.amount,
+        payment_mode=payment.payment_mode,
+        reference_number=payment.reference_number,
+        payment_date=payment.payment_date,
+        notes=payment.notes,
+        status=payment.status,
+        created_at=payment.created_at
+    )
+
+
+async def get_party_ledger(
+    db: AsyncSession,
+    tenant_id: str,
+    party_id: str,
+    party_type: str
+) -> PartyLedgerResponse:
+    """Builds a complete, chronological statement of account with running balance."""
+    if party_type == "customer":
+        cust = (await db.execute(
+            select(Customer).options(selectinload(Customer.area)).where(Customer.tenant_id == tenant_id, Customer.id == party_id)
+        )).scalar_one_or_none()
+        if not cust:
+            raise HTTPException(status_code=404, detail="Customer not found")
+
+        await recalculate_party_balance(db, tenant_id, party_id, "customer")
+        await db.refresh(cust)
+
+        bills = list((await db.execute(
+            select(Bill).where(Bill.tenant_id == tenant_id, Bill.party_id == party_id, Bill.type == "sale")
+            .order_by(Bill.bill_date.asc(), Bill.created_at.asc())
+        )).scalars().all())
+
+        payments = list((await db.execute(
+            select(Payment).where(Payment.tenant_id == tenant_id, Payment.party_id == party_id, Payment.party_type == "customer")
+            .order_by(Payment.payment_date.asc(), Payment.created_at.asc())
+        )).scalars().all())
+
+        transactions = []
+        if cust.opening_balance != 0:
+            transactions.append(
+                PartyLedgerEntry(
+                    id="OP-BAL",
+                    date=cust.created_at,
+                    type="opening_balance",
+                    type_label="Opening Balance",
+                    reference_no="OP-BAL",
+                    description="Initial Opening Balance",
+                    payment_mode="N/A",
+                    debit=cust.opening_balance if cust.opening_balance > 0 else 0.0,
+                    credit=abs(cust.opening_balance) if cust.opening_balance < 0 else 0.0,
+                    running_balance=cust.opening_balance
+                )
+            )
+
+        for b in bills:
+            if b.status == "void":
+                transactions.append(
+                    PartyLedgerEntry(
+                        id=b.id,
+                        date=b.bill_date or b.created_at,
+                        type="bill_void",
+                        type_label="Voided Sale Invoice",
+                        reference_no=b.bill_number,
+                        description=f"Cancelled/Voided Bill #{b.bill_number}",
+                        payment_mode=b.payment_mode,
+                        debit=0.0,
+                        credit=0.0,
+                        running_balance=0.0
+                    )
+                )
+            else:
+                transactions.append(
+                    PartyLedgerEntry(
+                        id=b.id,
+                        date=b.bill_date or b.created_at,
+                        type="sale_invoice",
+                        type_label=f"Tax Invoice ({b.payment_mode.upper()})",
+                        reference_no=b.bill_number,
+                        description=f"Sale Bill #{b.bill_number}",
+                        payment_mode=b.payment_mode,
+                        debit=b.total_amount,
+                        credit=b.paid_amount or 0.0,
+                        running_balance=0.0
+                    )
+                )
+
+        for p in payments:
+            if p.status == "cancelled":
+                continue
+            if p.payment_type == "payment_in":
+                transactions.append(
+                    PartyLedgerEntry(
+                        id=p.id,
+                        date=p.payment_date or p.created_at,
+                        type="payment_in",
+                        type_label=f"Receipt ({p.payment_mode.upper()})",
+                        reference_no=p.reference_number or f"RCPT-{p.id[:8]}",
+                        description=f"Payment Received from Customer. {p.notes or ''}".strip(),
+                        payment_mode=p.payment_mode,
+                        debit=0.0,
+                        credit=p.amount,
+                        running_balance=0.0
+                    )
+                )
+            else:
+                transactions.append(
+                    PartyLedgerEntry(
+                        id=p.id,
+                        date=p.payment_date or p.created_at,
+                        type="payment_out",
+                        type_label=f"Refund/Payment ({p.payment_mode.upper()})",
+                        reference_no=p.reference_number or f"PMT-{p.id[:8]}",
+                        description=f"Refund/Payment Out to Customer. {p.notes or ''}".strip(),
+                        payment_mode=p.payment_mode,
+                        debit=p.amount,
+                        credit=0.0,
+                        running_balance=0.0
+                    )
+                )
+
+        transactions.sort(key=lambda x: x.date)
+
+        running = cust.opening_balance or 0.0
+        total_invoiced = 0.0
+        total_paid = 0.0
+
+        for tx in transactions:
+            if tx.type == "opening_balance":
+                tx.running_balance = running
+            elif tx.type != "bill_void":
+                running = round(running + tx.debit - tx.credit, 2)
+                total_invoiced += tx.debit
+                total_paid += tx.credit
+                tx.running_balance = running
+            else:
+                tx.running_balance = running
+
+        return PartyLedgerResponse(
+            party_id=cust.id,
+            party_name=cust.name,
+            party_type="customer",
+            mobile=cust.mobile,
+            gst_number=cust.gst_number,
+            area_name=cust.area.name if cust.area else None,
+            opening_balance=cust.opening_balance,
+            total_invoiced=round(total_invoiced, 2),
+            total_paid=round(total_paid, 2),
+            current_balance=cust.current_balance,
+            transactions=transactions
+        )
+
+    else:  # Supplier
+        supp = (await db.execute(
+            select(Supplier).options(selectinload(Supplier.area)).where(Supplier.tenant_id == tenant_id, Supplier.id == party_id)
+        )).scalar_one_or_none()
+        if not supp:
+            raise HTTPException(status_code=404, detail="Supplier not found")
+
+        await recalculate_party_balance(db, tenant_id, party_id, "supplier")
+        await db.refresh(supp)
+
+        bills = list((await db.execute(
+            select(Bill).where(
+                Bill.tenant_id == tenant_id,
+                or_(Bill.party_id == party_id, Bill.party_name == supp.name),
+                Bill.type == "purchase"
+            ).order_by(Bill.bill_date.asc(), Bill.created_at.asc())
+        )).scalars().all())
+
+        payments = list((await db.execute(
+            select(Payment).where(Payment.tenant_id == tenant_id, Payment.party_id == party_id, Payment.party_type == "supplier")
+            .order_by(Payment.payment_date.asc(), Payment.created_at.asc())
+        )).scalars().all())
+
+        transactions = []
+        if supp.opening_balance != 0:
+            transactions.append(
+                PartyLedgerEntry(
+                    id="OP-BAL",
+                    date=supp.created_at,
+                    type="opening_balance",
+                    type_label="Opening Balance",
+                    reference_no="OP-BAL",
+                    description="Initial Opening Balance",
+                    payment_mode="N/A",
+                    debit=0.0,
+                    credit=supp.opening_balance,
+                    running_balance=supp.opening_balance
+                )
+            )
+
+        for b in bills:
+            if b.status == "void":
+                transactions.append(
+                    PartyLedgerEntry(
+                        id=b.id,
+                        date=b.bill_date or b.created_at,
+                        type="bill_void",
+                        type_label="Voided Purchase Bill",
+                        reference_no=b.bill_number,
+                        description=f"Cancelled/Voided Purchase #{b.bill_number}",
+                        payment_mode=b.payment_mode,
+                        debit=0.0,
+                        credit=0.0,
+                        running_balance=0.0
+                    )
+                )
+            else:
+                transactions.append(
+                    PartyLedgerEntry(
+                        id=b.id,
+                        date=b.bill_date or b.created_at,
+                        type="purchase_invoice",
+                        type_label=f"Purchase Inward ({b.payment_mode.upper()})",
+                        reference_no=b.bill_number,
+                        description=f"Purchase Bill #{b.bill_number}",
+                        payment_mode=b.payment_mode,
+                        debit=b.paid_amount or 0.0,
+                        credit=b.total_amount,
+                        running_balance=0.0
+                    )
+                )
+
+        for p in payments:
+            if p.status == "cancelled":
+                continue
+            if p.payment_type == "payment_out":
+                transactions.append(
+                    PartyLedgerEntry(
+                        id=p.id,
+                        date=p.payment_date or p.created_at,
+                        type="payment_out",
+                        type_label=f"Payment Made ({p.payment_mode.upper()})",
+                        reference_no=p.reference_number or f"PMT-{p.id[:8]}",
+                        description=f"Payment to Supplier. {p.notes or ''}".strip(),
+                        payment_mode=p.payment_mode,
+                        debit=p.amount,
+                        credit=0.0,
+                        running_balance=0.0
+                    )
+                )
+            else:
+                transactions.append(
+                    PartyLedgerEntry(
+                        id=p.id,
+                        date=p.payment_date or p.created_at,
+                        type="payment_in",
+                        type_label=f"Supplier Refund ({p.payment_mode.upper()})",
+                        reference_no=p.reference_number or f"RCPT-{p.id[:8]}",
+                        description=f"Refund from Supplier. {p.notes or ''}".strip(),
+                        payment_mode=p.payment_mode,
+                        debit=0.0,
+                        credit=p.amount,
+                        running_balance=0.0
+                    )
+                )
+
+        transactions.sort(key=lambda x: x.date)
+
+        running = supp.opening_balance or 0.0
+        total_invoiced = 0.0
+        total_paid = 0.0
+
+        for tx in transactions:
+            if tx.type == "opening_balance":
+                tx.running_balance = running
+            elif tx.type != "bill_void":
+                running = round(running + tx.credit - tx.debit, 2)
+                total_invoiced += tx.credit
+                total_paid += tx.debit
+                tx.running_balance = running
+            else:
+                tx.running_balance = running
+
+        return PartyLedgerResponse(
+            party_id=supp.id,
+            party_name=supp.name,
+            party_type="supplier",
+            mobile=supp.mobile,
+            gst_number=supp.gst_number,
+            area_name=supp.area.name if supp.area else None,
+            opening_balance=supp.opening_balance,
+            total_invoiced=round(total_invoiced, 2),
+            total_paid=round(total_paid, 2),
+            current_balance=supp.current_balance,
+            transactions=transactions
+        )
+
+
+async def recalculate_all_parties(db: AsyncSession, tenant_id: str) -> Dict[str, Any]:
+    custs = (await db.execute(select(Customer.id).where(Customer.tenant_id == tenant_id))).scalars().all()
+    for cid in custs:
+        await recalculate_party_balance(db, tenant_id, cid, "customer")
+
+    supps = (await db.execute(select(Supplier.id).where(Supplier.tenant_id == tenant_id))).scalars().all()
+    for sid in supps:
+        await recalculate_party_balance(db, tenant_id, sid, "supplier")
+
+    await db.commit()
+    return {
+        "status": "success",
+        "recalculated_customers": len(custs),
+        "recalculated_suppliers": len(supps)
+    }
+
 

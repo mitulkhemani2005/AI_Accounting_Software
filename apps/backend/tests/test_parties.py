@@ -104,3 +104,40 @@ async def test_party_management(async_client: AsyncClient):
     assert list_cust.status_code == 200
     assert any(c["name"] == "Ajay Sharma" for c in list_cust.json())
     assert any(c["name"] == "Sunil General Store" and c["area_name"] == "Main Market Sector 4" for c in list_cust.json())
+
+    # 9. Record Payment Received from Customer (Ajay Sharma: opening bal 1500)
+    pay_res = await async_client.post(
+        "/api/v1/parties/payments",
+        json={
+            "party_type": "customer",
+            "party_id": cust_id,
+            "payment_type": "receipt",
+            "amount": 500.0,
+            "payment_mode": "upi",
+            "reference_number": "UPI/2026/09/9991",
+            "notes": "Part payment of opening balance"
+        },
+        headers=headers
+    )
+    assert pay_res.status_code == 201
+    assert pay_res.json()["amount"] == 500.0
+
+    # 10. Check Customer Ledger and Running Balance
+    ledger_res = await async_client.get(f"/api/v1/parties/customer/{cust_id}/ledger", headers=headers)
+    assert ledger_res.status_code == 200
+    ledger_data = ledger_res.json()
+    assert ledger_data["opening_balance"] == 1500.0
+    assert ledger_data["total_paid"] == 500.0
+    assert ledger_data["current_balance"] == 1000.0
+    assert len(ledger_data["transactions"]) >= 2  # Opening balance + Payment receipt
+
+    # 11. Recalculate All Balances
+    recalc_res = await async_client.post("/api/v1/parties/recalculate", headers=headers)
+    assert recalc_res.status_code == 200
+    assert recalc_res.json()["status"] == "success"
+
+    # Verify customer balance is exactly 1000.0
+    cust_check = await async_client.get("/api/v1/parties/customers", headers=headers)
+    ajay = next((c for c in cust_check.json() if c["id"] == cust_id), None)
+    assert ajay is not None
+    assert ajay["current_balance"] == 1000.0

@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from datetime import datetime, timezone
 from app.models.bill import Bill, BillItem
 from app.models.user import User
-from app.models.party import Customer
+from app.models.party import Customer, Supplier
 from app.schemas.bill import (
     BillCreateRequest,
     BillUpdateRequest,
@@ -17,6 +17,7 @@ from app.schemas.bill import (
 from app.services.gst_service import calculate_line_item_gst, calculate_bill_totals
 from app.services.audit_service import log_audit_event
 from app.services.inventory_service import record_stock_out_for_bill, restore_stock_for_voided_bill
+from app.services.party_service import recalculate_party_balance
 
 
 async def generate_bill_number(db: AsyncSession, tenant_id: str, bill_type: str = "sale") -> str:
@@ -197,16 +198,10 @@ async def create_bill(
         )
         db.add(bill_item)
 
-    # 9. Update Customer Balance if credit or unpaid
-    if payload.party_id and (payload.payment_mode == "credit" or payload.payment_status in ["unpaid", "partial"]):
-        unpaid_diff = totals["total_amount"] - paid_amount
-        if unpaid_diff > 0:
-            cust_res = await db.execute(
-                select(Customer).where(Customer.tenant_id == tenant_id, Customer.id == payload.party_id)
-            )
-            cust = cust_res.scalar_one_or_none()
-            if cust:
-                cust.current_balance += unpaid_diff
+    # 9. Update Party Balance
+    if payload.party_id:
+        p_type = "customer" if bill.type == "sale" else "supplier"
+        await recalculate_party_balance(db, tenant_id, payload.party_id, p_type)
 
     # 10. Auto-Deduct Inventory Stock
     if bill.type == "sale":
@@ -417,25 +412,12 @@ async def update_bill_by_admin(
             )
             db.add(bill_item)
 
-    # 3. Adjust customer balance if credit/unpaid debt changes
-    new_unpaid = (bill.total_amount - bill.paid_amount) if (bill.payment_mode == "credit" or bill.payment_status in ["unpaid", "partial"]) else 0.0
-
-    if old_party_id and old_party_id != bill.party_id:
-        old_cust_res = await db.execute(select(Customer).where(Customer.tenant_id == tenant_id, Customer.id == old_party_id))
-        old_cust = old_cust_res.scalar_one_or_none()
-        if old_cust:
-            old_cust.current_balance = max(0.0, old_cust.current_balance - old_unpaid)
-        if bill.party_id:
-            new_cust_res = await db.execute(select(Customer).where(Customer.tenant_id == tenant_id, Customer.id == bill.party_id))
-            new_cust = new_cust_res.scalar_one_or_none()
-            if new_cust:
-                new_cust.current_balance += new_unpaid
-    elif bill.party_id:
-        cust_res = await db.execute(select(Customer).where(Customer.tenant_id == tenant_id, Customer.id == bill.party_id))
-        cust = cust_res.scalar_one_or_none()
-        if cust:
-            diff = new_unpaid - old_unpaid
-            cust.current_balance += diff
+    # 3. Recalculate party balances for affected parties
+    p_type = "customer" if bill.type == "sale" else "supplier"
+    if old_party_id:
+        await recalculate_party_balance(db, tenant_id, old_party_id, p_type)
+    if bill.party_id and bill.party_id != old_party_id:
+        await recalculate_party_balance(db, tenant_id, bill.party_id, p_type)
 
     bill.is_reviewed_by_admin = True
     await db.commit()
@@ -475,14 +457,10 @@ async def delete_bill_by_admin(
 
     bill.status = "void"
 
-    # Restore customer balance if credit sale
-    if bill.party_id and (bill.payment_mode == "credit" or bill.payment_status in ["unpaid", "partial"]):
-        unpaid_amount = bill.total_amount - bill.paid_amount
-        if unpaid_amount > 0:
-            cust_res = await db.execute(select(Customer).where(Customer.tenant_id == tenant_id, Customer.id == bill.party_id))
-            cust = cust_res.scalar_one_or_none()
-            if cust:
-                cust.current_balance = max(0.0, cust.current_balance - unpaid_amount)
+    # Restore party balance
+    if bill.party_id:
+        p_type = "customer" if bill.type == "sale" else "supplier"
+        await recalculate_party_balance(db, tenant_id, bill.party_id, p_type)
 
     # Restore stock
     if bill.type == "sale":

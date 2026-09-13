@@ -1,6 +1,7 @@
 import uuid
 from typing import Optional, List
-from sqlalchemy import String, Float, Boolean, ForeignKey, UniqueConstraint, Text
+from datetime import datetime
+from sqlalchemy import String, Float, Boolean, ForeignKey, UniqueConstraint, Text, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, TimestampMixin
 
@@ -82,3 +83,40 @@ class Supplier(Base, TimestampMixin):
 
     # Relationships
     area: Mapped[Optional["Area"]] = relationship("Area", back_populates="suppliers")
+
+
+class Payment(Base, TimestampMixin):
+    __tablename__ = "payments"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    party_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, index=True
+    )  # customer, supplier
+    party_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    party_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    payment_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, index=True
+    )  # payment_in (customer receipt), payment_out (supplier payment)
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    payment_mode: Mapped[str] = mapped_column(
+        String(30), default="cash", nullable=False
+    )  # cash, upi, bank_transfer, cheque, card
+    reference_number: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )  # Txn ID, UTR, Cheque #
+    payment_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_by_user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), default="active", nullable=False
+    )  # active, cancelled
+

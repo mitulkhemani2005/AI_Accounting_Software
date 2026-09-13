@@ -9,6 +9,7 @@ from app.models.inventory import Godown, Stock, StockBatch, StockMovement, Stock
 from app.models.item import Item
 from app.models.bill import Bill, BillItem
 from app.models.user import User
+from app.models.party import Supplier
 from app.schemas.inventory import (
     GodownCreate,
     GodownUpdate,
@@ -376,14 +377,23 @@ async def record_stock_in(
     total_gst = round(sum(b["gst_amount"] for b in bill_items_data), 2)
     total_cgst = round(sum(b["cgst_amount"] for b in bill_items_data), 2)
     total_sgst = round(sum(b["sgst_amount"] for b in bill_items_data), 2)
-    grand_total = total_taxable + total_gst
-    round_off = round(round(grand_total) - grand_total, 2)
-    final_amount = round(grand_total + round_off, 2)
+    raw_total = total_taxable + total_gst
+    final_amount = float(round(raw_total))
+    round_off = round(final_amount - raw_total, 2)
+    # Check if a Supplier exists with this name to link party_id
+    supplier_obj = (await db.execute(
+        select(Supplier).where(
+            Supplier.tenant_id == tenant_id,
+            func.lower(Supplier.name) == supplier_name.lower()
+        )
+    )).scalar_one_or_none()
+    supplier_party_id = supplier_obj.id if supplier_obj else None
 
     purchase_bill = Bill(
         tenant_id=tenant_id,
         bill_number=pur_bill_number,
         type="purchase",
+        party_id=supplier_party_id,
         party_name=supplier_name,
         created_by_user_id=user.id,
         subtotal=total_taxable,
@@ -395,7 +405,7 @@ async def record_stock_in(
         igst_amount=0.0,
         round_off=round_off,
         total_amount=final_amount,
-        payment_mode="credit",
+        payment_mode="cash",
         payment_status="paid",
         paid_amount=final_amount,
         status="active",
@@ -425,6 +435,10 @@ async def record_stock_in(
             total_amount=it_data["total_amount"],
         )
         db.add(b_item)
+
+    if supplier_party_id:
+        from app.services.party_service import recalculate_party_balance
+        await recalculate_party_balance(db, tenant_id, supplier_party_id, "supplier")
 
     await db.commit()
 
@@ -821,9 +835,12 @@ async def get_inventory_metrics(db: AsyncSession, tenant_id: str) -> InventoryMe
     )
     active_godowns = godowns_count_res.scalar() or 0
 
-    # 3. Sum of stock units & valuations
+    # 3. Sum of stock units & valuations (Active items only)
     stock_items = (await db.execute(
-        select(Stock, Item).join(Item, Stock.item_id == Item.id).where(Stock.tenant_id == tenant_id)
+        select(Stock, Item).join(Item, Stock.item_id == Item.id).where(
+            Stock.tenant_id == tenant_id,
+            Item.is_active == True
+        )
     )).all()
 
     total_stock_units = 0.0
