@@ -29,6 +29,7 @@ export function Sidebar() {
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, allowed: true },
     { label: "POS Counter Sale", href: "/dashboard/pos", icon: Receipt, allowed: true },
     { label: "Sales & Invoices", href: "/dashboard/sales", icon: ShoppingBag, allowed: true },
+    { label: "Inventory & Stock", href: "/dashboard/inventory", icon: Boxes, allowed: true },
     { label: "Product Master", href: "/dashboard/items", icon: Package, adminOnly: true },
     { label: "Parties & Ledger", href: "/dashboard/parties", icon: Contact, adminOnly: true },
     { label: "Staff Bills Review", href: "/dashboard/staff-bills", icon: ClipboardCheck, adminOnly: true },
@@ -37,7 +38,6 @@ export function Sidebar() {
   ];
 
   const upcomingModules = [
-    { label: "Inventory & Godowns", icon: Boxes, phase: "Phase 3" },
     { label: "Accounting Engine", icon: BookOpen, phase: "Phase 4" },
     { label: "Outstanding Reports", icon: FileText, phase: "Phase 5" },
     { label: "AI Suggestions", icon: Sparkles, phase: "Phase 7" },

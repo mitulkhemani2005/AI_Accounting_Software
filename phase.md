@@ -59,14 +59,14 @@
 
 ## PHASE 3 — Inventory Management Module
 
-- [ ] Create `godowns` (warehouses/branches) table
-- [ ] Create `stock` table (item, godown, batch, expiry, quantity)
-- [ ] Implement stock-in flow (linked to purchase bills)
-- [ ] Implement stock-out flow (linked to sale bills — auto-deduct on billing)
-- [ ] Implement low-stock alert logic + notification
-- [ ] Implement batch & expiry tracking
-- [ ] Implement multi-godown stock transfer
-- [ ] Build stock summary & movement reports
+- [x] Create `godowns` (warehouses/branches) table
+- [x] Create `stock` table (item, godown, batch, expiry, quantity)
+- [x] Implement stock-in flow (linked to purchase bills)
+- [x] Implement stock-out flow (linked to sale bills — auto-deduct on billing)
+- [x] Implement low-stock alert logic + notification
+- [x] Implement batch & expiry tracking
+- [x] Implement multi-godown stock transfer
+- [x] Build stock summary & movement reports
 
 **✅ Checkpoint:** Selling an item via POS automatically reduces stock; purchasing restocks it. Low-stock alerts trigger correctly. Confirm before proceeding.
 

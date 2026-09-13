@@ -5,6 +5,7 @@ from app.models.audit import AuditLog
 from app.models.party import Customer, Supplier
 from app.models.item import Item
 from app.models.bill import Bill, BillItem
+from app.models.inventory import Godown, Stock, StockBatch, StockMovement, StockTransfer, StockTransferItem
 
 __all__ = [
     "Base",
@@ -21,4 +22,10 @@ __all__ = [
     "Item",
     "Bill",
     "BillItem",
+    "Godown",
+    "Stock",
+    "StockBatch",
+    "StockMovement",
+    "StockTransfer",
+    "StockTransferItem",
 ]

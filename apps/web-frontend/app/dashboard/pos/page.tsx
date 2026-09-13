@@ -30,6 +30,7 @@ import {
   Building,
   Calendar,
   FileText,
+  Warehouse,
 } from "lucide-react";
 
 interface POSItem {
@@ -53,9 +54,12 @@ interface POSItem {
 export default function POSPage() {
   const { user, tenant, isAdmin } = useAuth();
 
-  // Catalog & Search
+  // Catalog, Search & Inventory
   const [catalog, setCatalog] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [godowns, setGodowns] = useState<any[]>([]);
+  const [selectedGodownId, setSelectedGodownId] = useState("");
+  const [stockSummaryMap, setStockSummaryMap] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -174,6 +178,27 @@ export default function POSPage() {
     }
   };
 
+  const fetchInventory = async () => {
+    try {
+      const [godownRes, summaryRes] = await Promise.all([
+        api.get("/inventory/godowns"),
+        api.get("/inventory/summary"),
+      ]);
+      setGodowns(godownRes.data);
+      if (godownRes.data.length > 0 && !selectedGodownId) {
+        const def = godownRes.data.find((g: any) => g.is_default) || godownRes.data[0];
+        setSelectedGodownId(def.id);
+      }
+      const map: Record<string, number> = {};
+      summaryRes.data.forEach((s: any) => {
+        map[s.item_id] = s.total_quantity;
+      });
+      setStockSummaryMap(map);
+    } catch (e) {
+      console.error("Failed to load inventory data:", e);
+    }
+  };
+
   useEffect(() => {
     const updateOnlineStatus = () => {
       setIsOnline(navigator.onLine);
@@ -195,6 +220,7 @@ export default function POSPage() {
 
     fetchCatalog();
     fetchCustomers();
+    fetchInventory();
 
     return () => {
       window.removeEventListener("online", updateOnlineStatus);
@@ -578,6 +604,7 @@ export default function POSPage() {
 
     const payload = {
       type: "sale",
+      godown_id: selectedGodownId || undefined,
       party_id: partyType === "customer" && selectedCustomerId ? selectedCustomerId : undefined,
       party_name: customerName,
       party_mobile: customerMobile || undefined,
@@ -630,10 +657,11 @@ export default function POSPage() {
       const res = await api.post("/bills", payload);
       setCompletedBill(res.data);
 
-      // Refresh customers to update balance if credit sale
+      // Refresh customers and inventory stock
       if (partyType === "customer") {
         fetchCustomers();
       }
+      fetchInventory();
 
       // Fetch WhatsApp share payload
       try {
@@ -771,47 +799,67 @@ export default function POSPage() {
                 No matching items. Add items in <strong>Product Master</strong>.
               </div>
             ) : (
-              filteredCatalog.map((p) => (
-                <div
-                  key={p.id}
-                  onClick={() => addItemToCart(p)}
-                  style={{
-                    background: "rgba(15, 23, 42, 0.6)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                    padding: "10px",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    transition: "transform 0.1s ease, border-color 0.1s ease",
-                  }}
-                  className="hover-card"
-                >
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#f8fafc", lineHeight: 1.2, marginBottom: "4px" }}>
-                      {p.name}
-                    </div>
-                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                      {p.category} &bull; {p.unit}
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: "8px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+              filteredCatalog.map((p) => {
+                const stockQty = stockSummaryMap[p.id];
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => addItemToCart(p)}
+                    style={{
+                      background: "rgba(15, 23, 42, 0.6)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "8px",
+                      padding: "10px",
+                      cursor: "pointer",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      transition: "transform 0.1s ease, border-color 0.1s ease",
+                    }}
+                    className="hover-card"
+                  >
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#34d399" }}>
-                        ₹{p.sale_price.toFixed(2)}
+                      <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#f8fafc", lineHeight: 1.2, marginBottom: "4px" }}>
+                        {p.name}
                       </div>
-                      <div style={{ fontSize: "0.65rem", color: p.is_tax_inclusive ? "#60a5fa" : "var(--text-muted)" }}>
-                        {p.is_tax_inclusive ? "Tax Incl." : `+${p.gst_rate}% GST`}
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                        {p.category} &bull; {p.unit}
                       </div>
+                      {stockQty !== undefined && (
+                        <div style={{ marginTop: "4px" }}>
+                          {stockQty <= 0 ? (
+                            <span style={{ fontSize: "0.65rem", fontWeight: 600, color: "#f87171", background: "rgba(239, 68, 68, 0.15)", padding: "1px 5px", borderRadius: "4px" }}>
+                              Out of stock (0)
+                            </span>
+                          ) : stockQty <= (p.min_stock_level || 5) ? (
+                            <span style={{ fontSize: "0.65rem", fontWeight: 600, color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)", padding: "1px 5px", borderRadius: "4px" }}>
+                              Low: {stockQty} {p.unit || "PCS"}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: "0.65rem", fontWeight: 500, color: "#34d399", background: "rgba(16, 185, 129, 0.15)", padding: "1px 5px", borderRadius: "4px" }}>
+                              Stock: {stockQty} {p.unit || "PCS"}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <span style={{ background: "#2563eb", borderRadius: "4px", padding: "2px 6px", fontSize: "0.7rem", color: "white" }}>
-                      +Add
-                    </span>
+
+                    <div style={{ marginTop: "8px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#34d399" }}>
+                          ₹{p.sale_price.toFixed(2)}
+                        </div>
+                        <div style={{ fontSize: "0.65rem", color: p.is_tax_inclusive ? "#60a5fa" : "var(--text-muted)" }}>
+                          {p.is_tax_inclusive ? "Tax Incl." : `+${p.gst_rate}% GST`}
+                        </div>
+                      </div>
+                      <span style={{ background: "#2563eb", borderRadius: "4px", padding: "2px 6px", fontSize: "0.7rem", color: "white" }}>
+                        +Add
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -820,14 +868,31 @@ export default function POSPage() {
         <div className="glass-panel" style={{ display: "flex", flexDirection: "column", padding: "16px", height: "100%", overflow: "hidden" }}>
           {/* Header & Customer Bar */}
           <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: "12px", marginBottom: "10px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <Receipt size={18} color="#38bdf8" />
                 <span style={{ fontWeight: 700, fontSize: "1rem" }}>Counter Checkout</span>
               </div>
 
-              {/* Status & Draft Buttons */}
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              {/* Godown & Status & Draft Buttons */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                {godowns.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", background: "rgba(30, 41, 59, 0.6)", padding: "2px 6px", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                    <Warehouse size={13} color="#38bdf8" />
+                    <select
+                      value={selectedGodownId}
+                      onChange={(e) => setSelectedGodownId(e.target.value)}
+                      style={{ background: "transparent", border: "none", color: "#f8fafc", fontSize: "0.75rem", outline: "none", cursor: "pointer" }}
+                    >
+                      {godowns.map((g) => (
+                        <option key={g.id} value={g.id} style={{ background: "#0f172a", color: "#f8fafc" }}>
+                          {g.name} {g.is_default ? "★" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {isOnline ? (
                   <span className="badge badge-success" style={{ fontSize: "0.7rem" }}><Wifi size={12} /> Live</span>
                 ) : (
@@ -857,10 +922,10 @@ export default function POSPage() {
                   }}
                   style={{ fontSize: "0.85rem", padding: "6px 10px", height: "36px" }}
                 >
-                  <option value="">👤 Walk-in Cash Customer</option>
+                  <option value="">ðŸ‘¤ Walk-in Cash Customer</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} {c.mobile ? `• 📱 ${c.mobile}` : ""} {c.gst_number ? `• 🆔 GST: ${c.gst_number}` : ""} {c.billing_address ? `• 📍 ${c.billing_address}` : ""} • 💰 Credit Due: ₹{c.current_balance?.toFixed(2)}
+                      {c.name} {c.mobile ? `â€¢ ðŸ“± ${c.mobile}` : ""} {c.gst_number ? `â€¢ ðŸ†” GST: ${c.gst_number}` : ""} {c.billing_address ? `â€¢ ðŸ“ ${c.billing_address}` : ""} â€¢ ðŸ’° Credit Due: â‚¹{c.current_balance?.toFixed(2)}
                     </option>
                   ))}
                 </select>
@@ -896,16 +961,16 @@ export default function POSPage() {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <strong style={{ fontSize: "0.85rem", color: "#f8fafc" }}>👤 {customerName}</strong>
-                    {customerMobile && <span style={{ color: "var(--text-muted)", marginLeft: "8px" }}>📱 {customerMobile}</span>}
+                    <strong style={{ fontSize: "0.85rem", color: "#f8fafc" }}>ðŸ‘¤ {customerName}</strong>
+                    {customerMobile && <span style={{ color: "var(--text-muted)", marginLeft: "8px" }}>ðŸ“± {customerMobile}</span>}
                   </div>
                   <div style={{ color: customerBalance > 0 ? "#f87171" : "#34d399", fontWeight: 700 }}>
-                    Credit Due: ₹{customerBalance.toFixed(2)}
+                    Credit Due: â‚¹{customerBalance.toFixed(2)}
                   </div>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "var(--text-muted)", fontSize: "0.725rem", flexWrap: "wrap", gap: "6px" }}>
-                  <div>📍 Address: <span style={{ color: "#f1f5f9" }}>{customerAddress ? `${customerAddress}${customerState ? `, ${customerState}` : ""}` : "No address registered"}</span></div>
-                  <div>🆔 GSTIN: <span style={{ fontFamily: "monospace", color: "#60a5fa" }}>{customerGst || "Unregistered"}</span></div>
+                  <div>ðŸ“ Address: <span style={{ color: "#f1f5f9" }}>{customerAddress ? `${customerAddress}${customerState ? `, ${customerState}` : ""}` : "No address registered"}</span></div>
+                  <div>ðŸ†” GSTIN: <span style={{ fontFamily: "monospace", color: "#60a5fa" }}>{customerGst || "Unregistered"}</span></div>
                 </div>
               </div>
             )}
@@ -936,7 +1001,7 @@ export default function POSPage() {
                       <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#f8fafc" }}>{item.item_name}</div>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", flexWrap: "wrap" }}>
                         <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "3px" }}>
-                          <span>Sell ₹:</span>
+                          <span>Sell â‚¹:</span>
                           <input
                             type="number"
                             step="0.01"
@@ -958,7 +1023,7 @@ export default function POSPage() {
                         </label>
                         {isAdmin && (
                           <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "3px" }}>
-                            <span>Cost ₹:</span>
+                            <span>Cost â‚¹:</span>
                             <input
                               type="number"
                               step="0.01"
@@ -987,10 +1052,10 @@ export default function POSPage() {
 
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#34d399" }}>
-                        ₹{item.total_amount.toFixed(2)}
+                        â‚¹{item.total_amount.toFixed(2)}
                       </div>
                       <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
-                        Tax: ₹{(item.cgst_amount + item.sgst_amount + item.igst_amount).toFixed(2)}
+                        Tax: â‚¹{(item.cgst_amount + item.sgst_amount + item.igst_amount).toFixed(2)}
                       </div>
                     </div>
                   </div>
@@ -1040,21 +1105,21 @@ export default function POSPage() {
           <div style={{ borderTop: "1px solid var(--border)", paddingTop: "10px", marginTop: "8px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "4px" }}>
               <span>Taxable Subtotal:</span>
-              <span>₹{taxableVal.toFixed(2)}</span>
+              <span>â‚¹{taxableVal.toFixed(2)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "4px" }}>
               <span>Total GST ({isInterstate ? "IGST" : "CGST+SGST"}):</span>
-              <span>₹{totalGst.toFixed(2)}</span>
+              <span>â‚¹{totalGst.toFixed(2)}</span>
             </div>
             {roundOff !== 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "4px" }}>
                 <span>Round Off:</span>
-                <span>₹{roundOff.toFixed(2)}</span>
+                <span>â‚¹{roundOff.toFixed(2)}</span>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.15rem", fontWeight: 700, color: "#f8fafc", margin: "6px 0" }}>
               <span>Grand Total:</span>
-              <span style={{ color: "#34d399" }}>₹{grandTotal.toFixed(2)}</span>
+              <span style={{ color: "#34d399" }}>â‚¹{grandTotal.toFixed(2)}</span>
             </div>
 
             {/* Payment Mode Selector - ONLY CASH & CREDIT */}
@@ -1078,7 +1143,7 @@ export default function POSPage() {
                   transition: "all 0.15s ease",
                 }}
               >
-                💵 CASH
+                ðŸ’µ CASH
               </button>
 
               <button
@@ -1107,7 +1172,7 @@ export default function POSPage() {
                   transition: "all 0.15s ease",
                 }}
               >
-                📒 CREDIT
+                ðŸ“’ CREDIT
               </button>
             </div>
 
@@ -1118,7 +1183,7 @@ export default function POSPage() {
               className="btn-primary"
               style={{ width: "100%", padding: "12px", background: "#10b981", borderColor: "#059669", fontSize: "1rem" }}
             >
-              {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : `Complete Sale & Print (₹${grandTotal})`}
+              {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : `Complete Sale & Print (â‚¹${grandTotal})`}
             </button>
           </div>
         </div>
@@ -1231,7 +1296,7 @@ export default function POSPage() {
               Sale Completed Successfully!
             </h2>
             <div style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-              Invoice No: <strong style={{ color: "#38bdf8" }}>{completedBill.bill_number}</strong> &bull; Total: <strong style={{ color: "#34d399" }}>₹{completedBill.total_amount?.toFixed(2)}</strong>
+              Invoice No: <strong style={{ color: "#38bdf8" }}>{completedBill.bill_number}</strong> &bull; Total: <strong style={{ color: "#34d399" }}>â‚¹{completedBill.total_amount?.toFixed(2)}</strong>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", margin: "16px 0" }}>
@@ -1299,11 +1364,10 @@ export default function POSPage() {
           </div>
         </div>
       )}
-
       {/* --- PRINTABLE HALF-A4 PROFESSIONAL BILL CONTAINER --- */}
       {completedBill && printFormat === "half_a4" && (
-        <div className="print-half-a4" style={{ width: "100%", maxWidth: "100%", margin: "0", padding: "2mm 4mm", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize: "10.5px", color: "#000", background: "#fff", boxSizing: "border-box" }}>
-          {/* Header: Company Details & Invoice Metadata */}
+        <div className="print-half-a4" style={{ width: "100%", maxWidth: "100%", margin: "0 auto", padding: "2mm 4mm", boxSizing: "border-box", background: "#fff", color: "#000" }}>
+          {/* Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #000", paddingBottom: "5px", marginBottom: "6px" }}>
             <div style={{ maxWidth: "62%" }}>
               <h2 style={{ margin: "0 0 2px 0", fontSize: "16px", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.5px", color: "#000" }}>
@@ -1315,7 +1379,6 @@ export default function POSPage() {
               <div style={{ fontSize: "9.5px", lineHeight: "1.3", color: "#111" }}>
                 <div><strong>Address:</strong> {tenant?.address ? `${tenant.address}${tenant.city ? `, ${tenant.city}` : ""}${tenant.state ? `, ${tenant.state}` : ""}${tenant.pincode ? ` - ${tenant.pincode}` : ""}` : "Store Address"}</div>
                 <div><strong>Phone:</strong> {tenant?.phone || "—"} &bull; <strong>GSTIN:</strong> {tenant?.gst_number || "Unregistered"}</div>
-                {tenant?.email && <div><strong>Email:</strong> {tenant.email}</div>}
               </div>
             </div>
             
@@ -1326,25 +1389,24 @@ export default function POSPage() {
               <div style={{ fontSize: "9.5px", lineHeight: "1.35", color: "#111" }}>
                 <div><strong>Invoice No:</strong> {completedBill.bill_number}</div>
                 <div><strong>Date:</strong> {new Date(completedBill.created_at || Date.now()).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                <div><strong>Time:</strong> {new Date(completedBill.created_at || Date.now()).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
-                <div><strong>Place of Supply:</strong> {completedBill.is_interstate ? "Inter-State (IGST)" : "Intra-State"}</div>
+                <div><strong>Supply:</strong> {completedBill.is_interstate ? "Inter-State (IGST)" : "Intra-State"}</div>
               </div>
             </div>
           </div>
 
-          {/* Bill To (Customer Details) & Payment Info */}
+          {/* Bill To & Payment Info */}
           <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", border: "1px solid #000", padding: "5px 8px", marginBottom: "6px", fontSize: "10px", lineHeight: "1.35", background: "#fcfcfc" }}>
             <div>
               <div style={{ fontSize: "8.5px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>BILLED TO (CUSTOMER):</div>
-              <div style={{ fontSize: "11.5px", fontWeight: "bold", color: "#000" }}>{completedBill.party_name || customerName}</div>
-              <div><strong>Address:</strong> {completedBill.party_address || customerAddress || "—"}</div>
-              <div><strong>Phone:</strong> {completedBill.party_mobile || customerMobile || "—"} &bull; <strong>GSTIN:</strong> {completedBill.party_gst || customerGst || "—"}</div>
+              <div style={{ fontSize: "11.5px", fontWeight: "bold", color: "#000" }}>{completedBill.party_name || "Cash Customer"}</div>
+              <div><strong>Address:</strong> {completedBill.party_address || "—"}</div>
+              <div><strong>Phone:</strong> {completedBill.party_mobile || "—"} &bull; <strong>GSTIN:</strong> {completedBill.party_gst || "—"}</div>
             </div>
             <div style={{ borderLeft: "1px solid #ccc", paddingLeft: "8px" }}>
               <div style={{ fontSize: "8.5px", fontWeight: "bold", textTransform: "uppercase", color: "#555" }}>PAYMENT & BILLING:</div>
               <div><strong>Payment Mode:</strong> <span style={{ textTransform: "uppercase", fontWeight: "bold" }}>{completedBill.payment_mode === "credit" ? "CREDIT" : "CASH"}</span></div>
               <div><strong>Payment Status:</strong> <span style={{ textTransform: "uppercase", fontWeight: "bold" }}>{completedBill.payment_status || "PAID"}</span></div>
-              <div><strong>Billed By:</strong> {user?.name || "Counter Staff"}</div>
+              <div><strong>Counter:</strong> POS Terminal #1</div>
             </div>
           </div>
 
@@ -1372,10 +1434,10 @@ export default function POSPage() {
                   </td>
                   <td style={{ padding: "3px", textAlign: "center", borderRight: "1px solid #e2e8f0", color: "#444" }}>{item.hsn_code || "—"}</td>
                   <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #e2e8f0" }}>{item.quantity} {item.unit || "pcs"}</td>
-                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #e2e8f0" }}>{item.rate.toFixed(2)}</td>
-                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #e2e8f0" }}>{(item.taxable_amount || (item.quantity * item.rate)).toFixed(2)}</td>
-                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #e2e8f0" }}>{item.gst_rate}%</td>
-                  <td style={{ padding: "3px 4px", textAlign: "right", fontWeight: "bold", color: "#000" }}>{item.total_amount.toFixed(2)}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #e2e8f0" }}>{(item.rate || 0).toFixed(2)}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #e2e8f0" }}>{(item.taxable_amount || 0).toFixed(2)}</td>
+                  <td style={{ padding: "3px", textAlign: "right", borderRight: "1px solid #e2e8f0" }}>{item.gst_rate || 0}%</td>
+                  <td style={{ padding: "3px 4px", textAlign: "right", fontWeight: "bold", color: "#000" }}>{(item.total_amount || 0).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -1387,7 +1449,7 @@ export default function POSPage() {
               <div>
                 <div style={{ fontSize: "8.5px", fontWeight: "bold", textTransform: "uppercase", color: "#555", marginBottom: "2px" }}>Amount in Words:</div>
                 <div style={{ fontSize: "9.5px", fontStyle: "italic", color: "#111", fontWeight: 500 }}>
-                  {numberToWordsINR(completedBill.total_amount || 0)}
+                  {numberToWordsINR(completedBill.total_amount || grandTotal || 0)}
                 </div>
               </div>
               <div style={{ marginTop: "6px", fontSize: "8px", color: "#555" }}>
@@ -1398,35 +1460,35 @@ export default function POSPage() {
             <div style={{ borderLeft: "1px solid #ccc", paddingLeft: "8px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
                 <span>Taxable Amount:</span>
-                <span>₹{(completedBill.taxable_amount || completedBill.subtotal || 0).toFixed(2)}</span>
+                <span>₹{(completedBill.taxable_amount || taxableVal).toFixed(2)}</span>
               </div>
-              {completedBill.discount_amount > 0 && (
+              {(completedBill.discount_amount || discountVal) > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", color: "#000", marginBottom: "2px" }}>
                   <span>Discount:</span>
-                  <span>-₹{completedBill.discount_amount.toFixed(2)}</span>
+                  <span>-₹{(completedBill.discount_amount || discountVal).toFixed(2)}</span>
                 </div>
               )}
-              {completedBill.cgst_amount > 0 && (
+              {(completedBill.cgst_amount || totalCgst) > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
                   <span>CGST:</span>
-                  <span>₹{completedBill.cgst_amount.toFixed(2)}</span>
+                  <span>₹{(completedBill.cgst_amount || totalCgst).toFixed(2)}</span>
                 </div>
               )}
-              {completedBill.sgst_amount > 0 && (
+              {(completedBill.sgst_amount || totalSgst) > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
                   <span>SGST:</span>
-                  <span>₹{completedBill.sgst_amount.toFixed(2)}</span>
+                  <span>₹{(completedBill.sgst_amount || totalSgst).toFixed(2)}</span>
                 </div>
               )}
-              {completedBill.igst_amount > 0 && (
+              {(completedBill.igst_amount || totalIgst) > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
                   <span>IGST:</span>
-                  <span>₹{completedBill.igst_amount.toFixed(2)}</span>
+                  <span>₹{(completedBill.igst_amount || totalIgst).toFixed(2)}</span>
                 </div>
               )}
               <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1.5px solid #000", paddingTop: "3px", marginTop: "3px", fontSize: "12px", fontWeight: "bold", color: "#000" }}>
                 <span>Grand Total:</span>
-                <span>₹{(completedBill.total_amount || 0).toFixed(2)}</span>
+                <span>₹{(completedBill.total_amount || grandTotal).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -1444,67 +1506,6 @@ export default function POSPage() {
         </div>
       )}
 
-      {/* --- PRINTABLE THERMAL RECEIPT --- */}
-      {completedBill && printFormat === "thermal" && (
-        <div className="print-thermal" style={{ padding: "10px", fontFamily: "monospace", fontSize: "12px", width: "300px", margin: "0 auto" }}>
-          <div style={{ textAlign: "center", borderBottom: "1px dashed #000", paddingBottom: "8px", marginBottom: "8px" }}>
-            <h3 style={{ fontSize: "16px", margin: 0 }}>{tenant?.business_name || "RETAIL STORE"}</h3>
-            {tenant?.gst_number && <div>GSTIN: {tenant.gst_number}</div>}
-            <div>TAX INVOICE</div>
-          </div>
-
-          <div style={{ borderBottom: "1px dashed #000", paddingBottom: "6px", marginBottom: "6px" }}>
-            <div>Inv #: {completedBill.bill_number}</div>
-            <div>Date: {new Date(completedBill.created_at || Date.now()).toLocaleString("en-IN")}</div>
-            <div>Cust: {completedBill.party_name || "Cash Customer"}</div>
-            {completedBill.party_mobile && <div>Phone: {completedBill.party_mobile}</div>}
-          </div>
-
-          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "8px", fontSize: "11px" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #000", textAlign: "left" }}>
-                <th>Item</th>
-                <th style={{ textAlign: "right" }}>Qty</th>
-                <th style={{ textAlign: "right" }}>Rate</th>
-                <th style={{ textAlign: "right" }}>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(completedBill.items || []).map((item: any, i: number) => (
-                <tr key={i}>
-                  <td>{item.item_name}</td>
-                  <td style={{ textAlign: "right" }}>{item.quantity}</td>
-                  <td style={{ textAlign: "right" }}>₹{item.rate.toFixed(2)}</td>
-                  <td style={{ textAlign: "right" }}>₹{item.total_amount.toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div style={{ borderTop: "1px dashed #000", paddingTop: "6px", display: "flex", flexDirection: "column", gap: "2px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Subtotal:</span>
-              <span>₹{(completedBill.subtotal || 0).toFixed(2)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>GST Total:</span>
-              <span>₹{(completedBill.gst_amount || 0).toFixed(2)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold", fontSize: "14px", borderTop: "1px solid #000", paddingTop: "4px" }}>
-              <span>Grand Total:</span>
-              <span>₹{(completedBill.total_amount || 0).toFixed(2)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
-              <span>Payment Mode:</span>
-              <span style={{ textTransform: "uppercase" }}>{completedBill.payment_mode === "credit" ? "Credit" : "Cash"}</span>
-            </div>
-          </div>
-
-          <div style={{ textAlign: "center", borderTop: "1px dashed #000", marginTop: "10px", paddingTop: "8px" }}>
-            Thank you for shopping with us!
-          </div>
-        </div>
-      )}
     </>
   );
 }

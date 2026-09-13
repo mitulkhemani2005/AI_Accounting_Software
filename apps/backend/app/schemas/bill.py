@@ -30,6 +30,7 @@ class BillCreateRequest(BaseModel):
     payment_status: str = Field("paid", description="paid, partial, unpaid")
     paid_amount: Optional[float] = None
     notes: Optional[str] = None
+    godown_id: Optional[str] = Field(None, description="Warehouse / Godown ID to deduct stock from")
     offline_sync_id: Optional[str] = Field(None, description="Client-generated UUID for offline idempotency")
     items: List[BillItemInput] = Field(..., min_length=1)
 

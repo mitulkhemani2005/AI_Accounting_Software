@@ -16,6 +16,7 @@ from app.schemas.bill import (
 )
 from app.services.gst_service import calculate_line_item_gst, calculate_bill_totals
 from app.services.audit_service import log_audit_event
+from app.services.inventory_service import record_stock_out_for_bill, restore_stock_for_voided_bill
 
 
 async def generate_bill_number(db: AsyncSession, tenant_id: str, bill_type: str = "sale") -> str:
@@ -207,10 +208,22 @@ async def create_bill(
             if cust:
                 cust.current_balance += unpaid_diff
 
+    # 10. Auto-Deduct Inventory Stock
+    if bill.type == "sale":
+        await record_stock_out_for_bill(
+            db=db,
+            tenant_id=tenant_id,
+            user=current_user,
+            bill_id=bill.id,
+            bill_number=bill.bill_number,
+            bill_items=items_breakdown,
+            godown_id=payload.godown_id
+        )
+
     await db.commit()
     await db.refresh(bill)
 
-    # 10. Audit Log
+    # 11. Audit Log
     await log_audit_event(
         db=db,
         tenant_id=tenant_id,
@@ -449,7 +462,7 @@ async def delete_bill_by_admin(
     bill_id: str,
     client_ip: Optional[str] = None
 ) -> bool:
-    """Admin voids/cancels a bill"""
+    """Admin voids/cancels a bill and restores deducted inventory stock"""
     result = await db.execute(
         select(Bill).where(Bill.tenant_id == tenant_id, Bill.id == bill_id)
     )
@@ -457,7 +470,31 @@ async def delete_bill_by_admin(
     if not bill:
         raise HTTPException(status_code=404, detail="Bill not found")
 
+    if bill.status == "void":
+        return True
+
     bill.status = "void"
+
+    # Restore customer balance if credit sale
+    if bill.party_id and (bill.payment_mode == "credit" or bill.payment_status in ["unpaid", "partial"]):
+        unpaid_amount = bill.total_amount - bill.paid_amount
+        if unpaid_amount > 0:
+            cust_res = await db.execute(select(Customer).where(Customer.tenant_id == tenant_id, Customer.id == bill.party_id))
+            cust = cust_res.scalar_one_or_none()
+            if cust:
+                cust.current_balance = max(0.0, cust.current_balance - unpaid_amount)
+
+    # Restore stock
+    if bill.type == "sale":
+        await restore_stock_for_voided_bill(
+            db=db,
+            tenant_id=tenant_id,
+            user=admin_user,
+            bill_id=bill.id,
+            bill_number=bill.bill_number,
+            bill_items=bill.items
+        )
+
     await db.commit()
 
     await log_audit_event(
@@ -467,7 +504,7 @@ async def delete_bill_by_admin(
         action="VOID",
         entity_type="Bill",
         entity_id=bill.id,
-        details={"bill_number": bill.bill_number, "status": "void"},
+        details={"bill_number": bill.bill_number, "status": "void", "stock_restored": True},
         ip_address=client_ip
     )
 
