@@ -233,18 +233,16 @@ export default function InventoryPage() {
     notes: "",
   });
 
-  // Stock In Form State (Supports entering in Cases CS or Loose EA)
+  // Stock In Form State (Options: product, cs, ea, batch(opt) only)
   const [stockInForm, setStockInForm] = useState<{
     godown_id: string;
     supplier_name: string;
     invoice_number: string;
     items: {
       item_id: string;
-      unit_type: "CS" | "EA";
-      quantity: number;
-      purchase_price: number;
+      cases: number | string;
+      loose_ea: number | string;
       batch_number: string;
-      expiry_date: string;
     }[];
     notes: string;
   }>({
@@ -254,11 +252,9 @@ export default function InventoryPage() {
     items: [
       {
         item_id: "",
-        unit_type: "CS",
-        quantity: 1,
-        purchase_price: 0,
+        cases: 1,
+        loose_ea: 0,
         batch_number: "",
-        expiry_date: "",
       },
     ],
     notes: "",
@@ -500,11 +496,9 @@ export default function InventoryPage() {
           const rIdx = productModalReturnTarget.rowIndex;
           const newRow = {
             item_id: createdOrUpdatedItem.id,
-            unit_type: "CS" as const,
-            quantity: 1,
-            purchase_price: createdOrUpdatedItem.purchase_price || 0,
+            cases: 1,
+            loose_ea: 0,
             batch_number: "",
-            expiry_date: "",
           };
           if (rIdx !== undefined && rIdx >= 0 && rIdx < updated.length) {
             updated[rIdx] = newRow;
@@ -542,11 +536,9 @@ export default function InventoryPage() {
       items: [
         {
           item_id: item.item_id,
-          unit_type: "CS",
-          quantity: 1,
-          purchase_price: item.purchase_price,
+          cases: 1,
+          loose_ea: 0,
           batch_number: `BATCH-${Date.now().toString().slice(-4)}`,
-          expiry_date: "",
         },
       ],
       notes: `Quick restock for ${item.item_name}`,
@@ -647,16 +639,16 @@ export default function InventoryPage() {
         items: stockInForm.items.map((row) => {
           const selItem = allItemsList.find((it) => it.id === row.item_id);
           const uPerCase = selItem?.units_per_case && selItem.units_per_case > 0 ? selItem.units_per_case : 1;
-          const isCase = row.unit_type === "CS";
-          const effectiveBaseQty = isCase ? row.quantity * uPerCase : row.quantity;
+          const cVal = parseFloat(row.cases?.toString() || "0") || 0;
+          const eVal = parseFloat(row.loose_ea?.toString() || "0") || 0;
+          const totalBaseQty = (cVal * uPerCase) + eVal;
+
           return {
             item_id: row.item_id,
-            quantity: effectiveBaseQty,
+            quantity: totalBaseQty > 0 ? totalBaseQty : 1,
             unit: "EA",
-            cases: isCase ? row.quantity : undefined,
-            purchase_price: row.purchase_price,
+            cases: cVal > 0 ? cVal : undefined,
             batch_number: row.batch_number.trim() || undefined,
-            expiry_date: row.expiry_date || undefined,
           };
         }),
         notes: stockInForm.notes,
@@ -669,7 +661,7 @@ export default function InventoryPage() {
         godown_id: godowns.find((g) => g.is_default)?.id || "",
         supplier_name: "",
         invoice_number: "",
-        items: [{ item_id: "", unit_type: "CS", quantity: 1, purchase_price: 0, batch_number: "", expiry_date: "" }],
+        items: [{ item_id: "", cases: 1, loose_ea: 0, batch_number: "" }],
         notes: "",
       });
       loadAllData();
@@ -1146,9 +1138,6 @@ export default function InventoryPage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
                 <div>
                   <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#f8fafc" }}>Restock Line Items</span>
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "8px" }}>
-                    (Enter stock in bulk Cases or loose Each units)
-                  </span>
                 </div>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button
@@ -1164,7 +1153,7 @@ export default function InventoryPage() {
                     onClick={() =>
                       setStockInForm({
                         ...stockInForm,
-                        items: [...stockInForm.items, { item_id: "", unit_type: "CS", quantity: 1, purchase_price: 0, batch_number: "", expiry_date: "" }],
+                        items: [...stockInForm.items, { item_id: "", cases: 1, loose_ea: 0, batch_number: "" }],
                       })
                     }
                     className="btn-secondary"
@@ -1175,9 +1164,31 @@ export default function InventoryPage() {
                 </div>
               </div>
 
+              {/* Column Titles Header */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(200px, 2.5fr) 110px 110px 140px 32px",
+                  gap: "8px",
+                  padding: "0 10px 6px 10px",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  color: "var(--text-muted)",
+                }}
+              >
+                <div>Product *</div>
+                <div>CS (Cases)</div>
+                <div>EA (Loose)</div>
+                <div>Batch (Opt)</div>
+                <div></div>
+              </div>
+
               {stockInForm.items.map((row, idx) => {
                 const selItem = allItemsList.find((it) => it.id === row.item_id);
                 const unitsPerCase = selItem?.units_per_case && selItem.units_per_case > 0 ? selItem.units_per_case : 1;
+                const cNum = parseFloat(row.cases?.toString() || "0") || 0;
+                const eNum = parseFloat(row.loose_ea?.toString() || "0") || 0;
+                const totalUnits = (cNum * unitsPerCase) + eNum;
 
                 return (
                   <div
@@ -1190,11 +1201,11 @@ export default function InventoryPage() {
                       marginBottom: "10px",
                       display: "flex",
                       flexDirection: "column",
-                      gap: "8px",
+                      gap: "6px",
                     }}
                   >
-                    <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 2fr) 110px 110px 110px 130px 130px 32px", gap: "8px", alignItems: "center" }}>
-                      {/* Item Picker & Quick-Add */}
+                    <div style={{ display: "grid", gridTemplateColumns: "minmax(200px, 2.5fr) 110px 110px 140px 32px", gap: "8px", alignItems: "center" }}>
+                      {/* Product Picker & Quick-Add */}
                       <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
                         <select
                           className="input-field"
@@ -1205,11 +1216,7 @@ export default function InventoryPage() {
                               return;
                             }
                             const updated = [...stockInForm.items];
-                            const chosen = allItemsList.find((it) => it.id === e.target.value);
                             updated[idx].item_id = e.target.value;
-                            if (chosen && (!updated[idx].purchase_price || updated[idx].purchase_price === 0)) {
-                              updated[idx].purchase_price = chosen.purchase_price;
-                            }
                             setStockInForm({ ...stockInForm, items: updated });
                           }}
                           required
@@ -1236,61 +1243,43 @@ export default function InventoryPage() {
                         </button>
                       </div>
 
-                      {/* Unit Selector (CS or EA) */}
-                      <div>
-                        <select
-                          className="input-field"
-                          value={row.unit_type}
-                          onChange={(e) => {
-                            const updated = [...stockInForm.items];
-                            updated[idx].unit_type = e.target.value as "CS" | "EA";
-                            setStockInForm({ ...stockInForm, items: updated });
-                          }}
-                          style={{ fontSize: "0.825rem" }}
-                        >
-                          <option value="CS">Cases (CS)</option>
-                          <option value="EA">Each (EA)</option>
-                        </select>
-                      </div>
-
-                      {/* Quantity */}
-                      <div>
-                        <input
-                          type="number"
-                          min="0.01"
-                          step="any"
-                          placeholder="Qty"
-                          className="input-field"
-                          value={row.quantity}
-                          onChange={(e) => {
-                            const updated = [...stockInForm.items];
-                            updated[idx].quantity = parseFloat(e.target.value) || 0;
-                            setStockInForm({ ...stockInForm, items: updated });
-                          }}
-                          required
-                          style={{ fontSize: "0.825rem" }}
-                        />
-                      </div>
-
-                      {/* Purchase Cost */}
+                      {/* CS (Cases) */}
                       <div>
                         <input
                           type="number"
                           min="0"
-                          step="0.01"
-                          placeholder="Cost (₹)"
+                          step="any"
+                          placeholder="CS"
                           className="input-field"
-                          value={row.purchase_price}
+                          value={row.cases}
                           onChange={(e) => {
                             const updated = [...stockInForm.items];
-                            updated[idx].purchase_price = parseFloat(e.target.value) || 0;
+                            updated[idx].cases = e.target.value;
                             setStockInForm({ ...stockInForm, items: updated });
                           }}
                           style={{ fontSize: "0.825rem" }}
                         />
                       </div>
 
-                      {/* Batch Number */}
+                      {/* EA (Each / Loose) */}
+                      <div>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          placeholder="EA"
+                          className="input-field"
+                          value={row.loose_ea}
+                          onChange={(e) => {
+                            const updated = [...stockInForm.items];
+                            updated[idx].loose_ea = e.target.value;
+                            setStockInForm({ ...stockInForm, items: updated });
+                          }}
+                          style={{ fontSize: "0.825rem" }}
+                        />
+                      </div>
+
+                      {/* Batch (Opt) */}
                       <div>
                         <input
                           type="text"
@@ -1300,21 +1289,6 @@ export default function InventoryPage() {
                           onChange={(e) => {
                             const updated = [...stockInForm.items];
                             updated[idx].batch_number = e.target.value;
-                            setStockInForm({ ...stockInForm, items: updated });
-                          }}
-                          style={{ fontSize: "0.825rem" }}
-                        />
-                      </div>
-
-                      {/* Expiry Date */}
-                      <div>
-                        <input
-                          type="date"
-                          className="input-field"
-                          value={row.expiry_date}
-                          onChange={(e) => {
-                            const updated = [...stockInForm.items];
-                            updated[idx].expiry_date = e.target.value;
                             setStockInForm({ ...stockInForm, items: updated });
                           }}
                           style={{ fontSize: "0.825rem" }}
@@ -1335,21 +1309,16 @@ export default function InventoryPage() {
                       </button>
                     </div>
 
-                    {/* Dynamic Case Conversion Info Pill */}
+                    {/* Dynamic Calculation Info Pill */}
                     {selItem && (
                       <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "flex", gap: "12px", alignItems: "center", paddingLeft: "4px" }}>
                         <span>
-                          Package Ratio: <strong style={{ color: "#f8fafc" }}>1 {selItem.secondary_unit || "CS"} = {unitsPerCase} {selItem.unit || "EA"}</strong>
+                          Ratio: <strong style={{ color: "#f8fafc" }}>1 {selItem.secondary_unit || "CS"} = {unitsPerCase} {selItem.unit || "EA"}</strong>
                         </span>
-                        {row.unit_type === "CS" ? (
-                          <span className="badge badge-blue" style={{ fontSize: "0.68rem" }}>
-                            📦 {row.quantity} CS &times; {unitsPerCase} = <strong>{(row.quantity * unitsPerCase).toFixed(0)} {selItem.unit || "EA"}</strong> added to inventory
-                          </span>
-                        ) : (
-                          <span className="badge badge-purple" style={{ fontSize: "0.68rem" }}>
-                            🏷️ {row.quantity} {selItem.unit || "EA"} loose units added to inventory
-                          </span>
-                        )}
+                        <span className="badge badge-blue" style={{ fontSize: "0.68rem" }}>
+                          📦 Total Received: <strong>{totalUnits.toFixed(0)} {selItem.unit || "EA"}</strong>
+                          {cNum > 0 && eNum > 0 ? ` (${cNum} CS + ${eNum} EA)` : cNum > 0 ? ` (${cNum} CS)` : ""}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -1747,7 +1716,7 @@ export default function InventoryPage() {
                           setActiveTab("stock_in");
                           setStockInForm({
                             ...stockInForm,
-                            items: [{ item_id: a.item_id, unit_type: "CS", quantity: 20, purchase_price: 0, batch_number: "", expiry_date: "" }],
+                            items: [{ item_id: a.item_id, cases: 1, loose_ea: 0, batch_number: "" }],
                           });
                         }}
                         className="btn-primary"
