@@ -95,12 +95,12 @@
 
 ## PHASE 5 — Outstanding & Compliance Reports
 
-- [ ] Build Sundry Debtors report with ageing buckets (0-30/30-60/60-90/90+ days)
-- [ ] Build Sundry Creditors report with ageing buckets
-- [ ] Implement automated due-payment reminders (WhatsApp/SMS)
-- [ ] Build GSTR-1 export-ready report
-- [ ] Build GSTR-3B export-ready report
-- [ ] Implement e-invoicing (IRN/QR code generation) for eligible turnover
+- [x] Build Sundry Debtors report with ageing buckets (0-30/30-60/60-90/90+ days)
+- [x] Build Sundry Creditors report with ageing buckets
+- [x] Implement automated due-payment reminders (WhatsApp/SMS)
+- [x] Build GSTR-1 export-ready report
+- [x] Build GSTR-3B export-ready report
+- [x] Implement e-invoicing (IRN/QR code generation) for eligible turnover
 
 **✅ Checkpoint:** Ageing reports match manual calculation on test data. GST export reports are correctly formatted. Confirm before proceeding.
 

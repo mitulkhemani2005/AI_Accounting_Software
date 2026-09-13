@@ -34,13 +34,13 @@ export function Sidebar() {
     { label: "Purchase Book", href: "/dashboard/inventory?tab=purchases", icon: FileSpreadsheet, adminOnly: true },
     { label: "Parties & Ledger", href: "/dashboard/parties", icon: Contact, adminOnly: true },
     { label: "Accounting Engine", href: "/dashboard/accounting", icon: BookOpen, adminOnly: true },
+    { label: "Outstanding & Reports", href: "/dashboard/reports", icon: FileText, adminOnly: true },
     { label: "Staff Bills Review", href: "/dashboard/staff-bills", icon: ClipboardCheck, adminOnly: true },
     { label: "Staff & Sub-users", href: "/dashboard/staff", icon: Users, adminOnly: true },
     { label: "Audit Trail", href: "/dashboard/audit", icon: History, adminOnly: true },
   ];
 
   const upcomingModules = [
-    { label: "Outstanding Reports", icon: FileText, phase: "Phase 5" },
     { label: "AI Suggestions", icon: Sparkles, phase: "Phase 7" },
   ];
 
