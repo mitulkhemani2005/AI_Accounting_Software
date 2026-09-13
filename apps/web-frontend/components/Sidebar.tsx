@@ -33,13 +33,13 @@ export function Sidebar() {
     { label: "Products & Stock", href: "/dashboard/inventory", icon: Boxes, allowed: true },
     { label: "Purchase Book", href: "/dashboard/inventory?tab=purchases", icon: FileSpreadsheet, adminOnly: true },
     { label: "Parties & Ledger", href: "/dashboard/parties", icon: Contact, adminOnly: true },
+    { label: "Accounting Engine", href: "/dashboard/accounting", icon: BookOpen, adminOnly: true },
     { label: "Staff Bills Review", href: "/dashboard/staff-bills", icon: ClipboardCheck, adminOnly: true },
     { label: "Staff & Sub-users", href: "/dashboard/staff", icon: Users, adminOnly: true },
     { label: "Audit Trail", href: "/dashboard/audit", icon: History, adminOnly: true },
   ];
 
   const upcomingModules = [
-    { label: "Accounting Engine", icon: BookOpen, phase: "Phase 4" },
     { label: "Outstanding Reports", icon: FileText, phase: "Phase 5" },
     { label: "AI Suggestions", icon: Sparkles, phase: "Phase 7" },
   ];

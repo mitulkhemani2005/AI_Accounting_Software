@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     parties,
     bills,
     inventory,
+    accounting,
     test_routes,
 )
 
@@ -36,6 +37,9 @@ api_router.include_router(bills.router, prefix="/bills", tags=["Billing & Point 
 
 # Inventory & Godowns (Phase 3)
 api_router.include_router(inventory.router, prefix="/inventory", tags=["Inventory, Stock & Godowns"])
+
+# Full Double-Entry Accounting Engine & Reports (Phase 4)
+api_router.include_router(accounting.router, prefix="/accounting", tags=["Accounting & Financial Reports"])
 
 # RBAC Test Verification Routes
 api_router.include_router(test_routes.router, prefix="/test-rbac", tags=["RBAC & Security Verification"])

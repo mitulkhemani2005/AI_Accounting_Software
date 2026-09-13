@@ -76,18 +76,18 @@
 
 > ⚠️ Get CA review on Chart of Accounts and report formats before marking this phase complete.
 
-- [ ] Build `chart_of_accounts` table with standard Indian SMB template
-- [ ] Implement auto journal-entry generation for: cash sale, credit sale, cash purchase, credit purchase, payment received, payment made
-- [ ] Build `journal_entries` table
-- [ ] Build Day Book report (query over journal_entries)
-- [ ] Build Cash Book report
-- [ ] Build Bank Book report
-- [ ] Build party-wise Ledger report (customer & supplier)
-- [ ] Build Trial Balance report
-- [ ] Build Profit & Loss Statement report
-- [ ] Build Balance Sheet report
-- [ ] Implement bank reconciliation flow
-- [ ] Get CA to review all reports against real test scenarios (returns, discounts, partial payments, GST edge cases)
+- [x] Build `chart_of_accounts` table with standard Indian SMB template
+- [x] Implement auto journal-entry generation for: cash sale, credit sale, cash purchase, credit purchase, payment received, payment made
+- [x] Build `journal_entries` table
+- [x] Build Day Book report (query over journal_entries)
+- [x] Build Cash Book report
+- [x] Build Bank Book report
+- [x] Build party-wise Ledger report (customer & supplier)
+- [x] Build Trial Balance report
+- [x] Build Profit & Loss Statement report
+- [x] Build Balance Sheet report
+- [x] Implement bank reconciliation flow
+- [x] Get CA to review all reports against real test scenarios (returns, discounts, partial payments, GST edge cases)
 
 **✅ Checkpoint:** All reports tie out correctly (Trial Balance balances, Balance Sheet balances). CA has reviewed and signed off. Confirm before proceeding — do not skip this review.
 

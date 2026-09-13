@@ -24,6 +24,10 @@ from app.services.inventory_service import (
     get_or_create_default_godown,
 )
 from app.services.party_service import recalculate_party_balance
+from app.services.accounting_service import (
+    record_sale_journal_entry,
+    void_journal_entry_for_reference,
+)
 
 
 async def generate_bill_number(db: AsyncSession, tenant_id: str, bill_type: str = "sale") -> str:
@@ -264,6 +268,27 @@ async def create_bill(
             bill_number=bill.bill_number,
             bill_items=items_breakdown,
             godown_id=payload.godown_id
+        )
+
+        # 10.5 Auto-Post Double-Entry Journal Voucher
+        is_cash_sale = payload.payment_mode == "cash" or not payload.party_id
+        await record_sale_journal_entry(
+            db=db,
+            tenant_id=tenant_id,
+            user_id=current_user.id,
+            bill_id=bill.id,
+            bill_number=bill.bill_number,
+            is_cash=is_cash_sale,
+            party_id=payload.party_id,
+            party_name=bill.party_name or "Walk-in Cash Customer",
+            taxable_amount=bill.taxable_amount,
+            cgst_amount=bill.cgst_amount,
+            sgst_amount=bill.sgst_amount,
+            igst_amount=bill.igst_amount,
+            discount_amount=bill.discount_amount,
+            round_off=bill.round_off,
+            total_amount=bill.total_amount,
+            payment_mode=payload.payment_mode or "cash"
         )
 
     await db.commit()
@@ -523,6 +548,15 @@ async def delete_bill_by_admin(
             bill_number=bill.bill_number,
             bill_items=bill.items
         )
+
+    # Void linked journal entry voucher
+    await void_journal_entry_for_reference(
+        db=db,
+        tenant_id=tenant_id,
+        user_id=admin_user.id,
+        reference_type="bill",
+        reference_id=bill.id
+    )
 
     await db.commit()
 

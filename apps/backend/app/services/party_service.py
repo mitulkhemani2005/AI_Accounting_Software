@@ -727,6 +727,23 @@ async def record_party_payment(
         party_id=payload.party_id,
         party_type=payload.party_type
     )
+
+    # Auto-Post Double-Entry Payment Journal Voucher
+    from app.services.accounting_service import record_payment_journal_entry
+    await record_payment_journal_entry(
+        db=db,
+        tenant_id=tenant_id,
+        user_id=user.id,
+        payment_id=payment.id,
+        party_type=payload.party_type,
+        party_name=party_name,
+        party_id=payload.party_id,
+        amount=payment.amount,
+        payment_mode=payment.payment_mode,
+        reference_number=payment.reference_number,
+        notes=payment.notes
+    )
+
     await db.commit()
     await db.refresh(payment)
 

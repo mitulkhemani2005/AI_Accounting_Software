@@ -440,6 +440,27 @@ async def record_stock_in(
         from app.services.party_service import recalculate_party_balance
         await recalculate_party_balance(db, tenant_id, supplier_party_id, "supplier")
 
+    # Auto-Post Double-Entry Purchase Journal Voucher
+    from app.services.accounting_service import record_purchase_journal_entry
+    await record_purchase_journal_entry(
+        db=db,
+        tenant_id=tenant_id,
+        user_id=user.id,
+        purchase_bill_id=purchase_bill.id,
+        purchase_bill_number=purchase_bill.bill_number,
+        supplier_name=supplier_name,
+        is_cash=supplier_party_id is None,
+        supplier_id=supplier_party_id,
+        taxable_amount=total_taxable,
+        cgst_amount=total_cgst,
+        sgst_amount=total_sgst,
+        igst_amount=0.0,
+        discount_amount=0.0,
+        round_off=round_off,
+        total_amount=final_amount,
+        payment_mode="cash" if supplier_party_id is None else "credit"
+    )
+
     await db.commit()
 
     await log_audit_event(

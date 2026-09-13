@@ -6,6 +6,7 @@ from app.models.party import Area, Customer, Supplier, Payment
 from app.models.item import Item
 from app.models.bill import Bill, BillItem
 from app.models.inventory import Godown, Stock, StockBatch, StockMovement, StockTransfer, StockTransferItem
+from app.models.accounting import AccountGroup, Account, JournalEntry, JournalItem
 
 __all__ = [
     "Base",
@@ -30,4 +31,8 @@ __all__ = [
     "StockMovement",
     "StockTransfer",
     "StockTransferItem",
+    "AccountGroup",
+    "Account",
+    "JournalEntry",
+    "JournalItem",
 ]
