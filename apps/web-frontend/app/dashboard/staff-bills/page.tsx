@@ -516,7 +516,14 @@ export default function StaffBillsReviewPage() {
       fetchBills();
     } catch (err: any) {
       console.error("Failed to update bill:", err);
-      alert(err.response?.data?.detail || "Failed to update bill. Please check values.");
+      const detail = err.response?.data?.detail;
+      const errorText =
+        typeof detail === "string"
+          ? detail
+          : Array.isArray(detail)
+          ? detail.map((d: any) => `${d.loc ? d.loc.filter((x: any) => x !== 'body').join(' > ') : ''}: ${d.msg}`).join('\n')
+          : "Failed to update bill. Please check values.";
+      alert(errorText);
     } finally {
       setIsSavingEdit(false);
     }
