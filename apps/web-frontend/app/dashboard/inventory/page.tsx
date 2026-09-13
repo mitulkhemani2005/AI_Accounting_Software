@@ -28,6 +28,7 @@ import {
   DollarSign,
   Truck,
   ShieldAlert,
+  ArrowRight,
   ArrowUpRight,
   ArrowDownLeft,
   Barcode,
@@ -170,7 +171,7 @@ interface ExpiringBatchAlert {
 
 export default function InventoryPage() {
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<"overview" | "stock_in" | "purchases" | "godowns" | "transfers" | "movements" | "alerts">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "stock_in" | "purchases" | "godowns" | "transfers" | "movements" | "alerts" | "ai_restock">("overview");
 
   // State
   const [metrics, setMetrics] = useState<InventoryMetrics | null>(null);
@@ -946,6 +947,7 @@ export default function InventoryPage() {
           { id: "transfers", label: "Stock Transfers", icon: ArrowRightLeft },
           { id: "movements", label: "Movement Ledger", icon: History },
           { id: "alerts", label: `Alerts (${lowStockAlerts.length + expiringAlerts.length})`, icon: ShieldAlert },
+          { id: "ai_restock", label: "✨ AI Restock Forecast", icon: Sparkles, adminOnly: true },
         ].map((tab) => {
           if (tab.adminOnly && !isAdmin) return null;
           const isActive = activeTab === tab.id;
@@ -2218,6 +2220,60 @@ export default function InventoryPage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* --- TAB: AI RESTOCK FORECAST --- */}
+      {activeTab === "ai_restock" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div
+            className="glass-panel"
+            style={{
+              padding: "28px",
+              borderRadius: "16px",
+              border: "1px solid rgba(139, 92, 246, 0.3)",
+              background: "linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 27, 75, 0.7))",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "20px",
+            }}
+          >
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                <Sparkles size={22} color="#c084fc" />
+                <h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#ffffff", margin: 0 }}>
+                  AI Predictive Restock & Velocity Forecasting
+                </h3>
+              </div>
+              <p style={{ color: "#94a3b8", fontSize: "0.9rem", maxWidth: "600px", margin: 0, lineHeight: 1.5 }}>
+                Our Exponential Smoothing algorithm computes daily consumption velocity, dynamic safety stocks, and predicted runout days for all your catalog items.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", gap: "12px" }}>
+              <a
+                href="/dashboard/ai"
+                className="btn-primary"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 20px",
+                  background: "linear-gradient(135deg, #8b5cf6, #ec4899)",
+                  textDecoration: "none",
+                  fontWeight: 700,
+                  fontSize: "0.9rem",
+                  boxShadow: "0 0 15px rgba(139, 92, 246, 0.4)",
+                }}
+              >
+                <Sparkles size={16} />
+                <span>Open Full AI Intelligence Hub</span>
+                <ArrowRight size={16} />
+              </a>
+            </div>
           </div>
         </div>
       )}

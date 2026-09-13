@@ -33,6 +33,7 @@ import {
   Warehouse,
   MapPin,
   Clock,
+  Sparkles,
 } from "lucide-react";
 
 interface POSItem {
@@ -58,7 +59,9 @@ interface POSItem {
 }
 
 export default function POSPage() {
-  const { user, tenant, isAdmin } = useAuth();
+  const { user, tenant, isAdmin, entitlements = [] } = useAuth();
+  const isFreePlan = (tenant?.subscription_tier || "free").toLowerCase() === "free";
+  const isAILocked = isFreePlan && !entitlements.includes("ai_suggestions");
 
   // Catalog, Search & Inventory
   const [catalog, setCatalog] = useState<any[]>([]);
@@ -71,6 +74,10 @@ export default function POSPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  // AI Smart Suggestions State
+  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
   // Cart / Bill State
   const [billItems, setBillItems] = useState<POSItem[]>([]);
@@ -257,6 +264,39 @@ export default function POSPage() {
       window.removeEventListener("offline", updateOnlineStatus);
     };
   }, []);
+
+  // AI Smart POS Recommendations Hook
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchSuggestions = async () => {
+      if (isAILocked) return;
+      setIsLoadingSuggestions(true);
+      try {
+        const cartIds = billItems.map((i) => i.item_id).filter(Boolean);
+        const params = new URLSearchParams();
+        cartIds.forEach((id) => params.append("cart_item_ids", id as string));
+        if (selectedCustomerId) {
+          params.append("customer_id", selectedCustomerId);
+        }
+        params.append("limit", "5");
+
+        const res = await api.get(`/ai/pos-suggestions?${params.toString()}`);
+        if (!isCancelled && res.data?.suggestions) {
+          setAiSuggestions(res.data.suggestions);
+        }
+      } catch (err) {
+        console.error("Failed to load POS AI suggestions", err);
+      } finally {
+        if (!isCancelled) setIsLoadingSuggestions(false);
+      }
+    };
+
+    const timeout = setTimeout(fetchSuggestions, 300);
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [billItems, selectedCustomerId, isAILocked]);
 
   // 2. Offline Sync Function
   const syncOfflineQueue = async () => {
@@ -952,6 +992,92 @@ export default function POSPage() {
               </button>
             ))}
           </div>
+
+          {/* AI Smart Cross-Sell & Up-Sell Recommendations Bar */}
+          {!isAILocked && aiSuggestions.length > 0 && (
+            <div
+              className="glass-panel"
+              style={{
+                padding: "8px 12px",
+                borderRadius: "10px",
+                background: "linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(30, 41, 59, 0.6))",
+                border: "1px solid rgba(139, 92, 246, 0.3)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "6px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.75rem", fontWeight: 700, color: "#c084fc", textTransform: "uppercase" }}>
+                  <Sparkles size={13} />
+                  <span>AI Smart Up-Sells & Frequent Pairs</span>
+                </div>
+                {isLoadingSuggestions && <Loader2 size={12} className="spin" color="#c084fc" />}
+              </div>
+
+              <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "2px" }}>
+                {aiSuggestions.map((sugg) => {
+                  const matchCatItem = catalog.find((c) => c.id === sugg.item_id);
+                  return (
+                    <div
+                      key={sugg.item_id}
+                      style={{
+                        background: "rgba(15, 23, 42, 0.7)",
+                        border: "1px solid rgba(139, 92, 246, 0.25)",
+                        borderRadius: "8px",
+                        padding: "6px 10px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#ffffff" }}>
+                          {sugg.item_name}
+                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.7rem" }}>
+                          <span style={{ color: "#34d399", fontWeight: 700 }}>₹{sugg.sale_price}</span>
+                          <span style={{ color: "var(--text-muted)", fontSize: "0.65rem" }}>({sugg.reason})</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (matchCatItem) {
+                            addItemToCart(matchCatItem);
+                          } else {
+                            addItemToCart({
+                              id: sugg.item_id,
+                              name: sugg.item_name,
+                              sale_price: sugg.sale_price,
+                              purchase_price: sugg.sale_price * 0.8,
+                              gst_rate: 5.0,
+                              unit: sugg.unit || "PCS",
+                            });
+                          }
+                        }}
+                        className="btn-primary"
+                        style={{
+                          padding: "3px 8px",
+                          fontSize: "0.75rem",
+                          borderRadius: "6px",
+                          background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "3px",
+                        }}
+                      >
+                        <Plus size={12} />
+                        <span>Add</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Product Grid */}
           <div

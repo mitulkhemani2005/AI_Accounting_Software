@@ -38,15 +38,14 @@ export function Sidebar() {
     { label: "Parties & Ledger", href: "/dashboard/parties", icon: Contact, adminOnly: true },
     { label: "Accounting Engine", href: "/dashboard/accounting", icon: BookOpen, adminOnly: true, requiredModule: "accounting", planBadge: "PRO" },
     { label: "Outstanding & Reports", href: "/dashboard/reports", icon: FileText, adminOnly: true, requiredModule: "outstanding_reports", planBadge: "PRO" },
+    { label: "AI Intelligence Hub", href: "/dashboard/ai", icon: Sparkles, adminOnly: true, requiredModule: "ai_suggestions", planBadge: "PRO" },
     { label: "Staff Bills Review", href: "/dashboard/staff-bills", icon: ClipboardCheck, adminOnly: true },
     { label: "Staff & Sub-users", href: "/dashboard/staff", icon: Users, adminOnly: true, requiredModule: "sub_users", planBadge: "PRO" },
     { label: "Subscription & Plans", href: "/dashboard/subscription", icon: CreditCard, adminOnly: true },
     { label: "Audit Trail", href: "/dashboard/audit", icon: History, adminOnly: true },
   ];
 
-  const upcomingModules = [
-    { label: "AI Suggestions", icon: Sparkles, phase: "Phase 7" },
-  ];
+  const upcomingModules: { label: string; icon: any; phase: string }[] = [];
 
   return (
     <aside
@@ -153,46 +152,50 @@ export function Sidebar() {
         </div>
 
         {/* Modules Roadmap Navigation */}
-        <div
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            color: "var(--text-muted)",
-            letterSpacing: "0.08em",
-            marginTop: "28px",
-            marginBottom: "12px",
-            paddingLeft: "8px",
-          }}
-        >
-          Business Modules
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          {upcomingModules.map((m) => (
+        {upcomingModules.length > 0 && (
+          <>
             <div
-              key={m.label}
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "8px 12px",
-                borderRadius: "8px",
-                fontSize: "0.825rem",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                textTransform: "uppercase",
                 color: "var(--text-muted)",
-                background: "rgba(30, 41, 59, 0.2)",
+                letterSpacing: "0.08em",
+                marginTop: "28px",
+                marginBottom: "12px",
+                paddingLeft: "8px",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <m.icon size={16} color="#60a5fa" />
-                <span>{m.label}</span>
-              </div>
-              <span className="badge badge-purple" style={{ fontSize: "0.65rem", padding: "2px 6px" }}>
-                {m.phase}
-              </span>
+              Business Modules
             </div>
-          ))}
-        </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              {upcomingModules.map((m) => (
+                <div
+                  key={m.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    fontSize: "0.825rem",
+                    color: "var(--text-muted)",
+                    background: "rgba(30, 41, 59, 0.2)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <m.icon size={16} color="#60a5fa" />
+                    <span>{m.label}</span>
+                  </div>
+                  <span className="badge badge-purple" style={{ fontSize: "0.65rem", padding: "2px 6px" }}>
+                    {m.phase}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Role Notice Card */}

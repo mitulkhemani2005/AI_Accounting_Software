@@ -7,6 +7,7 @@ from app.models.item import Item
 from app.models.bill import Bill, BillItem
 from app.models.inventory import Godown, Stock, StockBatch, StockMovement, StockTransfer, StockTransferItem
 from app.models.accounting import AccountGroup, Account, JournalEntry, JournalItem
+from app.models.ai import AISuggestionCache, RestockSuggestionCache
 
 __all__ = [
     "Base",
@@ -35,4 +36,6 @@ __all__ = [
     "Account",
     "JournalEntry",
     "JournalItem",
+    "AISuggestionCache",
+    "RestockSuggestionCache",
 ]

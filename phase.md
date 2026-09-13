@@ -124,14 +124,14 @@
 
 > Requires real transaction data (minimum ~100 transactions/shop, 30+ days) to be meaningful — can be built against synthetic/sample data first, then validated on pilot data.
 
-- [ ] Build AI microservice (separate Python service, decoupled from core transactional system)
-- [ ] Implement customer-wise item suggestion engine (association rule mining — Apriori/FP-Growth)
-- [ ] Implement restock/reorder forecasting (exponential smoothing baseline)
-- [ ] Implement scheduled nightly batch jobs per tenant (Celery/cron)
-- [ ] Build `ai_suggestions_cache` and `restock_suggestions_cache` tables
-- [ ] Implement natural language query layer (LLM-powered) over reports/ledger data
-- [ ] Surface AI suggestions in POS screen (item suggestions at billing time)
-- [ ] Surface restock suggestions in Inventory module
+- [x] Build AI microservice (separate Python service, decoupled from core transactional system)
+- [x] Implement customer-wise item suggestion engine (association rule mining — Apriori/FP-Growth)
+- [x] Implement restock/reorder forecasting (exponential smoothing baseline)
+- [x] Implement scheduled nightly batch jobs per tenant (Celery/cron)
+- [x] Build `ai_suggestions_cache` and `restock_suggestions_cache` tables
+- [x] Implement natural language query layer (LLM-powered) over reports/ledger data
+- [x] Surface AI suggestions in POS screen (item suggestions at billing time)
+- [x] Surface restock suggestions in Inventory module
 
 **✅ Checkpoint:** AI suggestions appear correctly for a test shop with sample transaction history. Nightly jobs run without blocking core billing/accounting operations. Confirm before proceeding.
 

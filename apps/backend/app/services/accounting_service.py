@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict, Any, Tuple
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, and_, or_, delete
@@ -952,7 +952,7 @@ async def get_profit_and_loss(
     """Generate Profit & Loss (Trading & P&L) statement"""
     await seed_default_chart_of_accounts(db, tenant_id)
     s_date = start_date or datetime.now(timezone.utc).replace(month=1, day=1, hour=0, minute=0, second=0)
-    e_date = end_date or datetime.now(timezone.utc)
+    e_date = end_date or (datetime.now(timezone.utc) + timedelta(days=1))
 
     # 1. Query Income Accounts
     inc_res = await db.execute(

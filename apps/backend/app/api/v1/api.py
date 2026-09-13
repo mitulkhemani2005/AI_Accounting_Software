@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     reports,
     subscriptions,
     imports,
+    ai,
     test_routes,
 )
 
@@ -52,6 +53,9 @@ api_router.include_router(subscriptions.router, prefix="/subscriptions", tags=["
 
 # Bulk CSV Data Import Hub (Phase 6)
 api_router.include_router(imports.router, prefix="/import", tags=["Bulk Data Import"])
+
+# AI Suggestions & Forecasting Engine (Phase 7)
+api_router.include_router(ai.router, prefix="/ai", tags=["AI Suggestions & Intelligence Hub"])
 
 # RBAC Test Verification Routes
 api_router.include_router(test_routes.router, prefix="/test-rbac", tags=["RBAC & Security Verification"])
