@@ -151,6 +151,23 @@ async def test_debtors_and_creditors_ageing_reports(async_client: AsyncClient):
     # Supplier balance = 12000 (opening) + 8000 (stock in) = 20000.0
     assert creditors_data["total_outstanding"] >= 20000.0
 
+    # 8. Test Debtors & Creditors CSV Exports
+    debtors_csv_res = await async_client.get(
+        "/api/v1/reports/debtors-ageing/csv",
+        headers=headers
+    )
+    assert debtors_csv_res.status_code == 200
+    assert "SUNDRY DEBTORS (CUSTOMER RECEIVABLES) AGEING REPORT" in debtors_csv_res.text
+    assert "Reliance Retail Mart" in debtors_csv_res.text
+
+    creditors_csv_res = await async_client.get(
+        "/api/v1/reports/creditors-ageing/csv",
+        headers=headers
+    )
+    assert creditors_csv_res.status_code == 200
+    assert "SUNDRY CREDITORS (SUPPLIER PAYABLES) AGEING REPORT" in creditors_csv_res.text
+    assert "Agro Millers Ltd" in creditors_csv_res.text
+
 
 @pytest.mark.asyncio
 async def test_automated_payment_reminders_and_whatsapp(async_client: AsyncClient):

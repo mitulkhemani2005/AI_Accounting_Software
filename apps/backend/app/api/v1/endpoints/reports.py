@@ -66,6 +66,54 @@ async def get_debtors_ageing_report(
 
 
 @router.get(
+    "/debtors-ageing/csv",
+    summary="Download Sundry Debtors Ageing Report in CSV",
+)
+async def export_debtors_ageing_csv(
+    as_of_date: Optional[date] = Query(None),
+    min_amount: float = Query(0.0, ge=0),
+    area_id: Optional[str] = Query(None),
+    customer_id: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission("reports.view")),
+):
+    report = await compute_debtors_ageing(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        as_of_date=as_of_date,
+        min_amount=min_amount,
+        area_id=area_id,
+        customer_id=customer_id,
+    )
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["SUNDRY DEBTORS (CUSTOMER RECEIVABLES) AGEING REPORT"])
+    writer.writerow(["As of Date", report.as_of_date, "Total Debtors", report.total_debtors, "Total Outstanding (INR)", report.total_outstanding])
+    writer.writerow(["0-30 Days Total", report.bucket_0_30_total, "31-60 Days Total", report.bucket_31_60_total, "61-90 Days Total", report.bucket_61_90_total, ">90 Days Total", report.bucket_above_90_total])
+    writer.writerow([])
+    writer.writerow(["Customer Name", "Mobile", "GSTIN", "Area", "0-30 Days (INR)", "31-60 Days (INR)", "61-90 Days (INR)", ">90 Days (INR)", "Total Due (INR)", "Overdue Invoices Count"])
+    for c in report.customers:
+        writer.writerow([
+            c.customer_name,
+            c.mobile or "",
+            c.gst_number or "",
+            c.area_name or "General",
+            c.bucket_0_30,
+            c.bucket_31_60,
+            c.bucket_61_90,
+            c.bucket_above_90,
+            c.total_due,
+            len(c.overdue_bills),
+        ])
+    filename = f"Debtors_Ageing_{report.as_of_date}.csv"
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.get(
     "/creditors-ageing",
     response_model=CreditorsAgeingResponse,
     summary="Get Sundry Creditors (Supplier Payables) Ageing Report",
@@ -87,6 +135,52 @@ async def get_creditors_ageing_report(
         as_of_date=as_of_date,
         min_amount=min_amount,
         supplier_id=supplier_id,
+    )
+
+
+@router.get(
+    "/creditors-ageing/csv",
+    summary="Download Sundry Creditors Ageing Report in CSV",
+)
+async def export_creditors_ageing_csv(
+    as_of_date: Optional[date] = Query(None),
+    min_amount: float = Query(0.0, ge=0),
+    supplier_id: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission("reports.view")),
+):
+    report = await compute_creditors_ageing(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        as_of_date=as_of_date,
+        min_amount=min_amount,
+        supplier_id=supplier_id,
+    )
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["SUNDRY CREDITORS (SUPPLIER PAYABLES) AGEING REPORT"])
+    writer.writerow(["As of Date", report.as_of_date, "Total Creditors", report.total_creditors, "Total Outstanding (INR)", report.total_outstanding])
+    writer.writerow(["0-30 Days Total", report.bucket_0_30_total, "31-60 Days Total", report.bucket_31_60_total, "61-90 Days Total", report.bucket_61_90_total, ">90 Days Total", report.bucket_above_90_total])
+    writer.writerow([])
+    writer.writerow(["Supplier Name", "Mobile", "GSTIN", "Area", "0-30 Days (INR)", "31-60 Days (INR)", "61-90 Days (INR)", ">90 Days (INR)", "Total Payable (INR)", "Purchase Bills Count"])
+    for s in report.suppliers:
+        writer.writerow([
+            s.supplier_name,
+            s.mobile or "",
+            s.gst_number or "",
+            s.area_name or "General",
+            s.bucket_0_30,
+            s.bucket_31_60,
+            s.bucket_61_90,
+            s.bucket_above_90,
+            s.total_due,
+            len(s.overdue_bills),
+        ])
+    filename = f"Creditors_Ageing_{report.as_of_date}.csv"
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 

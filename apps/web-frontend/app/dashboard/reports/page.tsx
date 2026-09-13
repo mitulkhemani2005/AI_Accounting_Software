@@ -187,6 +187,45 @@ export default function ReportsPage() {
     }
   };
 
+  // Universal Authenticated CSV & File Download Helper
+  const downloadBlobFile = async (url: string, filename: string, mimeType: string = "text/csv;charset=utf-8;") => {
+    setIsLoading(true);
+    try {
+      const res = await api.get(url, { responseType: "blob" });
+      const blob = new Blob([res.data], { type: mimeType });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+      setActionSuccess(`${filename} exported successfully!`);
+    } catch (err: any) {
+      console.error("Export download failed:", err);
+      setActionError("Failed to export file. Please ensure data exists for the selected period.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Download Debtors Ageing CSV
+  const handleDownloadDebtorsCSV = () => {
+    downloadBlobFile(
+      `/reports/debtors-ageing/csv?as_of_date=${endDate}`,
+      `Debtors_Ageing_${endDate}.csv`
+    );
+  };
+
+  // Download Creditors Ageing CSV
+  const handleDownloadCreditorsCSV = () => {
+    downloadBlobFile(
+      `/reports/creditors-ageing/csv?as_of_date=${endDate}`,
+      `Creditors_Ageing_${endDate}.csv`
+    );
+  };
+
   // Download GSTR-1 Offline Tool JSON
   const handleDownloadGSTR1JSON = async () => {
     try {
@@ -206,9 +245,9 @@ export default function ReportsPage() {
 
   // Download GSTR-1 CSV
   const handleDownloadGSTR1CSV = () => {
-    window.open(
-      `${api.defaults.baseURL}/reports/gstr-1/csv?from_date=${startDate}&to_date=${endDate}`,
-      "_blank"
+    downloadBlobFile(
+      `/reports/gstr-1/csv?from_date=${startDate}&to_date=${endDate}`,
+      `GSTR1_${tenant?.gst_number || "EXPORT"}_${startDate}_to_${endDate}.csv`
     );
   };
 
@@ -231,9 +270,9 @@ export default function ReportsPage() {
 
   // Download GSTR-3B CSV
   const handleDownloadGSTR3BCSV = () => {
-    window.open(
-      `${api.defaults.baseURL}/reports/gstr-3b/csv?from_date=${startDate}&to_date=${endDate}`,
-      "_blank"
+    downloadBlobFile(
+      `/reports/gstr-3b/csv?from_date=${startDate}&to_date=${endDate}`,
+      `GSTR3B_${tenant?.gst_number || "EXPORT"}_${startDate}_to_${endDate}.csv`
     );
   };
 
@@ -377,6 +416,28 @@ export default function ReportsPage() {
 
         {/* Dynamic Action Buttons per Tab */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {activeTab === "debtors" && (
+            <button
+              onClick={handleDownloadDebtorsCSV}
+              className="btn btn-secondary"
+              style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem" }}
+            >
+              <FileSpreadsheet size={14} />
+              <span>Export CSV</span>
+            </button>
+          )}
+
+          {activeTab === "creditors" && (
+            <button
+              onClick={handleDownloadCreditorsCSV}
+              className="btn btn-secondary"
+              style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem" }}
+            >
+              <FileSpreadsheet size={14} />
+              <span>Export CSV</span>
+            </button>
+          )}
+
           {activeTab === "gstr1" && (
             <>
               <button
