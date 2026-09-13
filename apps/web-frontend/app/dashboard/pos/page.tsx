@@ -1070,7 +1070,7 @@ export default function POSPage() {
                       <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#f8fafc" }}>{item.item_name}</div>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", flexWrap: "wrap" }}>
                         <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "3px" }}>
-                          <span>Sell â‚¹:</span>
+                          <span>Sell ₹:</span>
                           <input
                             type="number"
                             step="0.01"
@@ -1092,7 +1092,7 @@ export default function POSPage() {
                         </label>
                         {isAdmin && (
                           <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "3px" }}>
-                            <span>Cost â‚¹:</span>
+                            <span>Cost ₹:</span>
                             <input
                               type="number"
                               step="0.01"
@@ -1121,10 +1121,10 @@ export default function POSPage() {
 
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#34d399" }}>
-                        â‚¹{item.total_amount.toFixed(2)}
+                        ₹{item.total_amount.toFixed(2)}
                       </div>
                       <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
-                        Tax: â‚¹{(item.cgst_amount + item.sgst_amount + item.igst_amount).toFixed(2)}
+                        Tax: ₹{(item.cgst_amount + item.sgst_amount + item.igst_amount).toFixed(2)}
                       </div>
                     </div>
                   </div>
@@ -1174,21 +1174,21 @@ export default function POSPage() {
           <div style={{ borderTop: "1px solid var(--border)", paddingTop: "10px", marginTop: "8px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "4px" }}>
               <span>Taxable Subtotal:</span>
-              <span>â‚¹{taxableVal.toFixed(2)}</span>
+              <span>₹{taxableVal.toFixed(2)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "4px" }}>
               <span>Total GST ({isInterstate ? "IGST" : "CGST+SGST"}):</span>
-              <span>â‚¹{totalGst.toFixed(2)}</span>
+              <span>₹{totalGst.toFixed(2)}</span>
             </div>
             {roundOff !== 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "4px" }}>
                 <span>Round Off:</span>
-                <span>â‚¹{roundOff.toFixed(2)}</span>
+                <span>₹{roundOff.toFixed(2)}</span>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.15rem", fontWeight: 700, color: "#f8fafc", margin: "6px 0" }}>
               <span>Grand Total:</span>
-              <span style={{ color: "#34d399" }}>â‚¹{grandTotal.toFixed(2)}</span>
+              <span style={{ color: "#34d399" }}>₹{grandTotal.toFixed(2)}</span>
             </div>
 
             {/* Payment Mode Selector - ONLY CASH & CREDIT */}
@@ -1212,7 +1212,7 @@ export default function POSPage() {
                   transition: "all 0.15s ease",
                 }}
               >
-                ðŸ’µ CASH
+                💵 CASH
               </button>
 
               <button
@@ -1241,7 +1241,7 @@ export default function POSPage() {
                   transition: "all 0.15s ease",
                 }}
               >
-                ðŸ“’ CREDIT
+                💳 CREDIT
               </button>
             </div>
 
@@ -1252,7 +1252,7 @@ export default function POSPage() {
               className="btn-primary"
               style={{ width: "100%", padding: "12px", background: "#10b981", borderColor: "#059669", fontSize: "1rem" }}
             >
-              {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : `Complete Sale & Print (â‚¹${grandTotal})`}
+              {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : `Complete Sale & Print (₹${grandTotal})`}
             </button>
           </div>
         </div>
@@ -1381,7 +1381,7 @@ export default function POSPage() {
               Sale Completed Successfully!
             </h2>
             <div style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-              Invoice No: <strong style={{ color: "#38bdf8" }}>{completedBill.bill_number}</strong> &bull; Total: <strong style={{ color: "#34d399" }}>â‚¹{completedBill.total_amount?.toFixed(2)}</strong>
+              Invoice No: <strong style={{ color: "#38bdf8" }}>{completedBill.bill_number}</strong> &bull; Total: <strong style={{ color: "#34d399" }}>₹{completedBill.total_amount?.toFixed(2)}</strong>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", margin: "16px 0" }}>
