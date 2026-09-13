@@ -108,13 +108,13 @@
 
 ## PHASE 6 — Self-Serve Onboarding & Payments
 
-- [ ] Build self-serve signup flow (no manual admin intervention needed)
-- [ ] Build CSV import for existing stock/customer data
-- [ ] Integrate Razorpay for subscription billing
-- [ ] Implement auto-suspend on non-payment
-- [ ] Implement auto-activation of entitlements on payment/upgrade
-- [ ] Build in-app upgrade prompts (e.g., "Unlock Accounting Books — ₹600/month")
-- [ ] Build free-tier bill limit enforcement
+- [x] Build self-serve signup flow (no manual admin intervention needed)
+- [x] Build CSV import for existing stock/customer data
+- [x] Integrate Razorpay for subscription billing
+- [x] Implement auto-suspend on non-payment
+- [x] Implement auto-activation of entitlements on payment/upgrade
+- [x] Build in-app upgrade prompts (e.g., "Unlock Accounting Books — ₹600/month")
+- [x] Build free-tier bill limit enforcement
 
 **✅ Checkpoint:** A new user can sign up, import data, subscribe to a module via Razorpay, and get instant access — with zero manual intervention from you. Confirm before proceeding.
 

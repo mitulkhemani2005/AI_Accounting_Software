@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { CSVImportModal } from "@/components/CSVImportModal";
 import {
   Boxes,
   Plus,
@@ -196,6 +197,7 @@ export default function InventoryPage() {
 
   // Modals
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [productModalReturnTarget, setProductModalReturnTarget] = useState<{ target: "stock_in"; rowIndex?: number } | null>(null);
   const [productForm, setProductForm] = useState({
@@ -834,6 +836,9 @@ export default function InventoryPage() {
           </button>
           {isAdmin && (
             <>
+              <button onClick={() => setShowImportModal(true)} className="btn-secondary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <FileSpreadsheet size={15} color="#38bdf8" /> Import CSV
+              </button>
               <button onClick={openCreateProduct} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <Plus size={16} /> + Add Product
               </button>
@@ -3123,6 +3128,14 @@ export default function InventoryPage() {
           </div>
         </div>
       )}
+
+      {/* CSV Bulk Import Modal */}
+      <CSVImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        entityType="items"
+        onSuccess={loadAllData}
+      />
     </div>
   );
 }

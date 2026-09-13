@@ -20,6 +20,7 @@ import {
   Contact,
   Boxes,
   FileSpreadsheet,
+  CreditCard,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -37,6 +38,7 @@ export function Sidebar() {
     { label: "Outstanding & Reports", href: "/dashboard/reports", icon: FileText, adminOnly: true },
     { label: "Staff Bills Review", href: "/dashboard/staff-bills", icon: ClipboardCheck, adminOnly: true },
     { label: "Staff & Sub-users", href: "/dashboard/staff", icon: Users, adminOnly: true },
+    { label: "Subscription & Plans", href: "/dashboard/subscription", icon: CreditCard, adminOnly: true },
     { label: "Audit Trail", href: "/dashboard/audit", icon: History, adminOnly: true },
   ];
 

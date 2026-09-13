@@ -129,6 +129,10 @@ async def create_bill(
         if existing_bill:
             return format_bill_response(existing_bill)
 
+    # 1.5 Enforce Free Tier Monthly Bill Limit (50 bills) and Account Suspension
+    from app.services.subscription_service import check_bill_creation_allowed
+    await check_bill_creation_allowed(db=db, tenant_id=tenant_id)
+
     # 2. Calculate line item GST breakdowns
     items_breakdown = [
         calculate_line_item_gst(item=item_input, is_interstate=payload.is_interstate)

@@ -29,7 +29,9 @@ import {
   AlertCircle,
   Receipt,
   Scale,
+  FileSpreadsheet,
 } from "lucide-react";
+import { CSVImportModal } from "@/components/CSVImportModal";
 
 interface Area {
   id: string;
@@ -82,6 +84,7 @@ export default function PartiesPage() {
 
   // Party Modal State
   const [showModal, setShowModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [editingParty, setEditingParty] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -437,6 +440,16 @@ export default function PartiesPage() {
             <RefreshCw size={15} className={isRecalculating ? "animate-spin" : ""} />
             {isRecalculating ? "Syncing..." : "Sync Balances"}
           </button>
+
+          {tab !== "areas" && (
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="btn-secondary"
+              style={{ display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              <FileSpreadsheet size={15} color="#38bdf8" /> Import CSV
+            </button>
+          )}
 
           {tab === "areas" ? (
             <button onClick={openCreateAreaModal} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -1382,6 +1395,14 @@ export default function PartiesPage() {
           </div>
         </div>
       )}
+
+      {/* Bulk CSV Import Modal */}
+      <CSVImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        entityType={tab === "customers" ? "customers" : "suppliers"}
+        onSuccess={fetchParties}
+      />
     </div>
   );
 }

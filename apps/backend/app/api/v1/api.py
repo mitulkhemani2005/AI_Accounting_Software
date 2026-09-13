@@ -10,6 +10,8 @@ from app.api.v1.endpoints import (
     inventory,
     accounting,
     reports,
+    subscriptions,
+    imports,
     test_routes,
 )
 
@@ -44,6 +46,12 @@ api_router.include_router(accounting.router, prefix="/accounting", tags=["Accoun
 
 # Outstanding & Compliance Reports (Phase 5)
 api_router.include_router(reports.router, prefix="/reports", tags=["Outstanding & Compliance Reports"])
+
+# Subscriptions & Razorpay Billing (Phase 6)
+api_router.include_router(subscriptions.router, prefix="/subscriptions", tags=["Subscriptions & Plans"])
+
+# Bulk CSV Data Import Hub (Phase 6)
+api_router.include_router(imports.router, prefix="/import", tags=["Bulk Data Import"])
 
 # RBAC Test Verification Routes
 api_router.include_router(test_routes.router, prefix="/test-rbac", tags=["RBAC & Security Verification"])
