@@ -33,6 +33,7 @@ import {
   Edit2,
   PlusCircle,
   Save,
+  MapPin,
 } from "lucide-react";
 
 interface BillItem {
@@ -1038,6 +1039,11 @@ export default function SalesPage() {
 
                     <td>
                       <div style={{ fontWeight: 600, color: "#f8fafc" }}>{bill.party_name}</div>
+                      {bill.party_address && (
+                        <div style={{ fontSize: "0.72rem", color: "#94a3b8", display: "flex", alignItems: "center", gap: "4px", marginTop: "1px" }}>
+                          <MapPin size={11} /> {bill.party_address}
+                        </div>
+                      )}
                       {bill.party_mobile && (
                         <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
                           <Phone size={12} /> {bill.party_mobile}
@@ -1681,6 +1687,11 @@ export default function SalesPage() {
               <div>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Customer Details</div>
                 <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "#f8fafc", marginTop: "2px" }}>{selectedBill.party_name}</div>
+                {selectedBill.party_address && (
+                  <div style={{ color: "#cbd5e1", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <MapPin size={12} color="#38bdf8" /> {selectedBill.party_address}
+                  </div>
+                )}
                 {selectedBill.party_mobile && <div>Phone: {selectedBill.party_mobile}</div>}
                 {selectedBill.party_gst && <div>GSTIN: {selectedBill.party_gst}</div>}
               </div>

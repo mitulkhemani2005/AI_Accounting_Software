@@ -627,7 +627,15 @@ export default function PartiesPage() {
                         {/* Name & Address */}
                         <td>
                           <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.95rem" }}>{p.name}</div>
-                          {p.address && <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "2px" }}>{p.address}</div>}
+                          {p.address ? (
+                            <div style={{ fontSize: "0.75rem", color: "#94a3b8", display: "flex", alignItems: "center", gap: "3px", marginTop: "2px" }}>
+                              <MapPin size={11} color="#38bdf8" /> {p.address}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontStyle: "italic", marginTop: "2px" }}>
+                              No address registered
+                            </div>
+                          )}
                         </td>
 
                         {/* Area Badge */}
@@ -999,6 +1007,7 @@ export default function PartiesPage() {
                 </div>
                 <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "4px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
                   <span>Party: <strong style={{ color: "#f8fafc" }}>{selectedPartyForLedger.name}</strong></span>
+                  {selectedPartyForLedger.address && <span>• 📍 {selectedPartyForLedger.address}</span>}
                   {selectedPartyForLedger.mobile && <span>• 📱 +91 {selectedPartyForLedger.mobile}</span>}
                   {selectedPartyForLedger.gst_number && <span>• 🆔 GST: {selectedPartyForLedger.gst_number}</span>}
                   {selectedPartyForLedger.area_name && <span>• 📍 Area: {selectedPartyForLedger.area_name}</span>}

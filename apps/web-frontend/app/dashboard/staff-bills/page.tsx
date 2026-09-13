@@ -48,6 +48,7 @@ interface Bill {
   party_name: string;
   party_mobile?: string;
   party_gst?: string;
+  party_address?: string;
   is_interstate: boolean;
   created_by_user_id: string;
   creator_name?: string;
@@ -642,6 +643,7 @@ export default function StaffBillsReviewPage() {
                 <div style={{ fontWeight: 600, fontSize: "1rem", color: "#f8fafc", marginTop: "2px" }}>
                   {selectedBill.party_name}
                 </div>
+                {selectedBill.party_address && <div style={{ color: "#cbd5e1", marginTop: "2px" }}>📍 {selectedBill.party_address}</div>}
                 {selectedBill.party_mobile && <div>Phone: {selectedBill.party_mobile}</div>}
                 {selectedBill.party_gst && <div>GSTIN: {selectedBill.party_gst}</div>}
               </div>

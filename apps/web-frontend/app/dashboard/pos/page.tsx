@@ -659,7 +659,7 @@ export default function POSPage() {
     setCustomerName(cust.name);
     setCustomerMobile(cust.mobile || "");
     setCustomerGst(cust.gst_number || "");
-    setCustomerAddress(cust.billing_address || "");
+    setCustomerAddress(cust.address || cust.billing_address || "");
     setCustomerArea(cust.area_name || "");
     setCustomerState(cust.state || "");
     setCustomerBalance(cust.current_balance || 0);
@@ -674,7 +674,7 @@ export default function POSPage() {
         name: newCustomerForm.name.trim(),
         mobile: newCustomerForm.mobile.trim() || undefined,
         gst_number: newCustomerForm.gst_number.trim() || undefined,
-        billing_address: newCustomerForm.address.trim() || undefined,
+        address: newCustomerForm.address.trim() || undefined,
         state: newCustomerForm.state,
         area_id: newCustomerForm.area_id || undefined,
       });

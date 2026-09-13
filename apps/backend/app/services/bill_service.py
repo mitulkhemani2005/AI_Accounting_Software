@@ -200,16 +200,50 @@ async def create_bill(
     is_reviewed = True if is_admin else False
     bill_status = "active" if is_admin else "under_review"
 
+    # Auto-resolve party details (including address) from Customer or Supplier if party_id is provided
+    resolved_party_name = payload.party_name
+    resolved_party_mobile = payload.party_mobile
+    resolved_party_gst = payload.party_gst
+    resolved_party_address = payload.party_address
+
+    if payload.party_id:
+        if payload.type == "sale":
+            cust_obj = (await db.execute(
+                select(Customer).where(Customer.tenant_id == tenant_id, Customer.id == payload.party_id)
+            )).scalar_one_or_none()
+            if cust_obj:
+                if not resolved_party_name or resolved_party_name == "Cash Customer":
+                    resolved_party_name = cust_obj.name
+                if not resolved_party_mobile:
+                    resolved_party_mobile = cust_obj.mobile
+                if not resolved_party_gst:
+                    resolved_party_gst = cust_obj.gst_number
+                if not resolved_party_address:
+                    resolved_party_address = cust_obj.address
+        elif payload.type == "purchase":
+            supp_obj = (await db.execute(
+                select(Supplier).where(Supplier.tenant_id == tenant_id, Supplier.id == payload.party_id)
+            )).scalar_one_or_none()
+            if supp_obj:
+                if not resolved_party_name:
+                    resolved_party_name = supp_obj.name
+                if not resolved_party_mobile:
+                    resolved_party_mobile = supp_obj.mobile
+                if not resolved_party_gst:
+                    resolved_party_gst = supp_obj.gst_number
+                if not resolved_party_address:
+                    resolved_party_address = supp_obj.address
+
     # 7. Create Bill Record
     bill = Bill(
         tenant_id=tenant_id,
         bill_number=bill_number,
         type=payload.type,
         party_id=payload.party_id,
-        party_name=payload.party_name,
-        party_mobile=payload.party_mobile,
-        party_gst=payload.party_gst,
-        party_address=payload.party_address,
+        party_name=resolved_party_name,
+        party_mobile=resolved_party_mobile,
+        party_gst=resolved_party_gst,
+        party_address=resolved_party_address,
         terms_conditions=payload.terms_conditions,
         is_interstate=payload.is_interstate,
         created_by_user_id=current_user.id,
