@@ -36,6 +36,8 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS state VARCHAR(100)",
                 "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS pincode VARCHAR(20)",
                 "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS terms_conditions VARCHAR(2000)",
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS area_id VARCHAR(36) REFERENCES areas(id) ON DELETE SET NULL",
+                "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS area_id VARCHAR(36) REFERENCES areas(id) ON DELETE SET NULL",
             ]
             for stmt in migration_statements:
                 try:

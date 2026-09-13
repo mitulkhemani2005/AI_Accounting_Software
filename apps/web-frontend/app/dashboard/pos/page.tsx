@@ -31,6 +31,7 @@ import {
   Calendar,
   FileText,
   Warehouse,
+  MapPin,
 } from "lucide-react";
 
 interface POSItem {
@@ -57,6 +58,8 @@ export default function POSPage() {
   // Catalog, Search & Inventory
   const [catalog, setCatalog] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [areas, setAreas] = useState<any[]>([]);
+  const [selectedAreaFilter, setSelectedAreaFilter] = useState("");
   const [godowns, setGodowns] = useState<any[]>([]);
   const [selectedGodownId, setSelectedGodownId] = useState("");
   const [stockSummaryMap, setStockSummaryMap] = useState<Record<string, number>>({});
@@ -72,6 +75,7 @@ export default function POSPage() {
   const [customerMobile, setCustomerMobile] = useState("");
   const [customerGst, setCustomerGst] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
+  const [customerArea, setCustomerArea] = useState("");
   const [customerState, setCustomerState] = useState("");
   const [customerBalance, setCustomerBalance] = useState<number>(0);
   const [isInterstate, setIsInterstate] = useState(false);
@@ -138,6 +142,7 @@ export default function POSPage() {
     gst_number: "",
     address: "",
     state: "Maharashtra",
+    area_id: "",
   });
   const [isAddingCustomer, setIsAddingCustomer] = useState(false);
   const [customerSearchFilter, setCustomerSearchFilter] = useState("");
@@ -160,6 +165,15 @@ export default function POSPage() {
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   // 1. Initial Load & Offline queue checks
+  const fetchAreas = async () => {
+    try {
+      const res = await api.get("/parties/areas");
+      setAreas(res.data);
+    } catch (e) {
+      console.error("Failed to load areas:", e);
+    }
+  };
+
   const fetchCustomers = async () => {
     try {
       const res = await api.get("/parties/customers");
@@ -218,6 +232,7 @@ export default function POSPage() {
       if (savedQueue) setOfflineQueueCount(JSON.parse(savedQueue).length);
     } catch (e) {}
 
+    fetchAreas();
     fetchCatalog();
     fetchCustomers();
     fetchInventory();
@@ -503,6 +518,7 @@ export default function POSPage() {
       setCustomerMobile("");
       setCustomerGst("");
       setCustomerAddress("");
+      setCustomerArea("");
       setCustomerState("");
       setCustomerBalance(0);
       return;
@@ -513,6 +529,7 @@ export default function POSPage() {
     setCustomerMobile(cust.mobile || "");
     setCustomerGst(cust.gst_number || "");
     setCustomerAddress(cust.billing_address || "");
+    setCustomerArea(cust.area_name || "");
     setCustomerState(cust.state || "");
     setCustomerBalance(cust.current_balance || 0);
   };
@@ -528,11 +545,12 @@ export default function POSPage() {
         gst_number: newCustomerForm.gst_number.trim() || undefined,
         billing_address: newCustomerForm.address.trim() || undefined,
         state: newCustomerForm.state,
+        area_id: newCustomerForm.area_id || undefined,
       });
-      await fetchCustomers();
+      await Promise.all([fetchCustomers(), fetchAreas()]);
       handleSelectCustomer(res.data);
       setShowAddCustomerModal(false);
-      setNewCustomerForm({ name: "", mobile: "", gst_number: "", address: "", state: "Maharashtra" });
+      setNewCustomerForm({ name: "", mobile: "", gst_number: "", address: "", state: "Maharashtra", area_id: "" });
     } catch (err: any) {
       alert(err.response?.data?.detail || "Failed to create customer");
     } finally {
@@ -548,6 +566,7 @@ export default function POSPage() {
       customerName,
       customerMobile,
       selectedCustomerId,
+      customerArea,
       partyType,
       billItems,
       isInterstate,
@@ -565,6 +584,7 @@ export default function POSPage() {
     setCustomerName(draft.customerName);
     setCustomerMobile(draft.customerMobile);
     setSelectedCustomerId(draft.selectedCustomerId || "");
+    setCustomerArea(draft.customerArea || "");
     setPartyType(draft.partyType || "cash");
     setBillItems(draft.billItems);
     setIsInterstate(draft.isInterstate);
@@ -582,6 +602,8 @@ export default function POSPage() {
     setCustomerName("Walk-in Cash Customer");
     setCustomerMobile("");
     setCustomerGst("");
+    setCustomerAddress("");
+    setCustomerArea("");
     setCustomerBalance(0);
     setPartyType("cash");
     setSelectedCustomerId("");
@@ -914,43 +936,79 @@ export default function POSPage() {
                   <PauseCircle size={12} /> Hold
                 </button>
               </div>
-            </div>
-
-            {/* Customer Selector Dropdown + Quick Add (Admin Only) */}
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <div style={{ flex: 1, position: "relative" }}>
-                <select
-                  className="input-field"
-                  value={selectedCustomerId}
-                  onChange={(e) => {
-                    const cust = customers.find((c) => c.id === e.target.value);
-                    handleSelectCustomer(cust);
-                  }}
-                  style={{ fontSize: "0.85rem", padding: "6px 10px", height: "36px" }}
-                >
-                  <option value="">ðŸ‘¤ Walk-in Cash Customer</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.mobile ? `â€¢ ðŸ“± ${c.mobile}` : ""} {c.gst_number ? `â€¢ ðŸ†” GST: ${c.gst_number}` : ""} {c.billing_address ? `â€¢ ðŸ“ ${c.billing_address}` : ""} â€¢ ðŸ’° Credit Due: â‚¹{c.current_balance?.toFixed(2)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => setShowAddCustomerModal(true)}
-                  className="btn-secondary"
-                  style={{ padding: "6px 10px", fontSize: "0.8rem", whiteSpace: "nowrap", height: "36px" }}
-                  title="Admin: Create New Customer"
-                >
-                  <UserPlus size={14} /> + New
-                </button>
+            </div>            {/* Customer Selector Dropdown + Area Route Filter + Quick Add (Admin Only) */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              {/* Area Route Filter Dropdown (Optional Fast Filter) */}
+              {areas.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", flex: 1, background: "rgba(15, 23, 42, 0.5)", border: "1px solid var(--border)", borderRadius: "6px", padding: "2px 8px" }}>
+                    <MapPin size={12} color="#38bdf8" />
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", whiteSpace: "nowrap", fontWeight: 600 }}>Filter Area / Route:</span>
+                    <select
+                      value={selectedAreaFilter}
+                      onChange={(e) => setSelectedAreaFilter(e.target.value)}
+                      style={{ background: "transparent", border: "none", color: "#38bdf8", fontSize: "0.75rem", outline: "none", width: "100%", cursor: "pointer", fontWeight: 600 }}
+                    >
+                      <option value="" style={{ background: "#0f172a", color: "#f8fafc" }}>
+                        All Areas ({customers.length} Parties)
+                      </option>
+                      {areas.map((a) => (
+                        <option key={a.id} value={a.id} style={{ background: "#0f172a", color: "#f8fafc" }}>
+                          📍 {a.name} ({a.customers_count || 0} customers)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {selectedAreaFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAreaFilter("")}
+                      style={{ fontSize: "0.68rem", background: "rgba(239, 68, 68, 0.15)", color: "#f87171", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "4px", padding: "2px 6px", cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                      ✕ Reset Area
+                    </button>
+                  )}
+                </div>
               )}
+
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <div style={{ flex: 1, position: "relative" }}>
+                  <select
+                    className="input-field"
+                    value={selectedCustomerId}
+                    onChange={(e) => {
+                      const cust = customers.find((c) => c.id === e.target.value);
+                      handleSelectCustomer(cust);
+                    }}
+                    style={{ fontSize: "0.85rem", padding: "6px 10px", height: "36px" }}
+                  >
+                    <option value="">👤 Walk-in Cash Customer</option>
+                    {(selectedAreaFilter
+                      ? customers.filter((c) => c.area_id === selectedAreaFilter)
+                      : customers
+                    ).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.area_name ? `• 📍 [${c.area_name}]` : ""} {c.mobile ? `• 📱 ${c.mobile}` : ""} {c.gst_number ? `• 🆔 GST: ${c.gst_number}` : ""} • 💰 Due: ₹{c.current_balance?.toFixed(2)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCustomerModal(true)}
+                    className="btn-secondary"
+                    style={{ padding: "6px 10px", fontSize: "0.8rem", whiteSpace: "nowrap", height: "36px" }}
+                    title="Admin: Create New Customer"
+                  >
+                    <UserPlus size={14} /> + New
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Selected Customer Info Badge with Name, Address, GSTIN, Mobile, and Credit Due */}
+            {/* Selected Customer Info Badge with Name, Area, Address, GSTIN, Mobile, and Credit Due */}
             {selectedCustomerId && (
               <div
                 style={{
@@ -965,18 +1023,23 @@ export default function POSPage() {
                   fontSize: "0.775rem",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <strong style={{ fontSize: "0.85rem", color: "#f8fafc" }}>ðŸ‘¤ {customerName}</strong>
-                    {customerMobile && <span style={{ color: "var(--text-muted)", marginLeft: "8px" }}>ðŸ“± {customerMobile}</span>}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                    <strong style={{ fontSize: "0.85rem", color: "#f8fafc" }}>👤 {customerName}</strong>
+                    {customerArea && (
+                      <span style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid rgba(56, 189, 248, 0.4)", padding: "1px 6px", borderRadius: "4px", fontSize: "0.68rem", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                        <MapPin size={10} /> {customerArea}
+                      </span>
+                    )}
+                    {customerMobile && <span style={{ color: "var(--text-muted)", marginLeft: "4px" }}>📱 {customerMobile}</span>}
                   </div>
                   <div style={{ color: customerBalance > 0 ? "#f87171" : "#34d399", fontWeight: 700 }}>
-                    Credit Due: â‚¹{customerBalance.toFixed(2)}
+                    Credit Due: ₹{customerBalance.toFixed(2)}
                   </div>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "var(--text-muted)", fontSize: "0.725rem", flexWrap: "wrap", gap: "6px" }}>
-                  <div>ðŸ“ Address: <span style={{ color: "#f1f5f9" }}>{customerAddress ? `${customerAddress}${customerState ? `, ${customerState}` : ""}` : "No address registered"}</span></div>
-                  <div>ðŸ†” GSTIN: <span style={{ fontFamily: "monospace", color: "#60a5fa" }}>{customerGst || "Unregistered"}</span></div>
+                  <div>📍 Address: <span style={{ color: "#f1f5f9" }}>{customerAddress ? `${customerAddress}${customerState ? `, ${customerState}` : ""}` : "No address registered"}</span></div>
+                  <div>🆔 GSTIN: <span style={{ fontFamily: "monospace", color: "#60a5fa" }}>{customerGst || "Unregistered"}</span></div>
                 </div>
               </div>
             )}
@@ -1250,6 +1313,22 @@ export default function POSPage() {
                   value={newCustomerForm.address}
                   onChange={(e) => setNewCustomerForm({ ...newCustomerForm, address: e.target.value })}
                 />
+              </div>
+
+              <div>
+                <label className="input-label">Trade Area / Delivery Route (Optional)</label>
+                <select
+                  className="input-field"
+                  value={newCustomerForm.area_id}
+                  onChange={(e) => setNewCustomerForm({ ...newCustomerForm, area_id: e.target.value })}
+                >
+                  <option value="">-- Select Trade Area / Route --</option>
+                  {areas.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      📍 {a.name} {a.code ? `(${a.code})` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
