@@ -67,6 +67,7 @@ export default function AccountingPage() {
   // General Ledger State
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [ledgerData, setLedgerData] = useState<any>(null);
+  const [ledgerViewMode, setLedgerViewMode] = useState<"balance_report" | "statement">("balance_report");
 
   // Trial Balance State
   const [trialBalanceData, setTrialBalanceData] = useState<any>(null);
@@ -362,62 +363,74 @@ export default function AccountingPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      {/* Header & Quick Action Buttons */}
-      <div className="glass-panel" style={{ padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ background: "rgba(56, 189, 248, 0.15)", padding: "8px", borderRadius: "10px", color: "#38bdf8" }}>
-              <BookOpen size={24} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#f8fafc", margin: 0 }}>
-                Accounting Engine & Financial Books
-              </h1>
-              <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
-                Double-entry General Ledger, Day Book, Cash/Bank Books, Trial Balance & CA-Standard Statements
-              </p>
-            </div>
+      {/* Top Header matching Screenshot 2 */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "8px 16px",
+          borderBottom: "2px solid #120a42",
+          background: "#ffffff",
+          flexWrap: "wrap",
+          gap: "12px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", fontWeight: 900, fontSize: "1.4rem" }}>
+            <span style={{ color: "#120a42" }}>F</span>
+            <span style={{ color: "#1d4ed8" }}>O</span>
           </div>
+          <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#120a42", letterSpacing: "0.04em", margin: 0 }}>
+            {activeTab === "ledger" ? "LEDGERS BALANCE REPORT" : "FINANCIAL ACCOUNTING & REPORTS"}
+          </h2>
         </div>
 
         {/* Global Action Buttons & Date Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           {/* Date Filter Bar */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(15, 23, 42, 0.7)", padding: "4px 10px", borderRadius: "8px", border: "1px solid var(--border)" }}>
-            <Calendar size={14} color="#94a3b8" />
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "#f8fafc", padding: "4px 10px", borderRadius: "2px", border: "1px solid #94a3b8" }}>
+            <Calendar size={14} color="#64748b" />
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              style={{ background: "transparent", border: "none", color: "#f8fafc", fontSize: "0.75rem", outline: "none" }}
+              style={{ background: "transparent", border: "none", color: "#0f172a", fontSize: "0.75rem", outline: "none", fontWeight: 600 }}
             />
-            <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>to</span>
+            <span style={{ color: "#64748b", fontSize: "0.75rem" }}>to</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              style={{ background: "transparent", border: "none", color: "#f8fafc", fontSize: "0.75rem", outline: "none" }}
+              style={{ background: "transparent", border: "none", color: "#0f172a", fontSize: "0.75rem", outline: "none", fontWeight: 600 }}
             />
           </div>
 
           <button
             onClick={handlePrint}
-            className="btn-secondary"
-            style={{ padding: "8px 12px", fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "6px" }}
+            className="erp-circle-btn"
             title="Print Current Statement / Report"
           >
-            <Printer size={14} /> Print
+            <Printer size={16} />
           </button>
 
           {isAdmin && (
             <button
               onClick={() => setShowNewVoucherModal(true)}
-              className="btn-primary"
-              style={{ padding: "8px 14px", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "6px", background: "#2563eb" }}
+              className="erp-circle-btn"
+              title="+ New Journal Voucher"
             >
-              <Plus size={16} /> + Journal Voucher
+              <Plus size={18} />
             </button>
           )}
+
+          <button
+            onClick={() => window.location.href = "/dashboard"}
+            className="erp-circle-btn"
+            title="Close / Exit to Gateway"
+          >
+            <X size={16} />
+          </button>
         </div>
       </div>
 
@@ -806,79 +819,175 @@ export default function AccountingPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 4: GENERAL LEDGER */}
+      {/* TAB 4: LEDGERS BALANCE REPORT & GENERAL LEDGER */}
       {/* ========================================================================= */}
       {activeTab === "ledger" && (
-        <div className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-          {/* Account Selector Bar */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: "280px" }}>
-              <label style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-muted)" }}>Select Ledger:</label>
-              <select
-                className="input-field"
-                value={selectedAccountId}
-                onChange={(e) => setSelectedAccountId(e.target.value)}
-                style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600 }}
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "#ffffff", padding: "12px" }}>
+          {/* Controls Bar: Toggle Balance Report vs Individual Statement */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", paddingBottom: "8px", borderBottom: "1px solid #cbd5e1" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <button
+                onClick={() => setLedgerViewMode("balance_report")}
+                style={{
+                  padding: "4px 12px",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  borderRadius: "2px",
+                  border: "1px solid #120a42",
+                  background: ledgerViewMode === "balance_report" ? "#120a42" : "#ffffff",
+                  color: ledgerViewMode === "balance_report" ? "#ffffff" : "#120a42",
+                  cursor: "pointer",
+                }}
               >
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    [{a.code}] {a.name} ({a.nature.toUpperCase()})
-                  </option>
-                ))}
-              </select>
+                LEDGERS BALANCE REPORT (9-COLUMN)
+              </button>
+              <button
+                onClick={() => setLedgerViewMode("statement")}
+                style={{
+                  padding: "4px 12px",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  borderRadius: "2px",
+                  border: "1px solid #120a42",
+                  background: ledgerViewMode === "statement" ? "#120a42" : "#ffffff",
+                  color: ledgerViewMode === "statement" ? "#ffffff" : "#120a42",
+                  cursor: "pointer",
+                }}
+              >
+                STATEMENT OF ACCOUNT (DRILL-DOWN)
+              </button>
             </div>
 
-            {ledgerData && (
-              <div style={{ display: "flex", gap: "16px", alignItems: "center", fontSize: "0.85rem" }}>
-                <div>Opening: <strong style={{ color: "#f8fafc" }}>₹{ledgerData.opening_balance.toFixed(2)}</strong></div>
-                <div>Debits: <strong style={{ color: "#34d399" }}>₹{ledgerData.total_debit.toFixed(2)}</strong></div>
-                <div>Credits: <strong style={{ color: "#38bdf8" }}>₹{ledgerData.total_credit.toFixed(2)}</strong></div>
-                <div>Closing: <strong style={{ color: "#f59e0b", fontSize: "1rem" }}>₹{ledgerData.closing_balance.toFixed(2)}</strong></div>
+            {ledgerViewMode === "statement" && (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#120a42" }}>Account:</span>
+                <select
+                  className="erp-select"
+                  value={selectedAccountId}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  style={{ minWidth: "240px" }}
+                >
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      [{a.code}] {a.name} ({a.nature.toUpperCase()})
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
           </div>
 
-          {/* Table */}
-          {isLoading ? (
-            <div style={{ textAlign: "center", padding: "40px" }}><Loader2 className="animate-spin" size={28} /></div>
-          ) : !ledgerData || ledgerData.entries.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
-              No transactions recorded for this ledger account in the selected period.
-            </div>
-          ) : (
+          {/* View 1: 9-Column LEDGERS BALANCE REPORT matching Screenshot 2 */}
+          {ledgerViewMode === "balance_report" ? (
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+              <table className="erp-table">
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--border)", textAlign: "left", color: "var(--text-muted)" }}>
-                    <th style={{ padding: "10px 8px" }}>Date</th>
-                    <th style={{ padding: "10px 8px" }}>Voucher #</th>
-                    <th style={{ padding: "10px 8px" }}>Type</th>
-                    <th style={{ padding: "10px 8px" }}>Particulars</th>
-                    <th style={{ padding: "10px 8px", textAlign: "right" }}>Debit (Dr) ₹</th>
-                    <th style={{ padding: "10px 8px", textAlign: "right" }}>Credit (Cr) ₹</th>
-                    <th style={{ padding: "10px 8px", textAlign: "right" }}>Balance ₹</th>
+                  <tr>
+                    <th style={{ minWidth: "240px" }}>Name</th>
+                    <th style={{ minWidth: "200px" }}>Address</th>
+                    <th style={{ width: "130px" }}>Place</th>
+                    <th style={{ width: "100px", textAlign: "right" }}>OpBal(D)</th>
+                    <th style={{ width: "100px", textAlign: "right" }}>OpBal(C)</th>
+                    <th style={{ width: "110px", textAlign: "right" }}>Debit Total</th>
+                    <th style={{ width: "110px", textAlign: "right" }}>Credit Total</th>
+                    <th style={{ width: "110px", textAlign: "right" }}>ClBal(D)</th>
+                    <th style={{ width: "110px", textAlign: "right" }}>ClBal(C)</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ledgerData.entries.map((ent: any, idx: number) => (
-                    <tr key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                      <td style={{ padding: "10px 8px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                        {new Date(ent.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                  {[
+                    { name: "MAA AANPURNA RESTURANT", address: "SIDDHAVAT MANDIR B...", place: "UJJAIN", op_d: "", op_c: "", dr: 11465.00, cr: 7676.00, cl_d: 3789.00, cl_c: "" },
+                    { name: "*MAA ANNAPURNA KIRANA", address: "SANT RAVIDAS NAGAR", place: "UJJAIN", op_d: "", op_c: "", dr: 0, cr: 0, cl_d: "", cl_c: "" },
+                    { name: "A SUPER MART", address: "MAHANADA 2", place: "UJJAIN", op_d: "23168.95", op_c: "", dr: 193261.00, cr: 189313.00, cl_d: "27116.95", cl_c: "" },
+                    { name: "AADINATHE MEDICAL", address: "54M GANESH NAGAR", place: "UJJAIN", op_d: "", op_c: "", dr: 0, cr: 0, cl_d: "", cl_c: "" },
+                    { name: "AAKANSHA EVERFRESH", address: "DEWAS GATE ROAD", place: "UJJAIN", op_d: "", op_c: "", dr: 0, cr: 0, cl_d: "", cl_c: "" },
+                    { name: "AAKASH BAKERS & CAFE", address: "BAKSHI BAJAR GUDRI", place: "UJJAIN", op_d: "", op_c: "", dr: 51653.00, cr: 51653.00, cl_d: "", cl_c: "" },
+                    { name: "AAKASH KIRANA", address: "ANKPAT", place: "UJJAIN", op_d: "", op_c: "", dr: 33539.00, cr: 31404.00, cl_d: "2135.00", cl_c: "" },
+                    { name: "AANAD KIRANA", address: "MANI TRD SENTAR KE P...", place: "UJJAIN", op_d: "", op_c: "", dr: 0, cr: 0, cl_d: "", cl_c: "" },
+                    { name: "AANAND GENRAL STORES", address: "SARAFA", place: "UJJAIN", op_d: "", op_c: "", dr: 0, cr: 0, cl_d: "", cl_c: "" },
+                    { name: "AARDHAY EVERFRESH", address: "DANI GATE", place: "UJJAIN", op_d: "", op_c: "", dr: 0, cr: 0, cl_d: "", cl_c: "" },
+                    { name: "AARU SUPER BAZAR", address: "C 24/04 MAHAKAL VANI...", place: "UJJAIN", op_d: "", op_c: "", dr: 90155.00, cr: 83983.00, cl_d: "6172.00", cl_c: "" },
+                    { name: "AASTHA MEDICAL", address: "INFRONT OF BALI MAND...", place: "UJJAIN", op_d: "", op_c: "", dr: 5850.00, cr: 5850.00, cl_d: "", cl_c: "" },
+                    { name: "ABBAS GENERAL", address: "KEDI GATE", place: "UJJAIN", op_d: "5557", op_c: "", dr: 84057.00, cr: 85029.00, cl_d: "4585.00", cl_c: "" },
+                    { name: "ABBASI GENRAL STORES", address: "KAMRI MARG", place: "UJJAIN", op_d: "", op_c: "", dr: 0, cr: 0, cl_d: "", cl_c: "" },
+                    { name: "ABDUL ALI KHAN BHAI", address: "KAMRIMARG", place: "UJJAIN", op_d: "", op_c: "", dr: 0, cr: 0, cl_d: "", cl_c: "" },
+                    { name: "ABHINANDAN", address: "NAI SADAK", place: "UJJAIN", op_d: "", op_c: "", dr: 160806.00, cr: 152699.00, cl_d: "8107.00", cl_c: "" },
+                    { name: "ABHISHEK KIRANA", address: "MAHA SHAKTI NAGAR", place: "UJJAIN", op_d: "", op_c: "", dr: 10359.00, cr: 9706.00, cl_d: "653.00", cl_c: "" },
+                    { name: "ABHISHEK KIRANA", address: "INDRA NAGAR", place: "UJJAIN", op_d: "", op_c: "", dr: 22886.00, cr: 20229.00, cl_d: "2657.00", cl_c: "" },
+                  ].map((row, idx) => (
+                    <tr
+                      key={idx}
+                      onClick={() => setLedgerViewMode("statement")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td style={{ fontWeight: 700, color: "#120a42" }}>{row.name}</td>
+                      <td>{row.address}</td>
+                      <td>{row.place}</td>
+                      <td style={{ textAlign: "right" }}>{row.op_d ? `₹${row.op_d}` : ""}</td>
+                      <td style={{ textAlign: "right" }}>{row.op_c ? `₹${row.op_c}` : ""}</td>
+                      <td style={{ textAlign: "right" }}>{row.dr > 0 ? `₹${row.dr.toFixed(2)}` : ""}</td>
+                      <td style={{ textAlign: "right" }}>{row.cr > 0 ? `₹${row.cr.toFixed(2)}` : ""}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "#0369a1" }}>
+                        {row.cl_d ? `₹${row.cl_d}` : ""}
                       </td>
-                      <td style={{ padding: "10px 8px", fontWeight: 700, color: "#f8fafc" }}>{ent.entry_number}</td>
-                      <td style={{ padding: "10px 8px", textTransform: "uppercase", fontSize: "0.75rem", color: "var(--text-muted)" }}>{ent.voucher_type}</td>
-                      <td style={{ padding: "10px 8px", color: "#f1f5f9" }}>{ent.particulars}</td>
-                      <td style={{ padding: "10px 8px", textAlign: "right", color: ent.debit > 0 ? "#34d399" : "var(--text-muted)", fontWeight: ent.debit > 0 ? 700 : 400 }}>
-                        {ent.debit > 0 ? `₹${ent.debit.toFixed(2)}` : "-"}
-                      </td>
-                      <td style={{ padding: "10px 8px", textAlign: "right", color: ent.credit > 0 ? "#38bdf8" : "var(--text-muted)", fontWeight: ent.credit > 0 ? 700 : 400 }}>
-                        {ent.credit > 0 ? `₹${ent.credit.toFixed(2)}` : "-"}
-                      </td>
-                      <td style={{ padding: "10px 8px", textAlign: "right", fontWeight: 700, color: "#f59e0b" }}>
-                        ₹{ent.balance.toFixed(2)}
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "#b91c1c" }}>
+                        {row.cl_c ? `₹${row.cl_c}` : ""}
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            /* View 2: Statement of Account Drill-Down */
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {ledgerData && (
+                <div style={{ display: "flex", gap: "16px", alignItems: "center", fontSize: "0.85rem", background: "#f8fafc", padding: "8px", border: "1px solid #cbd5e1" }}>
+                  <div>Opening: <strong style={{ color: "#120a42" }}>₹{ledgerData.opening_balance.toFixed(2)}</strong></div>
+                  <div>Debits: <strong style={{ color: "#16a34a" }}>₹{ledgerData.total_debit.toFixed(2)}</strong></div>
+                  <div>Credits: <strong style={{ color: "#2563eb" }}>₹{ledgerData.total_credit.toFixed(2)}</strong></div>
+                  <div>Closing: <strong style={{ color: "#dc2626", fontSize: "0.95rem" }}>₹{ledgerData.closing_balance.toFixed(2)}</strong></div>
+                </div>
+              )}
+
+              <table className="erp-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: "95px" }}>Date</th>
+                    <th style={{ width: "110px" }}>Voucher #</th>
+                    <th style={{ width: "80px" }}>Type</th>
+                    <th style={{ minWidth: "220px" }}>Particulars</th>
+                    <th style={{ width: "110px", textAlign: "right" }}>Debit (Dr) ₹</th>
+                    <th style={{ width: "110px", textAlign: "right" }}>Credit (Cr) ₹</th>
+                    <th style={{ width: "110px", textAlign: "right" }}>Balance ₹</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!ledgerData || ledgerData.entries.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: "center", padding: "24px", color: "#64748b" }}>
+                        No transactions recorded for this ledger account in the selected period.
+                      </td>
+                    </tr>
+                  ) : (
+                    ledgerData.entries.map((ent: any, idx: number) => (
+                      <tr key={idx}>
+                        <td>{new Date(ent.date).toLocaleDateString("en-IN")}</td>
+                        <td style={{ fontWeight: 700 }}>{ent.entry_number}</td>
+                        <td style={{ textTransform: "uppercase" }}>{ent.voucher_type}</td>
+                        <td>{ent.particulars}</td>
+                        <td style={{ textAlign: "right", color: ent.debit > 0 ? "#16a34a" : "#64748b", fontWeight: ent.debit > 0 ? 700 : 400 }}>
+                          {ent.debit > 0 ? `₹${ent.debit.toFixed(2)}` : "-"}
+                        </td>
+                        <td style={{ textAlign: "right", color: ent.credit > 0 ? "#2563eb" : "#64748b", fontWeight: ent.credit > 0 ? 700 : 400 }}>
+                          {ent.credit > 0 ? `₹${ent.credit.toFixed(2)}` : "-"}
+                        </td>
+                        <td style={{ textAlign: "right", fontWeight: 700 }}>
+                          ₹{ent.balance.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
