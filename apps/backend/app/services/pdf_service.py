@@ -135,8 +135,7 @@ def _build_bill_story_elements(bill: Bill, tenant: Tenant, is_a5: bool, styles) 
         f"<b>{voucher_title}</b><br/>"
         f"Invoice No: <b>{bill.bill_number}</b><br/>"
         f"Date: <b>{bill.created_at.strftime('%d-%m-%Y')}</b><br/>"
-        f"Time: <b>{bill.created_at.strftime('%I:%M %p')}</b><br/>"
-        f"Supply: <b>{'Inter-State (IGST)' if bill.is_interstate else 'Intra-State'}</b>"
+        f"Time: <b>{bill.created_at.strftime('%I:%M %p')}</b>"
     )
 
     header_col_widths = [220, 168] if is_a5 else [305, 230]

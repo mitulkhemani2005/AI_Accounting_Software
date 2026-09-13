@@ -1737,7 +1737,6 @@ export default function POSPage() {
               <div style={{ fontSize: "9.5px", lineHeight: "1.35", color: "#111" }}>
                 <div><strong>Invoice No:</strong> {completedBill.bill_number}</div>
                 <div><strong>Date:</strong> {new Date(completedBill.created_at || Date.now()).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                <div><strong>Supply:</strong> {completedBill.is_interstate ? "Inter-State (IGST)" : "Intra-State"}</div>
               </div>
             </div>
           </div>

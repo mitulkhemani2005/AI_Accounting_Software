@@ -1250,7 +1250,7 @@ export default function PartiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="input-label">State of Supply</label>
+                  <label className="input-label">State</label>
                   <input
                     type="text"
                     className="input-field"

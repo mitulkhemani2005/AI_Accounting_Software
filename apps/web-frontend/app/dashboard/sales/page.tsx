@@ -1676,7 +1676,7 @@ export default function SalesPage() {
               </button>
             </div>
 
-            {/* Customer & Place of Supply */}
+            {/* Customer & Payment Details */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", background: "rgba(30, 41, 59, 0.4)", padding: "14px", borderRadius: "8px", marginBottom: "18px", fontSize: "0.85rem" }}>
               <div>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Customer Details</div>
@@ -1686,10 +1686,9 @@ export default function SalesPage() {
               </div>
 
               <div>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Payment & Tax Supply</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Payment Details</div>
                 <div>Payment Mode: <strong style={{ textTransform: "uppercase" }}>{selectedBill.payment_mode === "credit" ? "Credit" : "Cash"}</strong></div>
                 <div>Payment Status: <strong style={{ textTransform: "capitalize" }}>{selectedBill.payment_status}</strong> (Paid ₹{selectedBill.paid_amount.toFixed(2)})</div>
-                <div>Place of Supply: <strong>{selectedBill.is_interstate ? "Inter-state (IGST)" : "Intra-state (CGST+SGST)"}</strong></div>
               </div>
             </div>
 
@@ -1874,7 +1873,6 @@ export default function SalesPage() {
                 <div><strong>Invoice No:</strong> {selectedBill.bill_number}</div>
                 <div><strong>Date:</strong> {new Date(selectedBill.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
                 <div><strong>Time:</strong> {new Date(selectedBill.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
-                <div><strong>Place of Supply:</strong> {selectedBill.is_interstate ? "Inter-State (IGST)" : "Intra-State"}</div>
               </div>
             </div>
           </div>
@@ -2021,7 +2019,6 @@ export default function SalesPage() {
                     <div style={{ fontSize: "9.5px", lineHeight: "1.35", color: "#111" }}>
                       <div><strong>Invoice No:</strong> {b.bill_number}</div>
                       <div><strong>Date:</strong> {new Date(b.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                      <div><strong>Supply:</strong> {b.is_interstate ? "Inter-State (IGST)" : "Intra-State"}</div>
                     </div>
                   </div>
                 </div>
