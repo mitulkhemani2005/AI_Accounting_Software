@@ -29,6 +29,12 @@ import {
   ShieldAlert,
   ArrowUpRight,
   ArrowDownLeft,
+  Barcode,
+  Tag,
+  Trash2,
+  Loader2,
+  Sparkles,
+  SlidersHorizontal,
 } from "lucide-react";
 
 interface Godown {
@@ -175,6 +181,26 @@ export default function InventoryPage() {
   const [movementTypeFilter, setMovementTypeFilter] = useState("all");
 
   // Modals
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [productForm, setProductForm] = useState({
+    name: "",
+    sku: "",
+    barcode: "",
+    category: "Groceries",
+    unit: "PCS",
+    sale_price: "",
+    purchase_price: "",
+    gst_rate: "18",
+    is_tax_inclusive: false,
+    hsn_code: "",
+    min_stock_alert: "5",
+    opening_stock: "0",
+    opening_godown_id: "",
+  });
+  const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
+  const [productError, setProductError] = useState<string | null>(null);
+
   const [showGodownModal, setShowGodownModal] = useState(false);
   const [editingGodown, setEditingGodown] = useState<Godown | null>(null);
   const [godownForm, setGodownForm] = useState({
@@ -298,6 +324,139 @@ export default function InventoryPage() {
     if (activeTab === "movements") loadMovements();
     if (activeTab === "transfers") loadTransfers();
   }, [activeTab, movementTypeFilter]);
+
+  // --- Product Master CRUD & Quick Restock ---
+  const openCreateProduct = () => {
+    setEditingProduct(null);
+    const def = godowns.find((g) => g.is_default) || godowns[0];
+    setProductForm({
+      name: "",
+      sku: "",
+      barcode: "",
+      category: "Groceries",
+      unit: "PCS",
+      sale_price: "",
+      purchase_price: "",
+      gst_rate: "18",
+      is_tax_inclusive: false,
+      hsn_code: "",
+      min_stock_alert: "5",
+      opening_stock: "0",
+      opening_godown_id: def ? def.id : "",
+    });
+    setProductError(null);
+    setShowProductModal(true);
+  };
+
+  const openEditProduct = (stockItem: ItemStockSummary) => {
+    const fullItem = allItemsList.find((i) => i.id === stockItem.item_id) || stockItem;
+    setEditingProduct({ id: stockItem.item_id, ...fullItem });
+    setProductForm({
+      name: stockItem.item_name,
+      sku: stockItem.sku || "",
+      barcode: stockItem.barcode || "",
+      category: stockItem.category || "General",
+      unit: stockItem.unit || "PCS",
+      sale_price: stockItem.sale_price.toString(),
+      purchase_price: stockItem.purchase_price.toString(),
+      gst_rate: (fullItem as any).gst_rate !== undefined ? (fullItem as any).gst_rate.toString() : "18",
+      is_tax_inclusive: (fullItem as any).is_tax_inclusive || false,
+      hsn_code: (fullItem as any).hsn_code || "",
+      min_stock_alert: stockItem.min_stock_alert.toString(),
+      opening_stock: "0",
+      opening_godown_id: "",
+    });
+    setProductError(null);
+    setShowProductModal(true);
+  };
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingProduct(true);
+    setProductError(null);
+
+    const payload = {
+      name: productForm.name.trim(),
+      sku: productForm.sku.trim() || undefined,
+      barcode: productForm.barcode.trim() || undefined,
+      category: productForm.category.trim() || "General",
+      unit: productForm.unit.trim() || "PCS",
+      sale_price: parseFloat(productForm.sale_price) || 0,
+      purchase_price: parseFloat(productForm.purchase_price) || 0,
+      gst_rate: parseFloat(productForm.gst_rate) || 0,
+      is_tax_inclusive: productForm.is_tax_inclusive,
+      hsn_code: productForm.hsn_code.trim() || undefined,
+      min_stock_alert: parseFloat(productForm.min_stock_alert) || 0,
+    };
+
+    try {
+      if (editingProduct) {
+        await api.put(`/items/${editingProduct.id}`, payload);
+      } else {
+        const createRes = await api.post("/items", payload);
+        const openingQty = parseFloat(productForm.opening_stock) || 0;
+        if (openingQty > 0) {
+          const targetGodown = productForm.opening_godown_id || (godowns.find((g) => g.is_default) || godowns[0])?.id;
+          if (targetGodown) {
+            try {
+              await api.post("/inventory/stock-in", {
+                godown_id: targetGodown,
+                supplier_name: "Opening Stock Setup",
+                items: [
+                  {
+                    item_id: createRes.data.id,
+                    quantity: openingQty,
+                    purchase_price: parseFloat(productForm.purchase_price) || 0,
+                    batch_number: "BATCH-INIT",
+                  },
+                ],
+                notes: "Initial opening stock upon product creation",
+              });
+            } catch (stkErr) {
+              console.warn("Opening stock could not be created automatically:", stkErr);
+            }
+          }
+        }
+      }
+      setShowProductModal(false);
+      setEditingProduct(null);
+      await loadAllData();
+    } catch (err: any) {
+      setProductError(err.response?.data?.detail || "Failed to save product");
+    } finally {
+      setIsSubmittingProduct(false);
+    }
+  };
+
+  const handleDeleteProduct = async (itemId: string, name: string) => {
+    if (!confirm(`Are you sure you want to deactivate/delete product "${name}"?`)) return;
+    try {
+      await api.delete(`/items/${itemId}`);
+      await loadAllData();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Failed to delete product");
+    }
+  };
+
+  const quickStockInItem = (item: ItemStockSummary) => {
+    const def = godowns.find((g) => g.is_default) || godowns[0];
+    setStockInForm({
+      godown_id: def ? def.id : "",
+      supplier_name: "",
+      invoice_number: "",
+      items: [
+        {
+          item_id: item.item_id,
+          quantity: 1,
+          purchase_price: item.purchase_price,
+          batch_number: `BATCH-${Date.now().toString().slice(-4)}`,
+          expiry_date: "",
+        },
+      ],
+      notes: `Quick restock for ${item.item_name}`,
+    });
+    setActiveTab("stock_in");
+  };
 
   // Handle Save Godown
   const handleSaveGodown = async (e: React.FormEvent) => {
@@ -453,26 +612,32 @@ export default function InventoryPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <Boxes size={28} color="#38bdf8" />
             <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
-              Inventory & Warehouse Management
+              Products & Inventory Master
             </h1>
-            <span className="badge badge-purple" style={{ fontSize: "0.75rem" }}>Phase 3</span>
+            <span className="badge badge-purple" style={{ fontSize: "0.75rem" }}>Unified Master</span>
           </div>
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: "4px 0 0 0" }}>
-            Multi-godown stock tracking, batch & expiry control, purchase restocking, and movement ledgers
+            Unified catalog master, multi-godown stock levels, batch tracking, purchase restocking & transfers
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           <button onClick={loadAllData} className="btn-secondary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <RefreshCw size={15} /> Refresh
           </button>
           {isAdmin && (
             <>
-              <button onClick={() => setActiveTab("stock_in")} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <Plus size={16} /> Stock-In (Purchase)
+              <button onClick={openCreateProduct} className="btn-primary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <Plus size={16} /> + Add Product
+              </button>
+              <button onClick={() => setActiveTab("stock_in")} className="btn-secondary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <Truck size={15} /> Stock-In (Purchase)
               </button>
               <button onClick={() => setActiveTab("transfers")} className="btn-secondary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <ArrowRightLeft size={16} /> Transfer Stock
+                <ArrowRightLeft size={15} /> Transfer Stock
+              </button>
+              <button onClick={openCreateGodown} className="btn-secondary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <Warehouse size={15} /> + Godown
               </button>
             </>
           )}
@@ -562,7 +727,7 @@ export default function InventoryPage() {
       {/* Tabs Bar */}
       <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid var(--border)", paddingBottom: "8px", overflowX: "auto" }}>
         {[
-          { id: "overview", label: "Stock Overview", icon: Package },
+          { id: "overview", label: "Products & Stock Master", icon: Package },
           { id: "stock_in", label: "Stock-In (Purchase)", icon: Plus, adminOnly: true },
           { id: "godowns", label: "Godowns & Branches", icon: Warehouse },
           { id: "transfers", label: "Stock Transfers", icon: ArrowRightLeft },
@@ -594,10 +759,10 @@ export default function InventoryPage() {
         })}
       </div>
 
-      {/* --- TAB 1: STOCK OVERVIEW --- */}
+      {/* --- TAB 1: PRODUCTS & STOCK OVERVIEW --- */}
       {activeTab === "overview" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {/* Filters */}
+          {/* Filters & Actions Bar */}
           <div className="glass-panel" style={{ padding: "16px", borderRadius: "12px", display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", flex: 1, minWidth: "280px" }}>
               {/* Search */}
@@ -630,8 +795,8 @@ export default function InventoryPage() {
               </select>
             </div>
 
-            {/* Low Stock Toggle */}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {/* Quick Actions & Low Stock Toggle */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.85rem", color: lowStockOnly ? "#fbbf24" : "var(--text-muted)" }}>
                 <input
                   type="checkbox"
@@ -641,6 +806,16 @@ export default function InventoryPage() {
                 />
                 ⚠️ Low Stock Only
               </label>
+
+              {isAdmin && (
+                <button
+                  onClick={openCreateProduct}
+                  className="btn-primary"
+                  style={{ padding: "6px 12px", fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "4px" }}
+                >
+                  <Plus size={14} /> Add Product
+                </button>
+              )}
             </div>
           </div>
 
@@ -649,13 +824,12 @@ export default function InventoryPage() {
             <table className="custom-table" style={{ width: "100%", fontSize: "0.875rem" }}>
               <thead>
                 <tr>
-                  <th>Item & Details</th>
-                  <th>Category</th>
+                  <th>Product & Details</th>
                   <th>Godown Breakdown</th>
                   <th style={{ textAlign: "right" }}>Cost Price</th>
                   <th style={{ textAlign: "right" }}>Sale Price</th>
                   <th style={{ textAlign: "right" }}>On Hand</th>
-                  <th style={{ textAlign: "right" }}>Cost Value</th>
+                  <th style={{ textAlign: "right" }}>Valuation (Cost)</th>
                   <th>Status</th>
                   {isAdmin && <th style={{ textAlign: "right" }}>Actions</th>}
                 </tr>
@@ -663,83 +837,117 @@ export default function InventoryPage() {
               <tbody>
                 {filteredStocks.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin ? 9 : 8} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)" }}>
-                      No stock items found matching the selected filters.
+                    <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)" }}>
+                      No items found. Click <strong>"+ Add Product"</strong> to create a new item in your catalog.
                     </td>
                   </tr>
                 ) : (
-                  filteredStocks.map((item) => (
-                    <tr key={item.item_id}>
-                      <td>
-                        <div style={{ fontWeight: 600, color: "#f8fafc" }}>{item.item_name}</div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "flex", gap: "8px", marginTop: "2px" }}>
-                          {item.sku && <span>SKU: {item.sku}</span>}
-                          {item.barcode && <span>• Barcode: {item.barcode}</span>}
-                        </div>
-                        {/* Batches pill */}
-                        {item.active_batches.length > 0 && (
-                          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "4px" }}>
-                            {item.active_batches.map((b) => (
-                              <span key={b.id} className="badge badge-blue" style={{ fontSize: "0.65rem" }}>
-                                {b.batch_number} ({b.quantity} {item.unit}) {b.expiry_date ? `• Exp: ${b.expiry_date}` : ""}
-                              </span>
-                            ))}
+                  filteredStocks.map((item) => {
+                    const fullItem = allItemsList.find((i) => i.id === item.item_id);
+                    return (
+                      <tr key={item.item_id}>
+                        <td>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <div style={{ fontWeight: 600, color: "#f8fafc", fontSize: "0.95rem" }}>{item.item_name}</div>
+                            <span className="badge badge-purple" style={{ fontSize: "0.68rem" }}>{item.category}</span>
                           </div>
-                        )}
-                      </td>
-                      <td>
-                        <span className="badge badge-purple" style={{ fontSize: "0.7rem" }}>{item.category}</span>
-                      </td>
-                      <td>
-                        <div style={{ fontSize: "0.75rem" }}>
-                          {item.godown_breakdown.length === 0 ? (
-                            <span style={{ color: "#ef4444" }}>No stock in any godown</span>
-                          ) : (
-                            item.godown_breakdown.map((gb) => (
-                              <div key={gb.godown_id} style={{ display: "flex", justifyContent: "space-between", gap: "8px", color: gb.quantity > 0 ? "var(--text-main)" : "var(--text-muted)" }}>
-                                <span>{gb.godown_name}:</span>
-                                <strong>{gb.quantity} {item.unit}</strong>
-                              </div>
-                            ))
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "3px" }}>
+                            {item.sku && <span>SKU: <strong style={{ color: "#cbd5e1" }}>{item.sku}</strong></span>}
+                            {item.barcode && <span style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}><Barcode size={12} color="#38bdf8" /> {item.barcode}</span>}
+                            {(fullItem as any)?.hsn_code && <span>HSN: {(fullItem as any).hsn_code}</span>}
+                            {(fullItem as any)?.is_tax_inclusive && <span className="badge badge-blue" style={{ fontSize: "0.62rem" }}>Tax Incl. (MRP)</span>}
+                          </div>
+                          {/* Batches pill */}
+                          {item.active_batches.length > 0 && (
+                            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "4px" }}>
+                              {item.active_batches.map((b) => (
+                                <span key={b.id} className="badge badge-blue" style={{ fontSize: "0.65rem" }}>
+                                  Batch: {b.batch_number} ({b.quantity} {item.unit}) {b.expiry_date ? `• Exp: ${b.expiry_date}` : ""}
+                                </span>
+                              ))}
+                            </div>
                           )}
-                        </div>
-                      </td>
-                      <td style={{ textAlign: "right", color: "var(--text-muted)" }}>₹{item.purchase_price.toFixed(2)}</td>
-                      <td style={{ textAlign: "right", color: "#38bdf8", fontWeight: 600 }}>₹{item.sale_price.toFixed(2)}</td>
-                      <td style={{ textAlign: "right" }}>
-                        <span style={{ fontSize: "1.05rem", fontWeight: 700, color: item.is_out_of_stock ? "#ef4444" : item.is_low_stock ? "#fbbf24" : "#34d399" }}>
-                          {item.total_quantity}
-                        </span>{" "}
-                        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{item.unit}</span>
-                      </td>
-                      <td style={{ textAlign: "right", fontWeight: 600, color: "#f8fafc" }}>
-                        ₹{item.total_valuation_cost.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                      </td>
-                      <td>
-                        {item.is_out_of_stock ? (
-                          <span className="badge badge-danger" style={{ fontSize: "0.7rem" }}>Out of Stock</span>
-                        ) : item.is_low_stock ? (
-                          <span className="badge badge-warning" style={{ fontSize: "0.7rem" }}>Low Stock (&le; {item.min_stock_alert})</span>
-                        ) : (
-                          <span className="badge badge-success" style={{ fontSize: "0.7rem" }}>In Stock</span>
-                        )}
-                      </td>
-                      {isAdmin && (
-                        <td style={{ textAlign: "right" }}>
-                          <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
-                            <button
-                              onClick={() => openAdjustStock(item)}
-                              className="btn-secondary"
-                              style={{ padding: "4px 8px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "4px" }}
-                              title="Adjust Stock (Wastage, Count, Corrections)"
-                            >
-                              <Edit2 size={12} /> Adjust
-                            </button>
+                        </td>
+                        <td>
+                          <div style={{ fontSize: "0.75rem" }}>
+                            {item.godown_breakdown.length === 0 ? (
+                              <span style={{ color: "#ef4444" }}>No stock in any godown</span>
+                            ) : (
+                              item.godown_breakdown.map((gb) => (
+                                <div key={gb.godown_id} style={{ display: "flex", justifyContent: "space-between", gap: "8px", color: gb.quantity > 0 ? "var(--text-main)" : "var(--text-muted)" }}>
+                                  <span>{gb.godown_name}:</span>
+                                  <strong>{gb.quantity} {item.unit}</strong>
+                                </div>
+                              ))
+                            )}
                           </div>
                         </td>
-                      )}
-                    </tr>
-                  ))
+                        <td style={{ textAlign: "right", color: "var(--text-muted)" }}>₹{item.purchase_price.toFixed(2)}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <div style={{ color: "#38bdf8", fontWeight: 700 }}>₹{item.sale_price.toFixed(2)}</div>
+                          {(fullItem as any)?.gst_rate !== undefined && (
+                            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>GST: {(fullItem as any).gst_rate}%</div>
+                          )}
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <span style={{ fontSize: "1.05rem", fontWeight: 700, color: item.is_out_of_stock ? "#ef4444" : item.is_low_stock ? "#fbbf24" : "#34d399" }}>
+                            {item.total_quantity}
+                          </span>{" "}
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{item.unit}</span>
+                        </td>
+                        <td style={{ textAlign: "right", fontWeight: 600, color: "#f8fafc" }}>
+                          ₹{item.total_valuation_cost.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </td>
+                        <td>
+                          {item.is_out_of_stock ? (
+                            <span className="badge badge-danger" style={{ fontSize: "0.7rem" }}>Out of Stock</span>
+                          ) : item.is_low_stock ? (
+                            <span className="badge badge-warning" style={{ fontSize: "0.7rem" }}>Low Stock (&le; {item.min_stock_alert})</span>
+                          ) : (
+                            <span className="badge badge-success" style={{ fontSize: "0.7rem" }}>In Stock</span>
+                          )}
+                        </td>
+                        {isAdmin && (
+                          <td style={{ textAlign: "right" }}>
+                            <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end", flexWrap: "wrap" }}>
+                              <button
+                                onClick={() => openEditProduct(item)}
+                                className="btn-secondary"
+                                style={{ padding: "4px 8px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "3px" }}
+                                title="Edit Product Master Details"
+                              >
+                                <Edit2 size={12} /> Edit
+                              </button>
+                              <button
+                                onClick={() => openAdjustStock(item)}
+                                className="btn-secondary"
+                                style={{ padding: "4px 8px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "3px" }}
+                                title="Adjust Stock Quantity"
+                              >
+                                <SlidersHorizontal size={12} /> Adjust
+                              </button>
+                              <button
+                                onClick={() => quickStockInItem(item)}
+                                className="btn-secondary"
+                                style={{ padding: "4px 8px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "3px", color: "#34d399", borderColor: "rgba(52, 211, 153, 0.4)" }}
+                                title="Quick Restock / Stock-In"
+                              >
+                                <Plus size={12} /> Stock-In
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProduct(item.item_id, item.item_name)}
+                                className="btn-secondary"
+                                style={{ padding: "4px 6px", fontSize: "0.75rem", color: "#f87171", borderColor: "rgba(239, 68, 68, 0.3)" }}
+                                title="Deactivate Item"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -1365,6 +1573,304 @@ export default function InventoryPage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL: CREATE / EDIT PRODUCT MASTER --- */}
+      {showProductModal && (
+        <div className="modal-overlay" onClick={() => setShowProductModal(false)}>
+          <div className="glass-panel" style={{ width: "100%", maxWidth: "600px", maxHeight: "90vh", overflowY: "auto", padding: "24px", borderRadius: "14px", background: "#0f172a" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Package size={20} color="#38bdf8" />
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "#f8fafc" }}>
+                  {editingProduct ? `Edit Product Master — ${editingProduct.name}` : "Create New Catalog Product"}
+                </h3>
+              </div>
+              <button onClick={() => setShowProductModal(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {productError && (
+              <div style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", color: "#f87171", padding: "10px", borderRadius: "8px", fontSize: "0.85rem", marginBottom: "14px" }}>
+                {productError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProduct} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {/* Product Name */}
+              <div>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Amul Butter 500g"
+                  className="input-field"
+                  value={productForm.name}
+                  onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                  required
+                  autoFocus
+                />
+              </div>
+
+              {/* Category & Unit */}
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                    Category *
+                  </label>
+                  <input
+                    type="text"
+                    list="category-suggestions"
+                    placeholder="e.g. Groceries"
+                    className="input-field"
+                    value={productForm.category}
+                    onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
+                    required
+                  />
+                  <datalist id="category-suggestions">
+                    <option value="Groceries" />
+                    <option value="Dairy" />
+                    <option value="Beverages" />
+                    <option value="Snacks" />
+                    <option value="Pharmacy" />
+                    <option value="Electronics" />
+                    <option value="Personal Care" />
+                    <option value="Clothing" />
+                    <option value="Hardware" />
+                    <option value="General" />
+                  </datalist>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                    Unit of Measurement *
+                  </label>
+                  <select
+                    className="input-field"
+                    value={productForm.unit}
+                    onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
+                    required
+                  >
+                    <option value="PCS">PCS (Pieces)</option>
+                    <option value="KG">KG (Kilograms)</option>
+                    <option value="GM">GM (Grams)</option>
+                    <option value="LTR">LTR (Litres)</option>
+                    <option value="ML">ML (Millilitres)</option>
+                    <option value="BOX">BOX (Boxes)</option>
+                    <option value="PKT">PKT (Packets)</option>
+                    <option value="DOZ">DOZ (Dozens)</option>
+                    <option value="MTR">MTR (Meters)</option>
+                    <option value="SET">SET (Sets)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Barcode, SKU, HSN */}
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.9fr 0.9fr", gap: "10px" }}>
+                <div>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                    Barcode
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type="text"
+                      placeholder="Scan or type barcode"
+                      className="input-field"
+                      value={productForm.barcode}
+                      onChange={(e) => setProductForm({ ...productForm, barcode: e.target.value })}
+                      style={{ paddingLeft: "32px" }}
+                    />
+                    <Barcode size={15} color="#38bdf8" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                    SKU / Code
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. AMUL-BUT-500"
+                    className="input-field"
+                    value={productForm.sku}
+                    onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                    HSN Code
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 0402"
+                    className="input-field"
+                    value={productForm.hsn_code}
+                    onChange={(e) => setProductForm({ ...productForm, hsn_code: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Pricing & GST Section */}
+              <div style={{ background: "rgba(30, 41, 59, 0.4)", padding: "14px", borderRadius: "10px", border: "1px solid var(--border)" }}>
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#38bdf8", marginBottom: "10px", textTransform: "uppercase" }}>
+                  Pricing & GST Configuration
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                      Selling Price (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      className="input-field"
+                      value={productForm.sale_price}
+                      onChange={(e) => setProductForm({ ...productForm, sale_price: e.target.value })}
+                      style={{ fontWeight: 700, color: "#34d399" }}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                      Purchase Cost (₹)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      className="input-field"
+                      value={productForm.purchase_price}
+                      onChange={(e) => setProductForm({ ...productForm, purchase_price: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                      GST Rate (%)
+                    </label>
+                    <select
+                      className="input-field"
+                      value={productForm.gst_rate}
+                      onChange={(e) => setProductForm({ ...productForm, gst_rate: e.target.value })}
+                    >
+                      <option value="0">0% (Exempt / Nil)</option>
+                      <option value="5">5% GST</option>
+                      <option value="12">12% GST</option>
+                      <option value="18">18% GST (Standard)</option>
+                      <option value="28">28% GST</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: "10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.82rem", color: "#f8fafc" }}>
+                    <input
+                      type="checkbox"
+                      checked={productForm.is_tax_inclusive}
+                      onChange={(e) => setProductForm({ ...productForm, is_tax_inclusive: e.target.checked })}
+                    />
+                    Price already includes GST (Tax-Inclusive / MRP)
+                  </label>
+                </div>
+              </div>
+
+              {/* Min Stock Alert */}
+              <div>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  Minimum Stock Alert Level (Units)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="5"
+                  className="input-field"
+                  value={productForm.min_stock_alert}
+                  onChange={(e) => setProductForm({ ...productForm, min_stock_alert: e.target.value })}
+                />
+                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                  Dashboard will trigger low stock alert when on-hand quantity drops below this level.
+                </span>
+              </div>
+
+              {/* Opening Stock (Only when creating new item) */}
+              {!editingProduct && (
+                <div style={{ background: "rgba(56, 189, 248, 0.08)", padding: "12px", borderRadius: "10px", border: "1px dashed rgba(56, 189, 248, 0.4)" }}>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#38bdf8", marginBottom: "8px" }}>
+                    📦 Initial Opening Stock (Optional)
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px" }}>
+                    <div>
+                      <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                        Initial Quantity
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        placeholder="0"
+                        className="input-field"
+                        value={productForm.opening_stock}
+                        onChange={(e) => setProductForm({ ...productForm, opening_stock: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                        Assign to Godown
+                      </label>
+                      <select
+                        className="input-field"
+                        value={productForm.opening_godown_id}
+                        onChange={(e) => setProductForm({ ...productForm, opening_godown_id: e.target.value })}
+                      >
+                        {godowns.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.name} {g.is_default ? "★ (Default)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Submit Buttons */}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowProductModal(false)}
+                  className="btn-secondary"
+                  disabled={isSubmittingProduct}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isSubmittingProduct}
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  {isSubmittingProduct ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Saving...
+                    </>
+                  ) : editingProduct ? (
+                    "Update Product Master"
+                  ) : (
+                    "Create Product"
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
