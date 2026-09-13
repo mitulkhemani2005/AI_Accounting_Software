@@ -248,9 +248,17 @@ async def record_stock_in(
         if item_req.purchase_price and item_req.purchase_price > 0:
             item.purchase_price = item_req.purchase_price
 
+        # Calculate effective base units (EA / PCS)
+        u_per_case = item.units_per_case if (item.units_per_case and item.units_per_case > 0) else 1.0
+        effective_qty = item_req.quantity
+        if item_req.unit and item_req.unit.upper() in ["CS", "CASE", "CASES", "BOX"]:
+            effective_qty = item_req.quantity * u_per_case
+        elif item_req.cases is not None and item_req.cases > 0:
+            effective_qty = item_req.cases * u_per_case
+
         # Update or create aggregate Stock
         stock = await get_or_create_stock_record(db, tenant_id, target_godown_id, item.id)
-        stock.quantity += item_req.quantity
+        stock.quantity += effective_qty
         stock.last_restocked_at = datetime.now(timezone.utc)
 
         # Batch record if batch number provided
@@ -266,7 +274,7 @@ async def record_stock_in(
             )
             batch = batch_res.scalar_one_or_none()
             if batch:
-                batch.quantity += item_req.quantity
+                batch.quantity += effective_qty
                 if item_req.expiry_date:
                     batch.expiry_date = item_req.expiry_date
                 if cost > 0:
@@ -282,7 +290,7 @@ async def record_stock_in(
                     purchase_price=cost,
                     mrp=item_req.mrp,
                     sale_price=item_req.sale_price or item.sale_price,
-                    quantity=item_req.quantity,
+                    quantity=effective_qty,
                     is_active=True
                 )
                 db.add(batch)
@@ -291,6 +299,8 @@ async def record_stock_in(
         ref_notes = f"Supplier: {payload.supplier_name or 'N/A'}"
         if payload.invoice_number:
             ref_notes += f" | Inv: {payload.invoice_number}"
+        if item_req.unit and item_req.unit.upper() in ["CS", "CASE", "CASES", "BOX"]:
+            ref_notes += f" | {item_req.quantity} CS ({effective_qty} {item.unit})"
         if payload.notes:
             ref_notes += f" | {payload.notes}"
 
@@ -298,11 +308,11 @@ async def record_stock_in(
             tenant_id=tenant_id,
             godown_id=target_godown_id,
             item_id=item.id,
-            movement_type="purchase_in",
-            quantity=item_req.quantity,
+            movement_type="purchase",
+            quantity=effective_qty,
             balance_after=stock.quantity,
             cost_per_unit=cost,
-            reference_type="purchase_entry",
+            reference_type="purchase_grn",
             reference_id=payload.invoice_number,
             batch_number=batch_num,
             notes=ref_notes,
@@ -310,11 +320,13 @@ async def record_stock_in(
         )
         db.add(movement)
 
-        total_qty_added += item_req.quantity
+        total_qty_added += effective_qty
         processed_items.append({
+            "item_id": item.id,
             "item_name": item.name,
-            "quantity_added": item_req.quantity,
-            "new_balance": stock.quantity,
+            "quantity_added": effective_qty,
+            "cases_added": round(effective_qty / u_per_case, 2),
+            "new_stock_level": stock.quantity,
             "batch_number": batch_num
         })
 
@@ -849,6 +861,7 @@ async def get_stock_summary(
             for b in item_batches.get(it.id, [])
         ]
 
+        u_per_case = it.units_per_case if (it.units_per_case and it.units_per_case > 0) else 1.0
         results.append(
             ItemStockSummaryResponse(
                 item_id=it.id,
@@ -857,6 +870,9 @@ async def get_stock_summary(
                 barcode=it.barcode,
                 category=it.category,
                 unit=it.unit,
+                secondary_unit=it.secondary_unit or "CS",
+                units_per_case=u_per_case,
+                total_cases=round(total_qty / u_per_case, 2),
                 sale_price=it.sale_price,
                 purchase_price=it.purchase_price,
                 total_quantity=round(total_qty, 2),

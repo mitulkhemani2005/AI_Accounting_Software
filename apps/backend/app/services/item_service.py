@@ -48,9 +48,12 @@ async def create_item(
         barcode=clean_barcode,
         category=payload.category or "General",
         unit=(payload.unit or "PCS").upper(),
+        secondary_unit=(payload.secondary_unit or "CS").upper(),
+        units_per_case=payload.units_per_case or 1.0,
         sale_price=payload.sale_price,
         purchase_price=payload.purchase_price,
         gst_rate=payload.gst_rate,
+        is_tax_inclusive=payload.is_tax_inclusive,
         hsn_code=clean_hsn,
         min_stock_alert=payload.min_stock_alert,
         is_active=True

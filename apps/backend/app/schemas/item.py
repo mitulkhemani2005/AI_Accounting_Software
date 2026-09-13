@@ -9,6 +9,8 @@ class ItemCreateRequest(BaseModel):
     barcode: Optional[str] = Field(None, max_length=100)
     category: str = Field("General", max_length=100)
     unit: str = Field("PCS", max_length=20)
+    secondary_unit: Optional[str] = Field("CS", max_length=20)
+    units_per_case: float = Field(1.0, ge=0.01, description="Packaging conversion: 1 Case = X Each/Units")
     sale_price: float = Field(..., ge=0)
     purchase_price: float = Field(0.0, ge=0)
     gst_rate: float = Field(18.0, ge=0, le=100)
@@ -23,6 +25,8 @@ class ItemUpdateRequest(BaseModel):
     barcode: Optional[str] = None
     category: Optional[str] = None
     unit: Optional[str] = None
+    secondary_unit: Optional[str] = None
+    units_per_case: Optional[float] = Field(None, ge=0.01)
     sale_price: Optional[float] = Field(None, ge=0)
     purchase_price: Optional[float] = Field(None, ge=0)
     gst_rate: Optional[float] = Field(None, ge=0, le=100)
@@ -40,6 +44,8 @@ class ItemResponse(BaseModel):
     barcode: Optional[str] = None
     category: str
     unit: str
+    secondary_unit: Optional[str] = "CS"
+    units_per_case: float = 1.0
     sale_price: float
     purchase_price: float
     gst_rate: float

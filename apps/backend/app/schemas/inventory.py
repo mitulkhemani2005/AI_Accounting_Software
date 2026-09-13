@@ -85,6 +85,9 @@ class ItemStockSummaryResponse(BaseModel):
     barcode: Optional[str] = None
     category: str
     unit: str
+    secondary_unit: Optional[str] = "CS"
+    units_per_case: float = 1.0
+    total_cases: Optional[float] = None
     sale_price: float
     purchase_price: float
     total_quantity: float
@@ -112,6 +115,8 @@ class InventoryMetricsResponse(BaseModel):
 class StockInItemRequest(BaseModel):
     item_id: str
     quantity: float = Field(..., gt=0)
+    unit: Optional[str] = "EA"  # "EA" or "CS"
+    cases: Optional[float] = None
     purchase_price: Optional[float] = 0.0
     batch_number: Optional[str] = None
     expiry_date: Optional[date] = None

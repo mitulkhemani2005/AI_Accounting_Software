@@ -23,6 +23,8 @@ async def lifespan(app: FastAPI):
             await conn.run_sync(Base.metadata.create_all)
             migration_statements = [
                 "ALTER TABLE items ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE NOT NULL",
+                "ALTER TABLE items ADD COLUMN IF NOT EXISTS units_per_case FLOAT DEFAULT 1.0 NOT NULL",
+                "ALTER TABLE items ADD COLUMN IF NOT EXISTS secondary_unit VARCHAR(20) DEFAULT 'CS'",
                 "ALTER TABLE bill_items ADD COLUMN IF NOT EXISTS purchase_price FLOAT DEFAULT 0.0",
                 "ALTER TABLE bill_items ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE NOT NULL",
                 "ALTER TABLE bills ADD COLUMN IF NOT EXISTS party_address TEXT",

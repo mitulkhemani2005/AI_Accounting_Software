@@ -833,11 +833,17 @@ export default function POSPage() {
                             </span>
                           ) : stockQty <= (p.min_stock_level || 5) ? (
                             <span style={{ fontSize: "0.65rem", fontWeight: 600, color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)", padding: "1px 5px", borderRadius: "4px" }}>
-                              Low: {stockQty} {p.unit || "PCS"}
+                              Low: {stockQty} {p.unit || "EA"}
+                              {p.units_per_case && p.units_per_case > 1
+                                ? ` (${Math.floor(stockQty / p.units_per_case)} CS${stockQty % p.units_per_case > 0 ? ` + ${(stockQty % p.units_per_case).toFixed(0)} EA` : ""})`
+                                : ""}
                             </span>
                           ) : (
                             <span style={{ fontSize: "0.65rem", fontWeight: 500, color: "#34d399", background: "rgba(16, 185, 129, 0.15)", padding: "1px 5px", borderRadius: "4px" }}>
-                              Stock: {stockQty} {p.unit || "PCS"}
+                              Stock: {stockQty} {p.unit || "EA"}
+                              {p.units_per_case && p.units_per_case > 1
+                                ? ` (${Math.floor(stockQty / p.units_per_case)} CS${stockQty % p.units_per_case > 0 ? ` + ${(stockQty % p.units_per_case).toFixed(0)} EA` : ""})`
+                                : ""}
                             </span>
                           )}
                         </div>

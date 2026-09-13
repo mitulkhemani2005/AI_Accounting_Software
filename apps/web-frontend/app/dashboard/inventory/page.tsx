@@ -70,6 +70,9 @@ interface ItemStockSummary {
   barcode?: string;
   category: string;
   unit: string;
+  secondary_unit?: string;
+  units_per_case?: number;
+  total_cases?: number;
   sale_price: number;
   purchase_price: number;
   total_quantity: number;
@@ -183,12 +186,15 @@ export default function InventoryPage() {
   // Modals
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [productModalReturnTarget, setProductModalReturnTarget] = useState<{ target: "stock_in"; rowIndex?: number } | null>(null);
   const [productForm, setProductForm] = useState({
     name: "",
     sku: "",
     barcode: "",
     category: "Groceries",
-    unit: "PCS",
+    unit: "EA",
+    secondary_unit: "CS",
+    units_per_case: "1",
     sale_price: "",
     purchase_price: "",
     gst_rate: "18",
@@ -227,14 +233,28 @@ export default function InventoryPage() {
     notes: "",
   });
 
-  // Stock In Form State
-  const [stockInForm, setStockInForm] = useState({
+  // Stock In Form State (Supports entering in Cases CS or Loose EA)
+  const [stockInForm, setStockInForm] = useState<{
+    godown_id: string;
+    supplier_name: string;
+    invoice_number: string;
+    items: {
+      item_id: string;
+      unit_type: "CS" | "EA";
+      quantity: number;
+      purchase_price: number;
+      batch_number: string;
+      expiry_date: string;
+    }[];
+    notes: string;
+  }>({
     godown_id: "",
     supplier_name: "",
     invoice_number: "",
     items: [
       {
         item_id: "",
+        unit_type: "CS",
         quantity: 1,
         purchase_price: 0,
         batch_number: "",
@@ -261,7 +281,21 @@ export default function InventoryPage() {
   });
 
   // All Items lookup list for dropdowns
-  const [allItemsList, setAllItemsList] = useState<{ id: string; name: string; sku?: string; unit: string; purchase_price: number }[]>([]);
+  const [allItemsList, setAllItemsList] = useState<{
+    id: string;
+    name: string;
+    sku?: string;
+    barcode?: string;
+    category?: string;
+    unit: string;
+    secondary_unit?: string;
+    units_per_case?: number;
+    purchase_price: number;
+    sale_price?: number;
+    gst_rate?: number;
+    is_tax_inclusive?: boolean;
+    hsn_code?: string;
+  }[]>([]);
 
   useEffect(() => {
     loadAllData();
@@ -328,13 +362,41 @@ export default function InventoryPage() {
   // --- Product Master CRUD & Quick Restock ---
   const openCreateProduct = () => {
     setEditingProduct(null);
+    setProductModalReturnTarget(null);
     const def = godowns.find((g) => g.is_default) || godowns[0];
     setProductForm({
       name: "",
       sku: "",
       barcode: "",
       category: "Groceries",
-      unit: "PCS",
+      unit: "EA",
+      secondary_unit: "CS",
+      units_per_case: "1",
+      sale_price: "",
+      purchase_price: "",
+      gst_rate: "18",
+      is_tax_inclusive: false,
+      hsn_code: "",
+      min_stock_alert: "5",
+      opening_stock: "0",
+      opening_godown_id: def ? def.id : "",
+    });
+    setProductError(null);
+    setShowProductModal(true);
+  };
+
+  const openCreateProductForStockIn = (rowIndex?: number) => {
+    setEditingProduct(null);
+    setProductModalReturnTarget({ target: "stock_in", rowIndex });
+    const def = godowns.find((g) => g.is_default) || godowns[0];
+    setProductForm({
+      name: "",
+      sku: "",
+      barcode: "",
+      category: "Groceries",
+      unit: "EA",
+      secondary_unit: "CS",
+      units_per_case: "1",
       sale_price: "",
       purchase_price: "",
       gst_rate: "18",
@@ -351,12 +413,15 @@ export default function InventoryPage() {
   const openEditProduct = (stockItem: ItemStockSummary) => {
     const fullItem = allItemsList.find((i) => i.id === stockItem.item_id) || stockItem;
     setEditingProduct({ id: stockItem.item_id, ...fullItem });
+    setProductModalReturnTarget(null);
     setProductForm({
       name: stockItem.item_name,
       sku: stockItem.sku || "",
       barcode: stockItem.barcode || "",
       category: stockItem.category || "General",
-      unit: stockItem.unit || "PCS",
+      unit: stockItem.unit || "EA",
+      secondary_unit: (fullItem as any).secondary_unit || stockItem.secondary_unit || "CS",
+      units_per_case: ((fullItem as any).units_per_case || stockItem.units_per_case || 1).toString(),
       sale_price: stockItem.sale_price.toString(),
       purchase_price: stockItem.purchase_price.toString(),
       gst_rate: (fullItem as any).gst_rate !== undefined ? (fullItem as any).gst_rate.toString() : "18",
@@ -380,7 +445,9 @@ export default function InventoryPage() {
       sku: productForm.sku.trim() || undefined,
       barcode: productForm.barcode.trim() || undefined,
       category: productForm.category.trim() || "General",
-      unit: productForm.unit.trim() || "PCS",
+      unit: productForm.unit.trim() || "EA",
+      secondary_unit: productForm.secondary_unit.trim() || "CS",
+      units_per_case: parseFloat(productForm.units_per_case) || 1.0,
       sale_price: parseFloat(productForm.sale_price) || 0,
       purchase_price: parseFloat(productForm.purchase_price) || 0,
       gst_rate: parseFloat(productForm.gst_rate) || 0,
@@ -390,10 +457,13 @@ export default function InventoryPage() {
     };
 
     try {
+      let createdOrUpdatedItem: any = null;
       if (editingProduct) {
-        await api.put(`/items/${editingProduct.id}`, payload);
+        const res = await api.put(`/items/${editingProduct.id}`, payload);
+        createdOrUpdatedItem = res.data;
       } else {
         const createRes = await api.post("/items", payload);
+        createdOrUpdatedItem = createRes.data;
         const openingQty = parseFloat(productForm.opening_stock) || 0;
         if (openingQty > 0) {
           const targetGodown = productForm.opening_godown_id || (godowns.find((g) => g.is_default) || godowns[0])?.id;
@@ -406,6 +476,7 @@ export default function InventoryPage() {
                   {
                     item_id: createRes.data.id,
                     quantity: openingQty,
+                    unit: productForm.unit.trim() || "EA",
                     purchase_price: parseFloat(productForm.purchase_price) || 0,
                     batch_number: "BATCH-INIT",
                   },
@@ -421,6 +492,30 @@ export default function InventoryPage() {
       setShowProductModal(false);
       setEditingProduct(null);
       await loadAllData();
+
+      // If opened from Stock-In form, automatically select newly created product into the target row
+      if (productModalReturnTarget?.target === "stock_in" && createdOrUpdatedItem) {
+        setStockInForm((prev) => {
+          const updated = [...prev.items];
+          const rIdx = productModalReturnTarget.rowIndex;
+          const newRow = {
+            item_id: createdOrUpdatedItem.id,
+            unit_type: "CS" as const,
+            quantity: 1,
+            purchase_price: createdOrUpdatedItem.purchase_price || 0,
+            batch_number: "",
+            expiry_date: "",
+          };
+          if (rIdx !== undefined && rIdx >= 0 && rIdx < updated.length) {
+            updated[rIdx] = newRow;
+          } else {
+            updated.push(newRow);
+          }
+          return { ...prev, items: updated };
+        });
+        setActiveTab("stock_in");
+      }
+      setProductModalReturnTarget(null);
     } catch (err: any) {
       setProductError(err.response?.data?.detail || "Failed to save product");
     } finally {
@@ -447,6 +542,7 @@ export default function InventoryPage() {
       items: [
         {
           item_id: item.item_id,
+          unit_type: "CS",
           quantity: 1,
           purchase_price: item.purchase_price,
           batch_number: `BATCH-${Date.now().toString().slice(-4)}`,
@@ -544,14 +640,36 @@ export default function InventoryPage() {
   const handleStockInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post("/inventory/stock-in", stockInForm);
+      const payload = {
+        godown_id: stockInForm.godown_id,
+        supplier_name: stockInForm.supplier_name,
+        invoice_number: stockInForm.invoice_number,
+        items: stockInForm.items.map((row) => {
+          const selItem = allItemsList.find((it) => it.id === row.item_id);
+          const uPerCase = selItem?.units_per_case && selItem.units_per_case > 0 ? selItem.units_per_case : 1;
+          const isCase = row.unit_type === "CS";
+          const effectiveBaseQty = isCase ? row.quantity * uPerCase : row.quantity;
+          return {
+            item_id: row.item_id,
+            quantity: effectiveBaseQty,
+            unit: "EA",
+            cases: isCase ? row.quantity : undefined,
+            purchase_price: row.purchase_price,
+            batch_number: row.batch_number.trim() || undefined,
+            expiry_date: row.expiry_date || undefined,
+          };
+        }),
+        notes: stockInForm.notes,
+      };
+
+      await api.post("/inventory/stock-in", payload);
       alert("✅ Stock-in recorded successfully!");
       // Reset form
       setStockInForm({
         godown_id: godowns.find((g) => g.is_default)?.id || "",
         supplier_name: "",
         invoice_number: "",
-        items: [{ item_id: "", quantity: 1, purchase_price: 0, batch_number: "", expiry_date: "" }],
+        items: [{ item_id: "", unit_type: "CS", quantity: 1, purchase_price: 0, batch_number: "", expiry_date: "" }],
         notes: "",
       });
       loadAllData();
@@ -890,10 +1008,20 @@ export default function InventoryPage() {
                           )}
                         </td>
                         <td style={{ textAlign: "right" }}>
-                          <span style={{ fontSize: "1.05rem", fontWeight: 700, color: item.is_out_of_stock ? "#ef4444" : item.is_low_stock ? "#fbbf24" : "#34d399" }}>
-                            {item.total_quantity}
-                          </span>{" "}
-                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{item.unit}</span>
+                          <div style={{ fontSize: "1.05rem", fontWeight: 700, color: item.is_out_of_stock ? "#ef4444" : item.is_low_stock ? "#fbbf24" : "#34d399" }}>
+                            {item.total_quantity} <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>{item.unit || "EA"}</span>
+                          </div>
+                          {item.units_per_case && item.units_per_case > 1 && (
+                            <div style={{ marginTop: "2px" }}>
+                              <div style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: 600 }}>
+                                {Math.floor(item.total_quantity / item.units_per_case)} {item.secondary_unit || "CS"}
+                                {item.total_quantity % item.units_per_case > 0 ? ` + ${(item.total_quantity % item.units_per_case).toFixed(0)} ${item.unit || "EA"}` : ""}
+                              </div>
+                              <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                                (1 {item.secondary_unit || "CS"} = {item.units_per_case} {item.unit || "EA"})
+                              </div>
+                            </div>
+                          )}
                         </td>
                         <td style={{ textAlign: "right", fontWeight: 600, color: "#f8fafc" }}>
                           ₹{item.total_valuation_cost.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
@@ -1014,124 +1142,219 @@ export default function InventoryPage() {
             </div>
 
             {/* Line Items */}
-            <div style={{ borderTop: "1px solid var(--border)", paddingTop: "12px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#f8fafc" }}>Restock Line Items</span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setStockInForm({
-                      ...stockInForm,
-                      items: [...stockInForm.items, { item_id: "", quantity: 1, purchase_price: 0, batch_number: "", expiry_date: "" }],
-                    })
-                  }
-                  className="btn-secondary"
-                  style={{ padding: "4px 10px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "4px" }}
-                >
-                  <Plus size={13} /> Add Row
-                </button>
-              </div>
-
-              {stockInForm.items.map((row, idx) => (
-                <div key={idx} style={{ display: "grid", gridTemplateColumns: "1.8fr 0.8fr 0.8fr 1fr 1fr 32px", gap: "8px", marginBottom: "8px", alignItems: "center" }}>
-                  {/* Item Picker */}
-                  <select
-                    className="input-field"
-                    value={row.item_id}
-                    onChange={(e) => {
-                      const updated = [...stockInForm.items];
-                      const selItem = allItemsList.find((it) => it.id === e.target.value);
-                      updated[idx].item_id = e.target.value;
-                      if (selItem && (!updated[idx].purchase_price || updated[idx].purchase_price === 0)) {
-                        updated[idx].purchase_price = selItem.purchase_price;
-                      }
-                      setStockInForm({ ...stockInForm, items: updated });
-                    }}
-                    required
-                    style={{ fontSize: "0.825rem" }}
-                  >
-                    <option value="">Select Item...</option>
-                    {allItemsList.map((it) => (
-                      <option key={it.id} value={it.id}>
-                        {it.name} ({it.unit})
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Quantity */}
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="any"
-                    placeholder="Qty"
-                    className="input-field"
-                    value={row.quantity}
-                    onChange={(e) => {
-                      const updated = [...stockInForm.items];
-                      updated[idx].quantity = parseFloat(e.target.value) || 0;
-                      setStockInForm({ ...stockInForm, items: updated });
-                    }}
-                    required
-                    style={{ fontSize: "0.825rem" }}
-                  />
-
-                  {/* Purchase Cost */}
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="Cost (₹)"
-                    className="input-field"
-                    value={row.purchase_price}
-                    onChange={(e) => {
-                      const updated = [...stockInForm.items];
-                      updated[idx].purchase_price = parseFloat(e.target.value) || 0;
-                      setStockInForm({ ...stockInForm, items: updated });
-                    }}
-                    style={{ fontSize: "0.825rem" }}
-                  />
-
-                  {/* Batch Number */}
-                  <input
-                    type="text"
-                    placeholder="Batch No (Opt)"
-                    className="input-field"
-                    value={row.batch_number}
-                    onChange={(e) => {
-                      const updated = [...stockInForm.items];
-                      updated[idx].batch_number = e.target.value;
-                      setStockInForm({ ...stockInForm, items: updated });
-                    }}
-                    style={{ fontSize: "0.825rem" }}
-                  />
-
-                  {/* Expiry Date */}
-                  <input
-                    type="date"
-                    className="input-field"
-                    value={row.expiry_date}
-                    onChange={(e) => {
-                      const updated = [...stockInForm.items];
-                      updated[idx].expiry_date = e.target.value;
-                      setStockInForm({ ...stockInForm, items: updated });
-                    }}
-                    style={{ fontSize: "0.825rem" }}
-                  />
-
-                  {/* Remove Row */}
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                <div>
+                  <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#f8fafc" }}>Restock Line Items</span>
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "8px" }}>
+                    (Enter stock in bulk Cases or loose Each units)
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: "8px" }}>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (stockInForm.items.length <= 1) return;
-                      const updated = stockInForm.items.filter((_, i) => i !== idx);
-                      setStockInForm({ ...stockInForm, items: updated });
-                    }}
-                    style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer" }}
+                    onClick={() => openCreateProductForStockIn(stockInForm.items.length)}
+                    className="btn-secondary"
+                    style={{ padding: "5px 10px", fontSize: "0.75rem", color: "#38bdf8", borderColor: "rgba(56, 189, 248, 0.4)", display: "flex", alignItems: "center", gap: "4px" }}
                   >
-                    <X size={16} />
+                    <Plus size={13} /> + Add New Product to Catalog
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setStockInForm({
+                        ...stockInForm,
+                        items: [...stockInForm.items, { item_id: "", unit_type: "CS", quantity: 1, purchase_price: 0, batch_number: "", expiry_date: "" }],
+                      })
+                    }
+                    className="btn-secondary"
+                    style={{ padding: "5px 10px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "4px" }}
+                  >
+                    <Plus size={13} /> Add Row
                   </button>
                 </div>
-              ))}
+              </div>
+
+              {stockInForm.items.map((row, idx) => {
+                const selItem = allItemsList.find((it) => it.id === row.item_id);
+                const unitsPerCase = selItem?.units_per_case && selItem.units_per_case > 0 ? selItem.units_per_case : 1;
+
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      background: "rgba(15, 23, 42, 0.6)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "10px",
+                      padding: "10px",
+                      marginBottom: "10px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 2fr) 110px 110px 110px 130px 130px 32px", gap: "8px", alignItems: "center" }}>
+                      {/* Item Picker & Quick-Add */}
+                      <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                        <select
+                          className="input-field"
+                          value={row.item_id}
+                          onChange={(e) => {
+                            if (e.target.value === "__NEW_PRODUCT__") {
+                              openCreateProductForStockIn(idx);
+                              return;
+                            }
+                            const updated = [...stockInForm.items];
+                            const chosen = allItemsList.find((it) => it.id === e.target.value);
+                            updated[idx].item_id = e.target.value;
+                            if (chosen && (!updated[idx].purchase_price || updated[idx].purchase_price === 0)) {
+                              updated[idx].purchase_price = chosen.purchase_price;
+                            }
+                            setStockInForm({ ...stockInForm, items: updated });
+                          }}
+                          required
+                          style={{ fontSize: "0.825rem", flex: 1 }}
+                        >
+                          <option value="">Select Item...</option>
+                          <option value="__NEW_PRODUCT__" style={{ color: "#38bdf8", fontWeight: 700 }}>
+                            ➕ + Create New Product...
+                          </option>
+                          {allItemsList.map((it) => (
+                            <option key={it.id} value={it.id}>
+                              {it.name} ({it.unit || "EA"}{it.units_per_case && it.units_per_case > 1 ? ` | 1 CS = ${it.units_per_case} EA` : ""})
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          title="Add New Catalog Product"
+                          onClick={() => openCreateProductForStockIn(idx)}
+                          className="btn-secondary"
+                          style={{ padding: "6px 8px", color: "#38bdf8", borderColor: "rgba(56, 189, 248, 0.3)" }}
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+
+                      {/* Unit Selector (CS or EA) */}
+                      <div>
+                        <select
+                          className="input-field"
+                          value={row.unit_type}
+                          onChange={(e) => {
+                            const updated = [...stockInForm.items];
+                            updated[idx].unit_type = e.target.value as "CS" | "EA";
+                            setStockInForm({ ...stockInForm, items: updated });
+                          }}
+                          style={{ fontSize: "0.825rem" }}
+                        >
+                          <option value="CS">Cases (CS)</option>
+                          <option value="EA">Each (EA)</option>
+                        </select>
+                      </div>
+
+                      {/* Quantity */}
+                      <div>
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="any"
+                          placeholder="Qty"
+                          className="input-field"
+                          value={row.quantity}
+                          onChange={(e) => {
+                            const updated = [...stockInForm.items];
+                            updated[idx].quantity = parseFloat(e.target.value) || 0;
+                            setStockInForm({ ...stockInForm, items: updated });
+                          }}
+                          required
+                          style={{ fontSize: "0.825rem" }}
+                        />
+                      </div>
+
+                      {/* Purchase Cost */}
+                      <div>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Cost (₹)"
+                          className="input-field"
+                          value={row.purchase_price}
+                          onChange={(e) => {
+                            const updated = [...stockInForm.items];
+                            updated[idx].purchase_price = parseFloat(e.target.value) || 0;
+                            setStockInForm({ ...stockInForm, items: updated });
+                          }}
+                          style={{ fontSize: "0.825rem" }}
+                        />
+                      </div>
+
+                      {/* Batch Number */}
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="Batch (Opt)"
+                          className="input-field"
+                          value={row.batch_number}
+                          onChange={(e) => {
+                            const updated = [...stockInForm.items];
+                            updated[idx].batch_number = e.target.value;
+                            setStockInForm({ ...stockInForm, items: updated });
+                          }}
+                          style={{ fontSize: "0.825rem" }}
+                        />
+                      </div>
+
+                      {/* Expiry Date */}
+                      <div>
+                        <input
+                          type="date"
+                          className="input-field"
+                          value={row.expiry_date}
+                          onChange={(e) => {
+                            const updated = [...stockInForm.items];
+                            updated[idx].expiry_date = e.target.value;
+                            setStockInForm({ ...stockInForm, items: updated });
+                          }}
+                          style={{ fontSize: "0.825rem" }}
+                        />
+                      </div>
+
+                      {/* Remove Row */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (stockInForm.items.length <= 1) return;
+                          const updated = stockInForm.items.filter((_, i) => i !== idx);
+                          setStockInForm({ ...stockInForm, items: updated });
+                        }}
+                        style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", display: "flex", justifyContent: "center" }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    {/* Dynamic Case Conversion Info Pill */}
+                    {selItem && (
+                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "flex", gap: "12px", alignItems: "center", paddingLeft: "4px" }}>
+                        <span>
+                          Package Ratio: <strong style={{ color: "#f8fafc" }}>1 {selItem.secondary_unit || "CS"} = {unitsPerCase} {selItem.unit || "EA"}</strong>
+                        </span>
+                        {row.unit_type === "CS" ? (
+                          <span className="badge badge-blue" style={{ fontSize: "0.68rem" }}>
+                            📦 {row.quantity} CS &times; {unitsPerCase} = <strong>{(row.quantity * unitsPerCase).toFixed(0)} {selItem.unit || "EA"}</strong> added to inventory
+                          </span>
+                        ) : (
+                          <span className="badge badge-purple" style={{ fontSize: "0.68rem" }}>
+                            🏷️ {row.quantity} {selItem.unit || "EA"} loose units added to inventory
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Notes */}
@@ -1524,7 +1747,7 @@ export default function InventoryPage() {
                           setActiveTab("stock_in");
                           setStockInForm({
                             ...stockInForm,
-                            items: [{ item_id: a.item_id, quantity: 20, purchase_price: 0, batch_number: "", expiry_date: "" }],
+                            items: [{ item_id: a.item_id, unit_type: "CS", quantity: 20, purchase_price: 0, batch_number: "", expiry_date: "" }],
                           });
                         }}
                         className="btn-primary"
@@ -1647,7 +1870,7 @@ export default function InventoryPage() {
 
                 <div>
                   <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
-                    Unit of Measurement *
+                    Base Unit of Measurement *
                   </label>
                   <select
                     className="input-field"
@@ -1655,17 +1878,62 @@ export default function InventoryPage() {
                     onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
                     required
                   >
+                    <option value="EA">EA (Each / Single Piece)</option>
                     <option value="PCS">PCS (Pieces)</option>
+                    <option value="PKT">PKT (Packets)</option>
+                    <option value="BOX">BOX (Boxes)</option>
+                    <option value="BTL">BTL (Bottles)</option>
                     <option value="KG">KG (Kilograms)</option>
                     <option value="GM">GM (Grams)</option>
                     <option value="LTR">LTR (Litres)</option>
                     <option value="ML">ML (Millilitres)</option>
-                    <option value="BOX">BOX (Boxes)</option>
-                    <option value="PKT">PKT (Packets)</option>
                     <option value="DOZ">DOZ (Dozens)</option>
                     <option value="MTR">MTR (Meters)</option>
                     <option value="SET">SET (Sets)</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Packaging & Case Conversion (1 CS = X EA) */}
+              <div style={{ background: "rgba(56, 189, 248, 0.08)", padding: "12px", borderRadius: "10px", border: "1px solid rgba(56, 189, 248, 0.25)" }}>
+                <div style={{ fontSize: "0.825rem", fontWeight: 700, color: "#38bdf8", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Package size={16} /> Packaging & Bulk Case Ratio (1 CS = X EA)
+                </div>
+                <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "0 0 10px 0" }}>
+                  Configure dual-unit stock tracking for bulk cases (CS) and loose units/pieces ({productForm.unit || "EA"}).
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                      Secondary / Case Unit
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="CS"
+                      className="input-field"
+                      value={productForm.secondary_unit}
+                      onChange={(e) => setProductForm({ ...productForm, secondary_unit: e.target.value.toUpperCase() })}
+                    />
+                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>Default: CS (Cases / Cartons / Master Packs)</span>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                      Units Per Case (1 CS = ? {productForm.unit}) *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="any"
+                      placeholder="e.g. 24"
+                      className="input-field"
+                      value={productForm.units_per_case}
+                      onChange={(e) => setProductForm({ ...productForm, units_per_case: e.target.value })}
+                      required
+                    />
+                    <span style={{ fontSize: "0.68rem", color: "#38bdf8", fontWeight: 600 }}>
+                      1 {productForm.secondary_unit || "CS"} = {productForm.units_per_case || "1"} {productForm.unit || "EA"}
+                    </span>
+                  </div>
                 </div>
               </div>
 

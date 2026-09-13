@@ -331,3 +331,63 @@ async def test_low_stock_and_expiry_alerts(async_client: AsyncClient):
     metrics = metrics_res.json()
     assert metrics["low_stock_items_count"] >= 1
     assert metrics["expiring_soon_batches_count"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_dual_unit_packaging_and_case_stock_in(async_client: AsyncClient):
+    """Test creating an item with 1 CS = 24 EA and restocking in Cases (CS)"""
+    admin_headers = await get_admin_headers(async_client)
+
+    # 1. Create item with dual units: EA base, CS secondary, 1 CS = 24 EA
+    item_res = await async_client.post(
+        "/api/v1/items",
+        json={
+            "name": "Coca Cola 300ml Can",
+            "sku": "COKE-300",
+            "category": "Beverages",
+            "unit": "EA",
+            "secondary_unit": "CS",
+            "units_per_case": 24.0,
+            "sale_price": 40.0,
+            "purchase_price": 30.0,
+            "gst_rate": 28.0,
+            "min_stock_alert": 48.0
+        },
+        headers=admin_headers
+    )
+    assert item_res.status_code == 201
+    item = item_res.json()
+    assert item["units_per_case"] == 24.0
+    assert item["secondary_unit"] == "CS"
+
+    # 2. Stock-in 5 Cases (CS) -> Should automatically yield 5 * 24 = 120 EA
+    stock_in_res = await async_client.post(
+        "/api/v1/inventory/stock-in",
+        json={
+            "supplier_name": "Beverage Bottlers Ltd",
+            "invoice_number": "INV-CS-001",
+            "items": [
+                {
+                    "item_id": item["id"],
+                    "quantity": 5.0,
+                    "unit": "CS",
+                    "purchase_price": 720.0,
+                    "batch_number": "BATCH-CS-01"
+                }
+            ]
+        },
+        headers=admin_headers
+    )
+    assert stock_in_res.status_code == 200
+    assert stock_in_res.json()["items"][0]["quantity_added"] == 120.0
+
+    # 3. Verify stock summary returns both EA total and computed CS cases
+    summary_res = await async_client.get(f"/api/v1/inventory/stock?search={item['sku']}", headers=admin_headers)
+    assert summary_res.status_code == 200
+    summary_list = summary_res.json()
+    assert len(summary_list) == 1
+    sum_item = summary_list[0]
+    assert sum_item["total_quantity"] == 120.0
+    assert sum_item["units_per_case"] == 24.0
+    assert sum_item["total_cases"] == 5.0
+
