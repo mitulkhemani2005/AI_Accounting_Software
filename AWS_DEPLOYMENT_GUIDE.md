@@ -1,6 +1,9 @@
 # FundSafe ERP — 100% AWS Free Tier Deployment Guide
 
-This guide explains how to deploy FundSafe ERP on Amazon Web Services (AWS) **100% Free Tier Eligible (₹0 / $0 Cost)** in the **ap-south-1 (Mumbai, India)** region for full Indian GST & data compliance.
+This guide explains how to deploy FundSafe ERP on Amazon Web Services (AWS) **100% Free Tier Eligible (₹0 / $0 Cost)** in the **ap-south-1 (Mumbai, India)** region.
+
+> [!TIP]
+> **Zero-Effort Secrets:** You **do NOT need to manually configure `.env` passwords or keys**. The deployment script automatically generates strong database passwords, 64-char JWT secret keys, and auto-detects your server public IP!
 
 ---
 
@@ -47,96 +50,70 @@ ssh -i "fundsafe-key.pem" ubuntu@<YOUR_EC2_PUBLIC_IP>
 
 ---
 
-## Step 3: Run the Automated Free Tier Server Setup
+## Step 3: Run the 1-Click Setup & Deploy Commands
 
-Run the following commands on the server. This script automatically installs Docker, Docker Compose, sets up the UFW firewall, and configures **4GB of Swap memory** (critical so 1GB RAM instances never run out of memory during Next.js builds):
+Run these 4 simple commands on your EC2 instance:
 
 ```bash
-# Clone the repository
+# 1. Clone repository
 git clone https://github.com/mitulkhemani2005/AI_Accounting_Software.git fundsafe-erp
 cd fundsafe-erp
 
-# Make scripts executable and run setup
-chmod +x deploy/setup-aws-ec2.sh deploy/aws-deploy.sh
+# 2. Run server setup (Installs Docker, UFW firewall, and 4GB swap space)
+chmod +x deploy/*.sh
 ./deploy/setup-aws-ec2.sh
 
-# Apply docker group permissions immediately
+# 3. Apply docker group permissions
 newgrp docker
-```
 
----
-
-## Step 4: Configure Production Environment Variables
-
-```bash
-# Copy the production template
-cp .env.production .env
-
-# Edit the environment file
-nano .env
-```
-
-Set your production secrets:
-```ini
-ENVIRONMENT=production
-PROJECT_NAME="FundSafe ERP"
-POSTGRES_USER=fundsafe_admin
-POSTGRES_PASSWORD=CreateAStrongPasswordHere123!
-POSTGRES_DB=fundsafe_erp_prod
-JWT_SECRET_KEY=generate_a_random_64_character_secret_string_here
-CORS_ORIGINS=http://<YOUR_EC2_PUBLIC_IP>,http://localhost:3000
-```
-*(Press `Ctrl+O` then `Enter` to save, and `Ctrl+X` to exit nano)*
-
----
-
-## Step 5: Deploy the Entire Stack (1-Click)
-
-```bash
+# 4. Deploy the application (Auto-generates passwords, JWT secret, and IP!)
 ./deploy/aws-deploy.sh
 ```
 
-This will automatically build and start:
-- 🌐 **Nginx Reverse Proxy** on Port 80 & 443
-- 💻 **Next.js 14 Frontend** on Port 3000
-- ⚡ **FastAPI Backend** on Port 8000
-- 🤖 **AI Microservice** on Port 8001
-- 🗄️ **PostgreSQL 16 Database** on Port 5432
-- 🚀 **Redis 7 Cache** on Port 6379
+---
+
+## What happens automatically during Step 3:
+1. Detects your AWS server Public IP address automatically.
+2. Generates a cryptographically secure 64-char `JWT_SECRET_KEY`.
+3. Generates a secure random `POSTGRES_PASSWORD`.
+4. Creates `.env` and starts:
+   - 🌐 **Nginx Reverse Proxy** on Port 80 & 443
+   - 💻 **Next.js 14 Frontend** on Port 3000
+   - ⚡ **FastAPI Backend** on Port 8000
+   - 🤖 **AI Microservice** on Port 8001
+   - 🗄️ **PostgreSQL 16 Database** on Port 5432
+   - 🚀 **Redis 7 Cache** on Port 6379
 
 ---
 
-## Step 6: Access Your ERP in the Browser
+## Step 4: Open Your ERP in the Browser
 
-Open your browser and navigate to:
+When the script finishes, it will print your live URL:
 - **Web App:** `http://<YOUR_EC2_PUBLIC_IP>`
 - **API Health Check:** `http://<YOUR_EC2_PUBLIC_IP>/api/v1/health`
 - **Swagger Documentation:** `http://<YOUR_EC2_PUBLIC_IP>/docs`
 
 ---
 
-## Step 7 (Optional): Setup Free SSL HTTPS with Custom Domain
+## Step 5 (Optional): Free SSL HTTPS with Your Domain
 
 If you have a domain (e.g. `erp.yourdomain.com`):
-1. In your domain DNS manager (GoDaddy, Namecheap, Route 53, Cloudflare), add an **A record**:
-   - `Host:` `@` or `erp`
-   - `Points to:` `<YOUR_EC2_PUBLIC_IP>`
-2. On your EC2 server, obtain and install a free SSL certificate:
+1. In your domain DNS manager, add an **A record**: `erp` pointing to `<YOUR_EC2_PUBLIC_IP>`.
+2. On your EC2 server, run:
    ```bash
    sudo apt-get install -y certbot python3-certbot-nginx
    sudo certbot --nginx -d erp.yourdomain.com
    ```
-3. Certbot will automatically configure HTTPS and auto-renew the certificate every 90 days for free.
 
 ---
 
-## Maintenance & Monitoring Commands
+## Useful Maintenance Commands
 
 ```bash
-# Check status of all containers
+# View live status of containers
 docker compose -f docker-compose.prod.yml ps
 
-# View live real-time logs
+# View live container logs
 docker compose -f docker-compose.prod.yml logs -f
 
 # Reset / Clear Database completely
@@ -145,7 +122,7 @@ docker compose -f docker-compose.prod.yml exec backend python scripts/reset_db.p
 # Restart all services
 docker compose -f docker-compose.prod.yml restart
 
-# Pull latest code and re-deploy
+# Pull latest updates from GitHub and redeploy
 git pull origin main
 ./deploy/aws-deploy.sh
 ```
