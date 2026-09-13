@@ -101,6 +101,7 @@ async def get_inventory_dashboard_metrics(
 
 
 @router.get("/stock", response_model=List[ItemStockSummaryResponse])
+@router.get("/summary", response_model=List[ItemStockSummaryResponse])
 async def get_stock_overview(
     godown_id: Optional[str] = Query(None, description="Filter by Godown ID"),
     search: Optional[str] = Query(None, description="Search item name, SKU, or barcode"),
