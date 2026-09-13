@@ -4,6 +4,8 @@ from sqlalchemy import select, func, desc
 from fastapi import HTTPException, status
 from datetime import datetime, timezone
 from app.models.bill import Bill, BillItem
+from app.models.item import Item
+from app.models.inventory import Stock
 from app.models.user import User
 from app.models.party import Customer, Supplier
 from app.schemas.bill import (
@@ -16,7 +18,11 @@ from app.schemas.bill import (
 )
 from app.services.gst_service import calculate_line_item_gst, calculate_bill_totals
 from app.services.audit_service import log_audit_event
-from app.services.inventory_service import record_stock_out_for_bill, restore_stock_for_voided_bill
+from app.services.inventory_service import (
+    record_stock_out_for_bill,
+    restore_stock_for_voided_bill,
+    get_or_create_default_godown,
+)
 from app.services.party_service import recalculate_party_balance
 
 
@@ -123,6 +129,51 @@ async def create_bill(
         calculate_line_item_gst(item=item_input, is_interstate=payload.is_interstate)
         for item_input in payload.items
     ]
+
+    # 2.5 Strict Server-Side Stock Validation for Sale Bills
+    if payload.type == "sale":
+        target_godown_id = payload.godown_id
+        if not target_godown_id:
+            def_godown = await get_or_create_default_godown(db, tenant_id)
+            target_godown_id = def_godown.id
+
+        item_demands: Dict[str, Dict[str, Any]] = {}
+        for ib in items_breakdown:
+            item_id = ib.get("item_id")
+            if not item_id:
+                continue
+
+            qty = ib.get("quantity", 0.0)
+            unit_str = ((ib.get("unit") or "")).strip().upper()
+            effective_qty = qty
+            if unit_str in ["CS", "CASE", "CASES", "BOX", "CTN"]:
+                it_obj = (await db.execute(select(Item).where(Item.id == item_id))).scalar_one_or_none()
+                if it_obj and it_obj.units_per_case and it_obj.units_per_case > 1:
+                    effective_qty = qty * it_obj.units_per_case
+
+            if item_id not in item_demands:
+                item_demands[item_id] = {
+                    "item_name": ib.get("item_name") or "Item",
+                    "effective_qty": 0.0,
+                    "unit": ib.get("unit") or "EA",
+                }
+            item_demands[item_id]["effective_qty"] += effective_qty
+
+        for item_id, demand in item_demands.items():
+            stock_rec = (await db.execute(
+                select(Stock).where(
+                    Stock.tenant_id == tenant_id,
+                    Stock.godown_id == target_godown_id,
+                    Stock.item_id == item_id
+                )
+            )).scalar_one_or_none()
+
+            avail_qty = stock_rec.quantity if stock_rec else 0.0
+            if avail_qty < demand["effective_qty"]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Out of stock: '{demand['item_name']}' has only {avail_qty:.2f} units available in selected Godown, but {demand['effective_qty']:.2f} units were requested. Please restock before completing sale."
+                )
 
     # 3. Calculate Bill grand totals
     totals = calculate_bill_totals(

@@ -196,16 +196,26 @@ export default function POSPage() {
     }
   };
 
-  const fetchInventory = async () => {
+  const fetchInventory = async (godownId?: string) => {
     try {
+      const gId = godownId !== undefined ? godownId : selectedGodownId;
       const [godownRes, summaryRes] = await Promise.all([
         api.get("/inventory/godowns"),
-        api.get("/inventory/summary"),
+        api.get(gId ? `/inventory/summary?godown_id=${gId}` : "/inventory/summary"),
       ]);
       setGodowns(godownRes.data);
-      if (godownRes.data.length > 0 && !selectedGodownId) {
+      if (godownRes.data.length > 0 && !selectedGodownId && !godownId) {
         const def = godownRes.data.find((g: any) => g.is_default) || godownRes.data[0];
         setSelectedGodownId(def.id);
+        if (def.id && !gId) {
+          const defSummary = await api.get(`/inventory/summary?godown_id=${def.id}`);
+          const map: Record<string, number> = {};
+          defSummary.data.forEach((s: any) => {
+            map[s.item_id] = s.total_quantity;
+          });
+          setStockSummaryMap(map);
+          return;
+        }
       }
       const map: Record<string, number> = {};
       summaryRes.data.forEach((s: any) => {
@@ -321,6 +331,28 @@ export default function POSPage() {
     const itemUnit = useCase ? secUnit : baseUnit;
     const itemRate = useCase ? product.sale_price * uPerCase : product.sale_price;
 
+    const availStock = stockSummaryMap[product.id] ?? 0;
+    const eaToAdd = useCase ? uPerCase : 1;
+
+    // Check existing demand in cart for this product in EA
+    const currentInCartEa = billItems.reduce((acc, it) => {
+      if (it.item_id === product.id) {
+        const itUPerCase = it.units_per_case && it.units_per_case > 1 ? it.units_per_case : 1;
+        const itIsCase = it.unit === (it.secondary_unit || "CS") && itUPerCase > 1;
+        return acc + (itIsCase ? it.quantity * itUPerCase : it.quantity);
+      }
+      return acc;
+    }, 0);
+
+    if (currentInCartEa + eaToAdd > availStock) {
+      if (availStock <= 0) {
+        alert(`❌ Out of Stock: '${product.name}' has 0 stock available in this godown.`);
+      } else {
+        alert(`⚠️ Insufficient Stock: '${product.name}' only has ${availStock} ${baseUnit} available. (${currentInCartEa} already in cart). Cannot add ${eaToAdd} ${baseUnit}.`);
+      }
+      return;
+    }
+
     setBillItems((prev) => {
       const existingIdx = prev.findIndex((i) => i.item_id === product.id && i.unit === itemUnit);
       if (existingIdx >= 0) {
@@ -386,30 +418,52 @@ export default function POSPage() {
   };
 
   const toggleItemUnit = (idx: number) => {
+    const item = billItems[idx];
+    if (!item) return;
+    const uPerCase = item.units_per_case && item.units_per_case > 1 ? item.units_per_case : 1;
+    if (uPerCase <= 1) return;
+
+    const isCurrentlyCase = item.unit === (item.secondary_unit || "CS");
+
+    // If switching from EA to CS, verify stock
+    if (!isCurrentlyCase && item.item_id) {
+      const availStock = stockSummaryMap[item.item_id] ?? 0;
+      const extraEaNeeded = item.quantity * (uPerCase - 1);
+      const currentInCartEa = billItems.reduce((acc, it) => {
+        if (it.item_id === item.item_id) {
+          const itUPerCase = it.units_per_case && it.units_per_case > 1 ? it.units_per_case : 1;
+          const itIsCase = it.unit === (it.secondary_unit || "CS") && itUPerCase > 1;
+          return acc + (itIsCase ? it.quantity * itUPerCase : it.quantity);
+        }
+        return acc;
+      }, 0);
+
+      if (currentInCartEa + extraEaNeeded > availStock) {
+        alert(`⚠️ Cannot switch to ${item.secondary_unit || "CS"}: '${item.item_name}' needs ${item.quantity * uPerCase} EA total for ${item.quantity} ${item.secondary_unit || "CS"}, but only ${availStock} EA are available in stock.`);
+        return;
+      }
+    }
+
     setBillItems((prev) => {
       const updated = [...prev];
-      const item = updated[idx];
-      const uPerCase = item.units_per_case && item.units_per_case > 1 ? item.units_per_case : 1;
-      if (uPerCase <= 1) return prev;
-
-      const isCurrentlyCase = item.unit === (item.secondary_unit || "CS");
-      const nextUnit = isCurrentlyCase ? "EA" : item.secondary_unit || "CS";
-      const baseRate = item.base_sale_price !== undefined ? item.base_sale_price : isCurrentlyCase ? item.rate / uPerCase : item.rate;
+      const cur = updated[idx];
+      const nextUnit = isCurrentlyCase ? "EA" : cur.secondary_unit || "CS";
+      const baseRate = cur.base_sale_price !== undefined ? cur.base_sale_price : isCurrentlyCase ? cur.rate / uPerCase : cur.rate;
       const nextRate = isCurrentlyCase ? baseRate : baseRate * uPerCase;
 
       const calc = calculateLineItem(
         {
           rate: nextRate,
-          quantity: item.quantity,
-          discount_amount: item.discount_amount,
-          gst_rate: item.gst_rate,
-          is_tax_inclusive: item.is_tax_inclusive,
+          quantity: cur.quantity,
+          discount_amount: cur.discount_amount,
+          gst_rate: cur.gst_rate,
+          is_tax_inclusive: cur.is_tax_inclusive,
         },
         isInterstate
       );
 
       updated[idx] = {
-        ...item,
+        ...cur,
         unit: nextUnit,
         rate: nextRate,
         taxable_amount: calc.taxable,
@@ -451,25 +505,49 @@ export default function POSPage() {
   };
 
   const updateItemQty = (idx: number, delta: number) => {
+    const item = billItems[idx];
+    if (!item) return;
+
+    if (delta > 0 && item.item_id) {
+      const uPerCase = item.units_per_case && item.units_per_case > 1 ? item.units_per_case : 1;
+      const isCase = item.unit === (item.secondary_unit || "CS") && uPerCase > 1;
+      const addEa = isCase ? uPerCase * delta : delta;
+      const availStock = stockSummaryMap[item.item_id] ?? 0;
+
+      const currentInCartEa = billItems.reduce((acc, it) => {
+        if (it.item_id === item.item_id) {
+          const itUPerCase = it.units_per_case && it.units_per_case > 1 ? it.units_per_case : 1;
+          const itIsCase = it.unit === (it.secondary_unit || "CS") && itUPerCase > 1;
+          return acc + (itIsCase ? it.quantity * itUPerCase : it.quantity);
+        }
+        return acc;
+      }, 0);
+
+      if (currentInCartEa + addEa > availStock) {
+        alert(`⚠️ Cannot increase quantity: '${item.item_name}' only has ${availStock} available in stock.`);
+        return;
+      }
+    }
+
     setBillItems((prev) => {
       const updated = [...prev];
-      const item = updated[idx];
-      const newQty = item.quantity + delta;
+      const curItem = updated[idx];
+      const newQty = curItem.quantity + delta;
       if (newQty <= 0) {
         return updated.filter((_, i) => i !== idx);
       }
       const calc = calculateLineItem(
         {
-          rate: item.rate,
+          rate: curItem.rate,
           quantity: newQty,
-          discount_amount: item.discount_amount,
-          gst_rate: item.gst_rate,
-          is_tax_inclusive: item.is_tax_inclusive,
+          discount_amount: curItem.discount_amount,
+          gst_rate: curItem.gst_rate,
+          is_tax_inclusive: curItem.is_tax_inclusive,
         },
         isInterstate
       );
       updated[idx] = {
-        ...item,
+        ...curItem,
         quantity: newQty,
         taxable_amount: calc.taxable,
         cgst_amount: calc.cgst,
@@ -673,6 +751,25 @@ export default function POSPage() {
       return;
     }
 
+    // Pre-flight Stock Validation for Counter Sale
+    for (const item of billItems) {
+      if (!item.item_id) continue;
+      const availStock = stockSummaryMap[item.item_id] ?? 0;
+      const totalItemDemandEa = billItems.reduce((acc, it) => {
+        if (it.item_id === item.item_id) {
+          const itUPerCase = it.units_per_case && it.units_per_case > 1 ? it.units_per_case : 1;
+          const isItCase = it.unit === (it.secondary_unit || "CS") && itUPerCase > 1;
+          return acc + (isItCase ? it.quantity * itUPerCase : it.quantity);
+        }
+        return acc;
+      }, 0);
+
+      if (totalItemDemandEa > availStock) {
+        alert(`❌ Out of Stock / Insufficient Stock:\n'${item.item_name}' requires ${totalItemDemandEa} EA, but only ${availStock} EA are available in the selected Godown.\n\nPlease adjust cart quantities before checkout.`);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     const offlineSyncId = `pos-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
@@ -874,63 +971,72 @@ export default function POSPage() {
               </div>
             ) : (
               filteredCatalog.map((p) => {
-                const stockQty = stockSummaryMap[p.id];
+                const stockQty = stockSummaryMap[p.id] ?? 0;
+                const isOutOfStock = stockQty <= 0;
+                const uPerCase = p.units_per_case && p.units_per_case > 1 ? p.units_per_case : 1;
+                const canAddCase = stockQty >= uPerCase;
+
                 return (
                   <div
                     key={p.id}
-                    onClick={() => addItemToCart(p)}
+                    onClick={() => {
+                      if (!isOutOfStock) {
+                        addItemToCart(p, "EA");
+                      } else {
+                        alert(`❌ '${p.name}' is out of stock!`);
+                      }
+                    }}
                     style={{
-                      background: "rgba(15, 23, 42, 0.6)",
-                      border: "1px solid var(--border)",
+                      background: isOutOfStock ? "rgba(15, 23, 42, 0.4)" : "rgba(15, 23, 42, 0.6)",
+                      border: isOutOfStock ? "1px solid rgba(239, 68, 68, 0.35)" : "1px solid var(--border)",
                       borderRadius: "8px",
                       padding: "10px",
-                      cursor: "pointer",
+                      cursor: isOutOfStock ? "not-allowed" : "pointer",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
+                      opacity: isOutOfStock ? 0.6 : 1,
                       transition: "transform 0.1s ease, border-color 0.1s ease",
                     }}
-                    className="hover-card"
+                    className={isOutOfStock ? "" : "hover-card"}
                   >
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#f8fafc", lineHeight: 1.2, marginBottom: "4px" }}>
+                      <div style={{ fontWeight: 600, fontSize: "0.85rem", color: isOutOfStock ? "#94a3b8" : "#f8fafc", lineHeight: 1.2, marginBottom: "4px" }}>
                         {p.name}
                       </div>
                       <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
                         {p.category} &bull; {p.unit}
                       </div>
-                      {stockQty !== undefined && (
-                        <div style={{ marginTop: "4px" }}>
-                          {stockQty <= 0 ? (
-                            <span style={{ fontSize: "0.65rem", fontWeight: 600, color: "#f87171", background: "rgba(239, 68, 68, 0.15)", padding: "1px 5px", borderRadius: "4px" }}>
-                              Out of stock (0)
-                            </span>
-                          ) : stockQty <= (p.min_stock_level || 5) ? (
-                            <span style={{ fontSize: "0.65rem", fontWeight: 600, color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)", padding: "1px 5px", borderRadius: "4px" }}>
-                              Low: {stockQty} {p.unit || "EA"}
-                              {p.units_per_case && p.units_per_case > 1
-                                ? ` (${Math.floor(stockQty / p.units_per_case)} CS${stockQty % p.units_per_case > 0 ? ` + ${(stockQty % p.units_per_case).toFixed(0)} EA` : ""})`
-                                : ""}
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: "0.65rem", fontWeight: 500, color: "#34d399", background: "rgba(16, 185, 129, 0.15)", padding: "1px 5px", borderRadius: "4px" }}>
-                              Stock: {stockQty} {p.unit || "EA"}
-                              {p.units_per_case && p.units_per_case > 1
-                                ? ` (${Math.floor(stockQty / p.units_per_case)} CS${stockQty % p.units_per_case > 0 ? ` + ${(stockQty % p.units_per_case).toFixed(0)} EA` : ""})`
-                                : ""}
-                            </span>
-                          )}
-                        </div>
-                      )}
+                      <div style={{ marginTop: "4px" }}>
+                        {stockQty <= 0 ? (
+                          <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#f87171", background: "rgba(239, 68, 68, 0.2)", border: "1px solid rgba(239, 68, 68, 0.4)", padding: "1px 6px", borderRadius: "4px" }}>
+                            ❌ Out of stock (0)
+                          </span>
+                        ) : stockQty <= (p.min_stock_level || 5) ? (
+                          <span style={{ fontSize: "0.65rem", fontWeight: 600, color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)", padding: "1px 5px", borderRadius: "4px" }}>
+                            ⚠️ Low: {stockQty} {p.unit || "EA"}
+                            {p.units_per_case && p.units_per_case > 1
+                              ? ` (${Math.floor(stockQty / p.units_per_case)} CS${stockQty % p.units_per_case > 0 ? ` + ${(stockQty % p.units_per_case).toFixed(0)} EA` : ""})`
+                              : ""}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: "0.65rem", fontWeight: 500, color: "#34d399", background: "rgba(16, 185, 129, 0.15)", padding: "1px 5px", borderRadius: "4px" }}>
+                            Stock: {stockQty} {p.unit || "EA"}
+                            {p.units_per_case && p.units_per_case > 1
+                              ? ` (${Math.floor(stockQty / p.units_per_case)} CS${stockQty % p.units_per_case > 0 ? ` + ${(stockQty % p.units_per_case).toFixed(0)} EA` : ""})`
+                              : ""}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div style={{ marginTop: "8px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#34d399" }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.95rem", color: isOutOfStock ? "#64748b" : "#34d399" }}>
                           ₹{p.sale_price.toFixed(2)} <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 500 }}>/{p.unit || "EA"}</span>
                         </div>
                         {p.units_per_case && p.units_per_case > 1 && (
-                          <div style={{ fontSize: "0.72rem", color: "#38bdf8", fontWeight: 600 }}>
+                          <div style={{ fontSize: "0.72rem", color: isOutOfStock ? "#64748b" : "#38bdf8", fontWeight: 600 }}>
                             ₹{(p.sale_price * p.units_per_case).toFixed(2)} /{p.secondary_unit || "CS"} ({p.units_per_case} EA)
                           </div>
                         )}
@@ -941,24 +1047,44 @@ export default function POSPage() {
                       <div style={{ display: "flex", gap: "4px" }}>
                         <button
                           type="button"
+                          disabled={isOutOfStock}
                           onClick={(e) => {
                             e.stopPropagation();
-                            addItemToCart(p, "EA");
+                            if (!isOutOfStock) addItemToCart(p, "EA");
                           }}
-                          style={{ background: "#2563eb", borderRadius: "4px", padding: "3px 7px", fontSize: "0.7rem", color: "white", border: "none", cursor: "pointer", fontWeight: 600 }}
-                          title={`Add 1 ${p.unit || "EA"}`}
+                          style={{
+                            background: isOutOfStock ? "rgba(100, 116, 139, 0.3)" : "#2563eb",
+                            borderRadius: "4px",
+                            padding: "3px 7px",
+                            fontSize: "0.7rem",
+                            color: isOutOfStock ? "#94a3b8" : "white",
+                            border: "none",
+                            cursor: isOutOfStock ? "not-allowed" : "pointer",
+                            fontWeight: 600,
+                          }}
+                          title={isOutOfStock ? "Out of Stock" : `Add 1 ${p.unit || "EA"}`}
                         >
                           + {p.unit || "EA"}
                         </button>
                         {p.units_per_case && p.units_per_case > 1 && (
                           <button
                             type="button"
+                            disabled={!canAddCase}
                             onClick={(e) => {
                               e.stopPropagation();
-                              addItemToCart(p, "CS");
+                              if (canAddCase) addItemToCart(p, "CS");
                             }}
-                            style={{ background: "rgba(16, 185, 129, 0.25)", border: "1px solid #10b981", borderRadius: "4px", padding: "3px 7px", fontSize: "0.7rem", color: "#34d399", cursor: "pointer", fontWeight: 700 }}
-                            title={`Add 1 Full ${p.secondary_unit || "CS"} (${p.units_per_case} ${p.unit || "EA"})`}
+                            style={{
+                              background: !canAddCase ? "rgba(100, 116, 139, 0.2)" : "rgba(16, 185, 129, 0.25)",
+                              border: !canAddCase ? "1px solid rgba(100, 116, 139, 0.3)" : "1px solid #10b981",
+                              borderRadius: "4px",
+                              padding: "3px 7px",
+                              fontSize: "0.7rem",
+                              color: !canAddCase ? "#64748b" : "#34d399",
+                              cursor: !canAddCase ? "not-allowed" : "pointer",
+                              fontWeight: 700,
+                            }}
+                            title={!canAddCase ? `Insufficient stock for 1 full case (${p.units_per_case} EA)` : `Add 1 Full ${p.secondary_unit || "CS"} (${p.units_per_case} ${p.unit || "EA"})`}
                           >
                             + {p.secondary_unit || "CS"}
                           </button>
@@ -989,7 +1115,11 @@ export default function POSPage() {
                     <Warehouse size={13} color="#38bdf8" />
                     <select
                       value={selectedGodownId}
-                      onChange={(e) => setSelectedGodownId(e.target.value)}
+                      onChange={(e) => {
+                        const newGId = e.target.value;
+                        setSelectedGodownId(newGId);
+                        fetchInventory(newGId);
+                      }}
                       style={{ background: "transparent", border: "none", color: "#f8fafc", fontSize: "0.75rem", outline: "none", cursor: "pointer" }}
                     >
                       {godowns.map((g) => (

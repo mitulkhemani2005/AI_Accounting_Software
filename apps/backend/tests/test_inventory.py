@@ -462,3 +462,104 @@ async def test_stock_in_creates_purchase_book_record(async_client: AsyncClient):
     assert len(pdf_res.content) > 1000
 
 
+@pytest.mark.asyncio
+async def test_out_of_stock_counter_sale_blocked(async_client: AsyncClient):
+    """Test that creating a sale bill for items with insufficient or 0 stock raises a 400 Bad Request error"""
+    admin_headers = await get_admin_headers(async_client)
+
+    # 1. Create item with 0 stock
+    item_res = await async_client.post(
+        "/api/v1/items",
+        json={
+            "name": "Zero Stock Product",
+            "sku": "ZERO-STK-001",
+            "category": "General",
+            "unit": "EA",
+            "secondary_unit": "CS",
+            "units_per_case": 10,
+            "sale_price": 100.0,
+            "purchase_price": 80.0,
+            "gst_rate": 18.0
+        },
+        headers=admin_headers
+    )
+    assert item_res.status_code == 201
+    item = item_res.json()
+
+    # 2. Attempt counter sale with 0 stock -> Must fail with 400
+    sale_payload = {
+        "type": "sale",
+        "party_name": "Walk-in Cash Customer",
+        "payment_mode": "cash",
+        "payment_status": "paid",
+        "items": [
+            {
+                "item_id": item["id"],
+                "item_name": item["name"],
+                "quantity": 1.0,
+                "unit": "EA",
+                "rate": 100.0,
+                "gst_rate": 18.0
+            }
+        ]
+    }
+    fail_res = await async_client.post("/api/v1/bills", json=sale_payload, headers=admin_headers)
+    assert fail_res.status_code == 400
+    assert "Out of stock" in fail_res.json()["detail"]
+
+    # 3. Stock in 5 EA
+    await async_client.post(
+        "/api/v1/inventory/stock-in",
+        json={
+            "items": [{"item_id": item["id"], "quantity": 5.0, "purchase_price": 80.0}]
+        },
+        headers=admin_headers
+    )
+
+    # 4. Attempt to sell 1 CS (which is 10 EA) when only 5 EA are in stock -> Must fail with 400
+    case_sale_payload = {
+        "type": "sale",
+        "party_name": "Walk-in Cash Customer",
+        "payment_mode": "cash",
+        "payment_status": "paid",
+        "items": [
+            {
+                "item_id": item["id"],
+                "item_name": item["name"],
+                "quantity": 1.0,
+                "unit": "CS",
+                "rate": 1000.0,
+                "gst_rate": 18.0
+            }
+        ]
+    }
+    fail_case_res = await async_client.post("/api/v1/bills", json=case_sale_payload, headers=admin_headers)
+    assert fail_case_res.status_code == 400
+    assert "Out of stock" in fail_case_res.json()["detail"]
+
+    # 5. Sell 3 EA -> Must succeed
+    valid_sale_payload = {
+        "type": "sale",
+        "party_name": "Walk-in Cash Customer",
+        "payment_mode": "cash",
+        "payment_status": "paid",
+        "items": [
+            {
+                "item_id": item["id"],
+                "item_name": item["name"],
+                "quantity": 3.0,
+                "unit": "EA",
+                "rate": 100.0,
+                "gst_rate": 18.0
+            }
+        ]
+    }
+    valid_res = await async_client.post("/api/v1/bills", json=valid_sale_payload, headers=admin_headers)
+    assert valid_res.status_code == 201
+
+    # 6. Verify remaining stock = 5 - 3 = 2 EA
+    stk_res = await async_client.get(f"/api/v1/inventory/stock?search={item['sku']}", headers=admin_headers)
+    assert stk_res.json()[0]["total_quantity"] == 2.0
+
+
+
