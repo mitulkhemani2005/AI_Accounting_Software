@@ -40,6 +40,10 @@ interface POSItem {
   hsn_code?: string;
   quantity: number;
   unit: string;
+  secondary_unit?: string;
+  units_per_case?: number;
+  base_sale_price?: number;
+  base_purchase_price?: number;
   rate: number;
   purchase_price?: number;
   discount_amount: number;
@@ -309,9 +313,16 @@ export default function POSPage() {
     return { taxable, cgst, sgst, igst, total };
   };
 
-  const addItemToCart = (product: any) => {
+  const addItemToCart = (product: any, selectedUnit?: "EA" | "CS") => {
+    const uPerCase = product.units_per_case && product.units_per_case > 1 ? product.units_per_case : 1;
+    const baseUnit = product.unit || "EA";
+    const secUnit = product.secondary_unit || "CS";
+    const useCase = selectedUnit === "CS" && uPerCase > 1;
+    const itemUnit = useCase ? secUnit : baseUnit;
+    const itemRate = useCase ? product.sale_price * uPerCase : product.sale_price;
+
     setBillItems((prev) => {
-      const existingIdx = prev.findIndex((i) => i.item_id === product.id);
+      const existingIdx = prev.findIndex((i) => i.item_id === product.id && i.unit === itemUnit);
       if (existingIdx >= 0) {
         const updated = [...prev];
         const current = updated[existingIdx];
@@ -340,7 +351,7 @@ export default function POSPage() {
         const isTaxInc = product.is_tax_inclusive || false;
         const calc = calculateLineItem(
           {
-            rate: product.sale_price,
+            rate: itemRate,
             quantity: 1,
             discount_amount: 0,
             gst_rate: product.gst_rate,
@@ -353,9 +364,13 @@ export default function POSPage() {
           item_name: product.name,
           hsn_code: product.hsn_code,
           quantity: 1,
-          unit: product.unit || "PCS",
-          rate: product.sale_price,
-          purchase_price: product.purchase_price || 0,
+          unit: itemUnit,
+          secondary_unit: secUnit,
+          units_per_case: uPerCase,
+          base_sale_price: product.sale_price,
+          base_purchase_price: product.purchase_price || 0,
+          rate: itemRate,
+          purchase_price: useCase ? (product.purchase_price || 0) * uPerCase : product.purchase_price || 0,
           discount_amount: 0,
           gst_rate: product.gst_rate,
           is_tax_inclusive: isTaxInc,
@@ -367,6 +382,43 @@ export default function POSPage() {
         };
         return [...prev, newItem];
       }
+    });
+  };
+
+  const toggleItemUnit = (idx: number) => {
+    setBillItems((prev) => {
+      const updated = [...prev];
+      const item = updated[idx];
+      const uPerCase = item.units_per_case && item.units_per_case > 1 ? item.units_per_case : 1;
+      if (uPerCase <= 1) return prev;
+
+      const isCurrentlyCase = item.unit === (item.secondary_unit || "CS");
+      const nextUnit = isCurrentlyCase ? "EA" : item.secondary_unit || "CS";
+      const baseRate = item.base_sale_price !== undefined ? item.base_sale_price : isCurrentlyCase ? item.rate / uPerCase : item.rate;
+      const nextRate = isCurrentlyCase ? baseRate : baseRate * uPerCase;
+
+      const calc = calculateLineItem(
+        {
+          rate: nextRate,
+          quantity: item.quantity,
+          discount_amount: item.discount_amount,
+          gst_rate: item.gst_rate,
+          is_tax_inclusive: item.is_tax_inclusive,
+        },
+        isInterstate
+      );
+
+      updated[idx] = {
+        ...item,
+        unit: nextUnit,
+        rate: nextRate,
+        taxable_amount: calc.taxable,
+        cgst_amount: calc.cgst,
+        sgst_amount: calc.sgst,
+        igst_amount: calc.igst,
+        total_amount: calc.total,
+      };
+      return updated;
     });
   };
 
@@ -875,15 +927,43 @@ export default function POSPage() {
                     <div style={{ marginTop: "8px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#34d399" }}>
-                          ₹{p.sale_price.toFixed(2)}
+                          ₹{p.sale_price.toFixed(2)} <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 500 }}>/{p.unit || "EA"}</span>
                         </div>
+                        {p.units_per_case && p.units_per_case > 1 && (
+                          <div style={{ fontSize: "0.72rem", color: "#38bdf8", fontWeight: 600 }}>
+                            ₹{(p.sale_price * p.units_per_case).toFixed(2)} /{p.secondary_unit || "CS"} ({p.units_per_case} EA)
+                          </div>
+                        )}
                         <div style={{ fontSize: "0.65rem", color: p.is_tax_inclusive ? "#60a5fa" : "var(--text-muted)" }}>
                           {p.is_tax_inclusive ? "Tax Incl." : `+${p.gst_rate}% GST`}
                         </div>
                       </div>
-                      <span style={{ background: "#2563eb", borderRadius: "4px", padding: "2px 6px", fontSize: "0.7rem", color: "white" }}>
-                        +Add
-                      </span>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addItemToCart(p, "EA");
+                          }}
+                          style={{ background: "#2563eb", borderRadius: "4px", padding: "3px 7px", fontSize: "0.7rem", color: "white", border: "none", cursor: "pointer", fontWeight: 600 }}
+                          title={`Add 1 ${p.unit || "EA"}`}
+                        >
+                          + {p.unit || "EA"}
+                        </button>
+                        {p.units_per_case && p.units_per_case > 1 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addItemToCart(p, "CS");
+                            }}
+                            style={{ background: "rgba(16, 185, 129, 0.25)", border: "1px solid #10b981", borderRadius: "4px", padding: "3px 7px", fontSize: "0.7rem", color: "#34d399", cursor: "pointer", fontWeight: 700 }}
+                            title={`Add 1 Full ${p.secondary_unit || "CS"} (${p.units_per_case} ${p.unit || "EA"})`}
+                          >
+                            + {p.secondary_unit || "CS"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -928,11 +1008,22 @@ export default function POSPage() {
                 )}
 
                 {heldBills.length > 0 && (
-                  <button onClick={() => setShowHeldModal(true)} className="btn-secondary" style={{ padding: "3px 8px", fontSize: "0.75rem", color: "#f59e0b" }}>
+                  <button
+                    onClick={() => setShowHeldModal(true)}
+                    className="btn-secondary"
+                    style={{ padding: "2px 6px", fontSize: "0.7rem", background: "#d97706", borderColor: "#b45309", color: "white" }}
+                  >
                     <PlayCircle size={12} /> Held ({heldBills.length})
                   </button>
                 )}
-                <button onClick={holdCurrentBill} disabled={billItems.length === 0} className="btn-secondary" style={{ padding: "3px 8px", fontSize: "0.75rem" }}>
+
+                <button
+                  onClick={holdCurrentBill}
+                  disabled={billItems.length === 0}
+                  className="btn-secondary"
+                  style={{ padding: "2px 6px", fontSize: "0.7rem" }}
+                  title="Hold current cart and start a new sale"
+                >
                   <PauseCircle size={12} /> Hold
                 </button>
               </div>
@@ -941,9 +1032,8 @@ export default function POSPage() {
               {/* Area Route Filter Dropdown (Optional Fast Filter) */}
               {areas.length > 0 && (
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px", flex: 1, background: "rgba(15, 23, 42, 0.5)", border: "1px solid var(--border)", borderRadius: "6px", padding: "2px 8px" }}>
-                    <MapPin size={12} color="#38bdf8" />
-                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", whiteSpace: "nowrap", fontWeight: 600 }}>Filter Area / Route:</span>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "4px", background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(56, 189, 248, 0.4)", borderRadius: "6px", padding: "2px 8px" }}>
+                    <MapPin size={13} color="#38bdf8" />
                     <select
                       value={selectedAreaFilter}
                       onChange={(e) => setSelectedAreaFilter(e.target.value)}
@@ -1067,10 +1157,33 @@ export default function POSPage() {
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#f8fafc" }}>{item.item_name}</div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+                        <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#f8fafc" }}>{item.item_name}</div>
+                        {item.units_per_case && item.units_per_case > 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleItemUnit(idx)}
+                            style={{
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              border: "1px solid rgba(56, 189, 248, 0.4)",
+                              background: item.unit === (item.secondary_unit || "CS") ? "rgba(16, 185, 129, 0.2)" : "rgba(56, 189, 248, 0.15)",
+                              color: item.unit === (item.secondary_unit || "CS") ? "#34d399" : "#38bdf8",
+                              cursor: "pointer",
+                            }}
+                            title={`Switch unit between EA and CS (1 CS = ${item.units_per_case} EA)`}
+                          >
+                            {item.unit} ⇄
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>{item.unit}</span>
+                        )}
+                      </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", flexWrap: "wrap" }}>
                         <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "3px" }}>
-                          <span>Sell ₹:</span>
+                          <span>Sell ₹/{item.unit}:</span>
                           <input
                             type="number"
                             step="0.01"

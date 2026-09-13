@@ -208,6 +208,8 @@ export default function InventoryPage() {
     units_per_case: "1",
     sale_price: "",
     purchase_price: "",
+    sale_price_mode: "EA" as "EA" | "CS",
+    cost_price_mode: "EA" as "EA" | "CS",
     gst_rate: "18",
     is_tax_inclusive: false,
     hsn_code: "",
@@ -428,6 +430,8 @@ export default function InventoryPage() {
       units_per_case: "1",
       sale_price: "",
       purchase_price: "",
+      sale_price_mode: "EA",
+      cost_price_mode: "EA",
       gst_rate: "18",
       is_tax_inclusive: false,
       hsn_code: "",
@@ -453,6 +457,8 @@ export default function InventoryPage() {
       units_per_case: "1",
       sale_price: "",
       purchase_price: "",
+      sale_price_mode: "EA",
+      cost_price_mode: "EA",
       gst_rate: "18",
       is_tax_inclusive: false,
       hsn_code: "",
@@ -478,6 +484,8 @@ export default function InventoryPage() {
       units_per_case: ((fullItem as any).units_per_case || stockItem.units_per_case || 1).toString(),
       sale_price: stockItem.sale_price.toString(),
       purchase_price: stockItem.purchase_price.toString(),
+      sale_price_mode: "EA",
+      cost_price_mode: "EA",
       gst_rate: (fullItem as any).gst_rate !== undefined ? (fullItem as any).gst_rate.toString() : "18",
       is_tax_inclusive: (fullItem as any).is_tax_inclusive || false,
       hsn_code: (fullItem as any).hsn_code || "",
@@ -494,6 +502,22 @@ export default function InventoryPage() {
     setIsSubmittingProduct(true);
     setProductError(null);
 
+    const uPerCase = parseFloat(productForm.units_per_case) || 1.0;
+    
+    // Calculate base selling price per EA
+    let rawSalePrice = parseFloat(productForm.sale_price) || 0;
+    let baseSalePrice = rawSalePrice;
+    if (productForm.sale_price_mode === "CS" && uPerCase > 0) {
+      baseSalePrice = Math.round((rawSalePrice / uPerCase) * 10000) / 10000;
+    }
+
+    // Calculate base purchase cost per EA
+    let rawPurchasePrice = parseFloat(productForm.purchase_price) || 0;
+    let basePurchasePrice = rawPurchasePrice;
+    if (productForm.cost_price_mode === "CS" && uPerCase > 0) {
+      basePurchasePrice = Math.round((rawPurchasePrice / uPerCase) * 10000) / 10000;
+    }
+
     const payload = {
       name: productForm.name.trim(),
       sku: productForm.sku.trim() || undefined,
@@ -501,9 +525,9 @@ export default function InventoryPage() {
       category: productForm.category.trim() || "General",
       unit: productForm.unit.trim() || "EA",
       secondary_unit: productForm.secondary_unit.trim() || "CS",
-      units_per_case: parseFloat(productForm.units_per_case) || 1.0,
-      sale_price: parseFloat(productForm.sale_price) || 0,
-      purchase_price: parseFloat(productForm.purchase_price) || 0,
+      units_per_case: uPerCase,
+      sale_price: baseSalePrice,
+      purchase_price: basePurchasePrice,
       gst_rate: parseFloat(productForm.gst_rate) || 0,
       is_tax_inclusive: productForm.is_tax_inclusive,
       hsn_code: productForm.hsn_code.trim() || undefined,
@@ -2308,72 +2332,242 @@ export default function InventoryPage() {
                 </div>
               </div>
 
-              {/* Pricing & GST Section */}
+              {/* Pricing & GST Section with 1EA / 1CS Unit Options */}
               <div style={{ background: "rgba(30, 41, 59, 0.4)", padding: "14px", borderRadius: "10px", border: "1px solid var(--border)" }}>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#38bdf8", marginBottom: "10px", textTransform: "uppercase" }}>
-                  Pricing & GST Configuration
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
-                  <div>
-                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
-                      Selling Price (₹) *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      className="input-field"
-                      value={productForm.sale_price}
-                      onChange={(e) => setProductForm({ ...productForm, sale_price: e.target.value })}
-                      style={{ fontWeight: 700, color: "#34d399" }}
-                      required
-                    />
-                  </div>
+                {(() => {
+                  const uPerCase = parseFloat(productForm.units_per_case) || 1.0;
+                  const rawSale = parseFloat(productForm.sale_price) || 0;
+                  const eaSale = productForm.sale_price_mode === "CS" && uPerCase > 0 ? rawSale / uPerCase : rawSale;
+                  const csSale = productForm.sale_price_mode === "EA" ? rawSale * uPerCase : rawSale;
 
-                  <div>
-                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
-                      Purchase Cost (₹)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      className="input-field"
-                      value={productForm.purchase_price}
-                      onChange={(e) => setProductForm({ ...productForm, purchase_price: e.target.value })}
-                    />
-                  </div>
+                  const rawCost = parseFloat(productForm.purchase_price) || 0;
+                  const eaCost = productForm.cost_price_mode === "CS" && uPerCase > 0 ? rawCost / uPerCase : rawCost;
+                  const csCost = productForm.cost_price_mode === "EA" ? rawCost * uPerCase : rawCost;
 
-                  <div>
-                    <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
-                      GST Rate (%)
-                    </label>
-                    <select
-                      className="input-field"
-                      value={productForm.gst_rate}
-                      onChange={(e) => setProductForm({ ...productForm, gst_rate: e.target.value })}
-                    >
-                      <option value="0">0% (Exempt / Nil)</option>
-                      <option value="5">5% GST</option>
-                      <option value="12">12% GST</option>
-                      <option value="18">18% GST (Standard)</option>
-                      <option value="28">28% GST</option>
-                    </select>
-                  </div>
-                </div>
+                  const profitPerEa = eaSale - eaCost;
+                  const profitPerCs = csSale - csCost;
+                  const marginPct = eaSale > 0 ? ((profitPerEa / eaSale) * 100).toFixed(1) : "0";
 
-                <div style={{ marginTop: "10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.82rem", color: "#f8fafc" }}>
-                    <input
-                      type="checkbox"
-                      checked={productForm.is_tax_inclusive}
-                      onChange={(e) => setProductForm({ ...productForm, is_tax_inclusive: e.target.checked })}
-                    />
-                    Price already includes GST (Tax-Inclusive / MRP)
-                  </label>
-                </div>
+                  return (
+                    <>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                        <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#38bdf8", textTransform: "uppercase" }}>
+                          Pricing & GST Configuration
+                        </div>
+                        {uPerCase > 1 && (
+                          <span style={{ fontSize: "0.7rem", color: "#38bdf8", background: "rgba(56, 189, 248, 0.15)", padding: "2px 8px", borderRadius: "4px", border: "1px solid rgba(56, 189, 248, 0.3)", fontWeight: 600 }}>
+                            1 {productForm.secondary_unit || "CS"} = {uPerCase} {productForm.unit || "EA"}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+                        {/* Selling Price with 1 EA / 1 CS Toggle */}
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)" }}>
+                              Selling Price (₹) *
+                            </label>
+                            <div style={{ display: "flex", gap: "2px", background: "rgba(15, 23, 42, 0.8)", padding: "2px", borderRadius: "4px", border: "1px solid var(--border)" }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (productForm.sale_price_mode !== "EA") {
+                                    const raw = parseFloat(productForm.sale_price) || 0;
+                                    const converted = uPerCase > 0 ? raw / uPerCase : raw;
+                                    setProductForm({ ...productForm, sale_price_mode: "EA", sale_price: converted ? parseFloat(converted.toFixed(2)).toString() : "" });
+                                  }
+                                }}
+                                style={{
+                                  padding: "1px 6px",
+                                  fontSize: "0.65rem",
+                                  borderRadius: "3px",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  background: productForm.sale_price_mode === "EA" ? "#10b981" : "transparent",
+                                  color: productForm.sale_price_mode === "EA" ? "#fff" : "var(--text-muted)",
+                                  fontWeight: 700,
+                                }}
+                                title="Enter Selling Price per single piece/unit"
+                              >
+                                1 {productForm.unit || "EA"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (productForm.sale_price_mode !== "CS") {
+                                    const raw = parseFloat(productForm.sale_price) || 0;
+                                    const converted = raw * uPerCase;
+                                    setProductForm({ ...productForm, sale_price_mode: "CS", sale_price: converted ? parseFloat(converted.toFixed(2)).toString() : "" });
+                                  }
+                                }}
+                                style={{
+                                  padding: "1px 6px",
+                                  fontSize: "0.65rem",
+                                  borderRadius: "3px",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  background: productForm.sale_price_mode === "CS" ? "#10b981" : "transparent",
+                                  color: productForm.sale_price_mode === "CS" ? "#fff" : "var(--text-muted)",
+                                  fontWeight: 700,
+                                }}
+                                title="Enter Selling Price per full bulk case"
+                              >
+                                1 {productForm.secondary_unit || "CS"}
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ position: "relative" }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              className="input-field"
+                              value={productForm.sale_price}
+                              onChange={(e) => setProductForm({ ...productForm, sale_price: e.target.value })}
+                              style={{ fontWeight: 700, color: "#34d399", paddingRight: "48px" }}
+                              required
+                            />
+                            <span style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", fontSize: "0.7rem", color: "#34d399", fontWeight: 700 }}>
+                              /{productForm.sale_price_mode === "CS" ? (productForm.secondary_unit || "CS") : (productForm.unit || "EA")}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Purchase Cost with 1 EA / 1 CS Toggle */}
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)" }}>
+                              Purchase Cost (₹)
+                            </label>
+                            <div style={{ display: "flex", gap: "2px", background: "rgba(15, 23, 42, 0.8)", padding: "2px", borderRadius: "4px", border: "1px solid var(--border)" }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (productForm.cost_price_mode !== "EA") {
+                                    const raw = parseFloat(productForm.purchase_price) || 0;
+                                    const converted = uPerCase > 0 ? raw / uPerCase : raw;
+                                    setProductForm({ ...productForm, cost_price_mode: "EA", purchase_price: converted ? parseFloat(converted.toFixed(2)).toString() : "" });
+                                  }
+                                }}
+                                style={{
+                                  padding: "1px 6px",
+                                  fontSize: "0.65rem",
+                                  borderRadius: "3px",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  background: productForm.cost_price_mode === "EA" ? "#38bdf8" : "transparent",
+                                  color: productForm.cost_price_mode === "EA" ? "#fff" : "var(--text-muted)",
+                                  fontWeight: 700,
+                                }}
+                                title="Enter Purchase Cost per single piece/unit"
+                              >
+                                1 {productForm.unit || "EA"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (productForm.cost_price_mode !== "CS") {
+                                    const raw = parseFloat(productForm.purchase_price) || 0;
+                                    const converted = raw * uPerCase;
+                                    setProductForm({ ...productForm, cost_price_mode: "CS", purchase_price: converted ? parseFloat(converted.toFixed(2)).toString() : "" });
+                                  }
+                                }}
+                                style={{
+                                  padding: "1px 6px",
+                                  fontSize: "0.65rem",
+                                  borderRadius: "3px",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  background: productForm.cost_price_mode === "CS" ? "#38bdf8" : "transparent",
+                                  color: productForm.cost_price_mode === "CS" ? "#fff" : "var(--text-muted)",
+                                  fontWeight: 700,
+                                }}
+                                title="Enter Purchase Cost per full bulk case"
+                              >
+                                1 {productForm.secondary_unit || "CS"}
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ position: "relative" }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              className="input-field"
+                              value={productForm.purchase_price}
+                              onChange={(e) => setProductForm({ ...productForm, purchase_price: e.target.value })}
+                              style={{ paddingRight: "48px" }}
+                            />
+                            <span style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                              /{productForm.cost_price_mode === "CS" ? (productForm.secondary_unit || "CS") : (productForm.unit || "EA")}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* GST Rate */}
+                        <div>
+                          <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                            GST Rate (%)
+                          </label>
+                          <select
+                            className="input-field"
+                            value={productForm.gst_rate}
+                            onChange={(e) => setProductForm({ ...productForm, gst_rate: e.target.value })}
+                          >
+                            <option value="0">0% (Exempt / Nil)</option>
+                            <option value="5">5% GST</option>
+                            <option value="12">12% GST</option>
+                            <option value="18">18% GST (Standard)</option>
+                            <option value="28">28% GST</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Live Bidirectional Conversion Helper Bar */}
+                      {uPerCase > 1 && (
+                        <div style={{ marginTop: "12px", padding: "10px 12px", background: "rgba(15, 23, 42, 0.6)", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.25)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.75rem", flexWrap: "wrap", gap: "6px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span style={{ color: "var(--text-muted)" }}>🏷️ Selling Price:</span>
+                              <strong style={{ color: "#34d399" }}>₹{eaSale.toFixed(2)} / {productForm.unit || "EA"}</strong>
+                              <span style={{ color: "#64748b" }}>⇄</span>
+                              <strong style={{ color: "#34d399" }}>₹{csSale.toFixed(2)} / {productForm.secondary_unit || "CS"} ({uPerCase} {productForm.unit || "EA"})</strong>
+                            </div>
+                            {rawCost > 0 && (
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span style={{ color: "var(--text-muted)" }}>📦 Purchase Cost:</span>
+                                <strong style={{ color: "#38bdf8" }}>₹{eaCost.toFixed(2)} / {productForm.unit || "EA"}</strong>
+                                <span style={{ color: "#64748b" }}>⇄</span>
+                                <strong style={{ color: "#38bdf8" }}>₹{csCost.toFixed(2)} / {productForm.secondary_unit || "CS"}</strong>
+                              </div>
+                            )}
+                          </div>
+                          {rawCost > 0 && rawSale > 0 && (
+                            <div style={{ fontSize: "0.72rem", color: profitPerEa >= 0 ? "#a7f3d0" : "#fca5a5", display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span>📈 Gross Profit:</span>
+                              <strong>₹{profitPerEa.toFixed(2)} / {productForm.unit || "EA"} (₹{profitPerCs.toFixed(2)} / {productForm.secondary_unit || "CS"})</strong>
+                              <span>• Margin: {marginPct}%</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div style={{ marginTop: "10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.82rem", color: "#f8fafc" }}>
+                          <input
+                            type="checkbox"
+                            checked={productForm.is_tax_inclusive}
+                            onChange={(e) => setProductForm({ ...productForm, is_tax_inclusive: e.target.checked })}
+                          />
+                          Price already includes GST (Tax-Inclusive / MRP)
+                        </label>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Min Stock Alert */}

@@ -548,24 +548,36 @@ async def record_stock_out_for_bill(
         item_id = bi.get("item_id") if isinstance(bi, dict) else getattr(bi, "item_id", None)
         qty = bi.get("quantity") if isinstance(bi, dict) else getattr(bi, "quantity", 0.0)
         rate = bi.get("rate") if isinstance(bi, dict) else getattr(bi, "rate", 0.0)
+        unit_str = ((bi.get("unit") if isinstance(bi, dict) else getattr(bi, "unit", "")) or "").strip()
 
         if not item_id or qty <= 0:
             continue
 
+        effective_qty = qty
+        if unit_str.upper() in ["CS", "CASE", "CASES", "BOX", "CTN"]:
+            it_res = await db.execute(select(Item).where(Item.id == item_id))
+            it_obj = it_res.scalar_one_or_none()
+            if it_obj and it_obj.units_per_case and it_obj.units_per_case > 1:
+                effective_qty = qty * it_obj.units_per_case
+
         stock = await get_or_create_stock_record(db, tenant_id, godown_id, item_id)
-        stock.quantity = max(0.0, stock.quantity - qty)
+        stock.quantity = max(0.0, stock.quantity - effective_qty)
+
+        movement_notes = f"Counter Sale #{bill_number}"
+        if effective_qty != qty:
+            movement_notes += f" | {qty} {unit_str} ({effective_qty} EA)"
 
         movement = StockMovement(
             tenant_id=tenant_id,
             godown_id=godown_id,
             item_id=item_id,
             movement_type="sale_out",
-            quantity=qty,
+            quantity=effective_qty,
             balance_after=stock.quantity,
             cost_per_unit=rate,
             reference_type="bill",
             reference_id=bill_number,
-            notes=f"Counter Sale #{bill_number}",
+            notes=movement_notes,
             performed_by_user_id=user.id
         )
         db.add(movement)
@@ -589,24 +601,36 @@ async def restore_stock_for_voided_bill(
         item_id = bi.get("item_id") if isinstance(bi, dict) else getattr(bi, "item_id", None)
         qty = bi.get("quantity") if isinstance(bi, dict) else getattr(bi, "quantity", 0.0)
         rate = bi.get("rate") if isinstance(bi, dict) else getattr(bi, "rate", 0.0)
+        unit_str = ((bi.get("unit") if isinstance(bi, dict) else getattr(bi, "unit", "")) or "").strip()
 
         if not item_id or qty <= 0:
             continue
 
+        effective_qty = qty
+        if unit_str.upper() in ["CS", "CASE", "CASES", "BOX", "CTN"]:
+            it_res = await db.execute(select(Item).where(Item.id == item_id))
+            it_obj = it_res.scalar_one_or_none()
+            if it_obj and it_obj.units_per_case and it_obj.units_per_case > 1:
+                effective_qty = qty * it_obj.units_per_case
+
         stock = await get_or_create_stock_record(db, tenant_id, godown_id, item_id)
-        stock.quantity += qty
+        stock.quantity += effective_qty
+
+        movement_notes = f"Void/Restock #{bill_number}"
+        if effective_qty != qty:
+            movement_notes += f" | {qty} {unit_str} ({effective_qty} EA)"
 
         movement = StockMovement(
             tenant_id=tenant_id,
             godown_id=godown_id,
             item_id=item_id,
             movement_type="void_restock",
-            quantity=qty,
+            quantity=effective_qty,
             balance_after=stock.quantity,
             cost_per_unit=rate,
             reference_type="bill_void",
             reference_id=bill_number,
-            notes=f"Restock from Voided Bill #{bill_number}",
+            notes=movement_notes,
             performed_by_user_id=user.id
         )
         db.add(movement)
